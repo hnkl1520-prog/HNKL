@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HNKL Portfolio - Final</title>
+    
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+    
+    <style>
+        /* 1. 기본 커서 설정 */
+        body, html { 
+            margin: 0; padding: 0; overflow: hidden; 
+            background-color: #F5F5F7; 
+            font-family: 'Pretendard', sans-serif; 
+            width: 100vw; height: 100vh; 
+            cursor: default; 
+        }
+
+        .menu-item, .win-btn, #chat-minimized-icon, button, .send-btn { cursor: pointer; }
+
+        /* 커서 팔로워 스타일 */
+        #cursor-follower {
+            position: fixed; top: 0; left: 0;
+            width: 40px; height: 40px;
+            background-color: rgba(0, 0, 0, 0); 
+            border: 1.5px solid #898989; 
+            border-radius: 50%;
+            pointer-events: none; z-index: 9999;
+            transform: translate(-50%, -50%);
+            transition: width 0.3s cubic-bezier(0.19, 1, 0.22, 1),
+                        height 0.3s cubic-bezier(0.19, 1, 0.22, 1),
+                        background-color 0.3s, border-color 0.3s;
+            display: flex; align-items: center; justify-content: center; overflow: hidden;
+        }
+
+        #cursor-text { font-size: 14px; font-weight: 500; color: white; opacity: 0; white-space: nowrap; transition: opacity 0.2s; letter-spacing: 0.05em; }
+
+        #cursor-follower.active-enter, #cursor-follower.active-chat {
+            width: 80px; height: 80px;
+            background-color: rgba(29, 29, 31, 0.6); 
+            border-color: transparent; 
+        }
+
+        #cursor-follower.active-enter #cursor-text, #cursor-follower.active-chat #cursor-text { opacity: 1; }
+
+        /* 레이아웃 */
+        .grid-container {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            padding: 0 120px; box-sizing: border-box;
+            display: grid; grid-template-columns: repeat(12, 1fr); column-gap: 24px;
+            pointer-events: none; z-index: 10; align-content: start; 
+        }
+        .grid-col { background-color: rgba(255, 0, 0, 0.0); height: 100%; }
+
+        .menu-wrapper { grid-column: 1 / span 4; align-self: start; margin-top: 120px; pointer-events: auto; }
+        .menu-item { font-size: 3rem; font-weight: 700; line-height: 1.1; margin-bottom: 12px; color: #1D1D1F; transition: opacity 0.3s; letter-spacing: -0.02em; }
+        .menu-item:hover { opacity: 0.5; }
+
+        #canvas-container { width: 100%; height: 100%; position: absolute; top: 0; left: 0; z-index: 1; }
+
+        /* ---------------------------------------------------- */
+        /* ★ [수정] 챗봇 박스 사이즈 조절하는 곳 */
+        /* ---------------------------------------------------- */
+        #chat-interface {
+            display: none; 
+            position: absolute; 
+            bottom: 40px; right: 40px; 
+            
+            /* ▼ 여기 숫자를 바꾸면 크기가 변합니다 */
+            width: 360px; 
+            height: 500px;
+            
+            background: rgba(255, 255, 255, 0.95); border-radius: 24px; 
+            box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+            z-index: 100; flex-direction: column; overflow: hidden; border: 1px solid rgba(0,0,0,0.05);
+            animation: popUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        @keyframes popUp { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+        .chat-header { background: linear-gradient(90deg, #2b50f1, #9c6dff); padding: 15px 20px; color: white; font-weight: 700; display: flex; justify-content: space-between; align-items: center; }
+        .chat-controls { display: flex; gap: 10px; align-items: center; }
+        .win-btn { cursor: pointer; opacity: 0.7; font-size: 1.2rem; transition: opacity 0.2s; }
+        .win-btn:hover { opacity: 1; }
+        .chat-body { flex: 1; padding: 20px; overflow-y: auto; font-size: 0.9rem; }
+        .message { margin-bottom: 12px; padding: 10px 14px; border-radius: 14px; max-width: 80%; line-height: 1.4; }
+        .bot { background: #F0F0F5; color: #333; align-self: flex-start; border-bottom-left-radius: 2px; }
+        .user { background: #2b50f1; color: white; align-self: flex-end; margin-left: auto; border-bottom-right-radius: 2px; }
+        .chat-input-area { padding: 15px; border-top: 1px solid #eee; display: flex; gap: 10px; }
+        .chat-input { flex: 1; border: 1px solid #ddd; border-radius: 20px; padding: 10px 15px; outline: none; font-family: 'Pretendard'; }
+        .send-btn { background: #2b50f1; color: white; border: none; border-radius: 50%; width: 36px; height: 36px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+
+        #chat-minimized-icon {
+            display: none; position: absolute; bottom: 40px; right: 40px; width: 60px; height: 60px;
+            background: #2b50f1; border-radius: 50%; box-shadow: 0 5px 20px rgba(43, 80, 241, 0.4);
+            z-index: 100; cursor: pointer; align-items: center; justify-content: center; font-size: 1.8rem; color: white;
+            transition: transform 0.2s; animation: bounceIn 0.3s;
+        }
+        #chat-minimized-icon:hover { transform: scale(1.1); }
+        @keyframes bounceIn { from { transform: scale(0); } to { transform: scale(1); } }
+    </style>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+</head>
+<body>
+
+    <div id="cursor-follower">
+        <span id="cursor-text"></span>
+    </div>
+
+    <div class="grid-container">
+        <div class="grid-col"></div><div class="grid-col"></div><div class="grid-col"></div><div class="grid-col"></div>
+        <div class="grid-col"></div><div class="grid-col"></div><div class="grid-col"></div><div class="grid-col"></div>
+        <div class="grid-col"></div><div class="grid-col"></div><div class="grid-col"></div><div class="grid-col"></div>
+
+        <div class="menu-wrapper">
+            <div class="menu-item link-item" onclick="location.href='about.html'">ABOUT</div>
+            <div class="menu-item link-item" onclick="location.href='works.html'">WORKS</div>
+        </div>
+    </div>
+
+    <div id="chat-interface" onmouseenter="setCursorDefault()" onmouseleave="setCursorActive()">
+        <div class="chat-header">
+            <span>HNKL AI</span>
+            <div class="chat-controls">
+                <span class="win-btn" onclick="minimizeChat()" title="최소화">−</span>
+                <span class="win-btn" onclick="closeChat()" title="닫기">✕</span>
+            </div>
+        </div>
+        <div class="chat-body" id="chat-body">
+            <div class="message bot">안녕하세요! 저는 이 포트폴리오의 AI 도슨트입니다. 궁금한 점을 물어보세요.</div>
+        </div>
+        <div class="chat-input-area">
+            <input type="text" class="chat-input" id="chat-input" placeholder="질문을 입력하세요..." onkeypress="if(event.key==='Enter') sendMessage()">
+            <button class="send-btn" onclick="sendMessage()">→</button>
+        </div>
+    </div>
+
+    <div id="chat-minimized-icon" onclick="restoreChat()">💬</div>
+
+    <div id="canvas-container"></div>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xF5F5F7); 
+
+        const camera = new THREE.PerspectiveCamera(8, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 50, 75); 
+        camera.lookAt(0, 0, 0);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+        const params = {
+            color1: '#2b50f1', color2: '#9c6dff', color3: '#ffffff', color4: '#4fd1c5', color5: '#2b50f1',
+            speed: 0.2, scale: 0.006, offset: 0.8, baseRotX: 90.0, baseRotY: 0.0, baseRotZ: 0.0 
+        };
+
+        const depthMaterial = new THREE.ShaderMaterial({
+            uniforms: {
+                uColor1: { value: new THREE.Color(params.color1) },
+                uColor2: { value: new THREE.Color(params.color2) },
+                uColor3: { value: new THREE.Color(params.color3) },
+                uColor4: { value: new THREE.Color(params.color4) },
+                uColor5: { value: new THREE.Color(params.color5) },
+                uTime: { value: 0 },
+                uScale: { value: params.scale },
+                uOffset: { value: params.offset },
+                uRotX: { value: params.baseRotX },
+                uRotY: { value: params.baseRotY },
+                uRotZ: { value: params.baseRotZ }
+            },
+            vertexShader: `
+                uniform float uRotX; uniform float uRotY; uniform float uRotZ;
+                varying float vPos; 
+                mat3 rotateX(float angle) { float s = sin(angle); float c = cos(angle); return mat3(1.0, 0.0, 0.0, 0.0, c, -s, 0.0, s, c); }
+                mat3 rotateY(float angle) { float s = sin(angle); float c = cos(angle); return mat3(c, 0.0, s, 0.0, 1.0, 0.0, -s, 0.0, c); }
+                mat3 rotateZ(float angle) { float s = sin(angle); float c = cos(angle); return mat3(c, -s, 0.0, s, c, 0.0, 0.0, 0.0, 1.0); }
+                void main() {
+                    float rx = radians(uRotX); float ry = radians(uRotY); float rz = radians(uRotZ);
+                    vec3 transformedPos = position;
+                    transformedPos = rotateX(rx) * rotateY(ry) * rotateZ(rz) * transformedPos;
+                    vPos = transformedPos.y;
+                    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                }
+            `,
+            fragmentShader: `
+                uniform vec3 uColor1; uniform vec3 uColor2; uniform vec3 uColor3; uniform vec3 uColor4; uniform vec3 uColor5;
+                uniform float uTime; uniform float uScale; uniform float uOffset;
+                varying float vPos;
+                void main() {
+                    float t = fract((vPos * uScale) + uOffset - uTime);
+                    vec3 finalColor;
+                    if (t < 0.25) { finalColor = mix(uColor1, uColor2, t * 4.0); } 
+                    else if (t < 0.5) { finalColor = mix(uColor2, uColor3, (t - 0.25) * 4.0); } 
+                    else if (t < 0.75) { finalColor = mix(uColor3, uColor4, (t - 0.5) * 4.0); } 
+                    else { finalColor = mix(uColor4, uColor5, (t - 0.75) * 4.0); }
+                    gl_FragColor = vec4(finalColor, 1.0);
+                }
+            `
+        });
+
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.75);
+        scene.add(ambientLight);
+        const dirLight = new THREE.DirectionalLight(0xffffff, 4.5);
+        dirLight.position.set(20, 41.05, 15); 
+        dirLight.castShadow = true; dirLight.shadow.radius = 50; 
+        dirLight.shadow.mapSize.width = 2048; dirLight.shadow.mapSize.height = 2048; 
+        dirLight.shadow.camera.top = 30; dirLight.shadow.camera.bottom = -30; 
+        dirLight.shadow.camera.left = -30; dirLight.shadow.camera.right = 30; dirLight.shadow.camera.far = 100; 
+        scene.add(dirLight);
+        const planeGeometry = new THREE.PlaneGeometry(100, 100);
+        const planeMaterial = new THREE.ShadowMaterial({ opacity: 0.104, color: 0x000000 });
+        const plane = new THREE.Mesh(planeGeometry, planeMaterial);
+        plane.rotation.x = -Math.PI / 2; plane.position.y = -3.5; plane.receiveShadow = true;
+        scene.add(plane);
+
+        let character = null;
+        const baseScale = 1.25; 
+        const groundY = -3;
+
+        const loader = new GLTFLoader();
+        loader.load('model_2.glb', function (gltf) {
+            character = gltf.scene;
+            character.scale.set(baseScale, baseScale, baseScale);
+            character.position.y = groundY;
+            character.traverse(function (node) {
+                if (node.isMesh) { node.material = depthMaterial; node.castShadow = true; }
+            });
+            scene.add(character);
+        });
+
+        const particles = [];
+        const particleGroup = new THREE.Group();
+        scene.add(particleGroup);
+
+        function createCircleTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 64; canvas.height = 64;
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, 64, 64);
+            ctx.beginPath(); ctx.arc(32, 32, 28, 0, Math.PI * 2); ctx.fillStyle = 'white'; ctx.fill();
+            return new THREE.CanvasTexture(canvas);
+        }
+        const circleTexture = createCircleTexture();
+        const particleMaterialBase = new THREE.SpriteMaterial({ map: circleTexture, transparent: true, opacity: 1.0 });
+
+        const baseColors = [new THREE.Color(params.color1), new THREE.Color(params.color2), new THREE.Color(params.color3), new THREE.Color(params.color4), new THREE.Color(params.color5)];
+
+        function spawnParticle(position, velocityX, currentTime) {
+            const material = particleMaterialBase.clone();
+            material.color.copy(baseColors[Math.floor(Math.random() * baseColors.length)]);
+            const sprite = new THREE.Sprite(material);
+            sprite.position.copy(position);
+            const offset = 0.8;
+            if (velocityX > 0) { sprite.position.x -= offset; } else { sprite.position.x += offset; }
+            sprite.position.y += 0.5; sprite.position.z -= 0.5; 
+            const scale = 0.3 + Math.random() * 0.3;
+            sprite.scale.set(scale, scale, scale);
+            const velocity = new THREE.Vector3(-velocityX * 0.5 + (Math.random() - 0.5) * 0.1, Math.random() * 0.05, -0.05 - Math.random() * 0.05);
+            particleGroup.add(sprite);
+            particles.push({ sprite, velocity, life: 1.0, material }); 
+        }
+
+        let mouseX = 0; let mouseY = 0;
+        let pixelMouseX = 0; let pixelMouseY = 0;
+        let currentX = 0; let velocityX = 0;
+        const baseTension = 0.001; let tension = baseTension; const friction = 0.93;
+        let currentRotX = params.baseRotX; let currentRotY = params.baseRotY;
+
+        let isJumping = false; let isSquashing = false; let isLanding = false;
+        let velocityY = 0; const gravity = -0.025; const jumpPower = 0.45; const bounceDamping = 0.3; 
+        let landingTimer = null;
+
+        const raycaster = new THREE.Raycaster();
+        const pointer = new THREE.Vector2();
+
+        const cursorFollower = document.getElementById('cursor-follower');
+        const cursorText = document.getElementById('cursor-text');
+        let followerX = 0; let followerY = 0;
+        let isHoveringLink = false;
+        let isHoveringBall = false;
+
+        window.addEventListener('pointerdown', (event) => {
+            pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
+            pointer.y = - (event.clientY / window.innerHeight) * 2 + 1;
+            raycaster.setFromCamera(pointer, camera);
+
+            let clickedBall = false;
+            if (character) {
+                const intersects = raycaster.intersectObject(character, true);
+                if (intersects.length > 0) { clickedBall = true; }
+            }
+
+            if (clickedBall) {
+                const chatUI = document.getElementById('chat-interface');
+                const minIcon = document.getElementById('chat-minimized-icon');
+                if (chatUI.style.display === 'none' && minIcon.style.display === 'none') { toggleChat(true); } 
+                else { restoreChat(); }
+            } else {
+                if (!isJumping && !isSquashing && !isLanding) { isSquashing = true; }
+            }
+        });
+
+        document.addEventListener('mousemove', (event) => {
+            mouseX = (event.clientX / window.innerWidth) * 2 - 1;
+            mouseY = -(event.clientY / window.innerHeight) * 2 + 1;
+            pixelMouseX = event.clientX;
+            pixelMouseY = event.clientY;
+        });
+
+        const linkItems = document.querySelectorAll('.link-item');
+        linkItems.forEach(item => {
+            item.addEventListener('mouseenter', () => { isHoveringLink = true; updateCursorState(); });
+            item.addEventListener('mouseleave', () => { isHoveringLink = false; updateCursorState(); });
+        });
+
+        function updateCursorState() {
+            cursorFollower.classList.remove('active-enter', 'active-chat');
+            cursorText.innerText = "";
+            if (isHoveringLink) {
+                cursorFollower.classList.add('active-enter');
+                cursorText.innerText = "ENTER";
+            } else if (isHoveringBall) {
+                cursorFollower.classList.add('active-chat');
+                cursorText.innerText = "CHAT";
+            }
+        }
+        
+        window.setCursorDefault = function() { }
+        window.setCursorActive = function() { }
+
+        window.closeChat = function() { document.getElementById('chat-interface').style.display = 'none'; document.getElementById('chat-minimized-icon').style.display = 'none'; }
+        window.minimizeChat = function() { document.getElementById('chat-interface').style.display = 'none'; document.getElementById('chat-minimized-icon').style.display = 'flex'; }
+        window.restoreChat = function() { document.getElementById('chat-interface').style.display = 'flex'; document.getElementById('chat-minimized-icon').style.display = 'none'; }
+        window.toggleChat = function(show) { if (show) restoreChat(); else closeChat(); }
+
+        window.sendMessage = async function() {
+            const input = document.getElementById('chat-input');
+            const body = document.getElementById('chat-body');
+            const text = input.value.trim();
+            if (!text) return;
+            body.innerHTML += `<div class="message user">${text}</div>`;
+            input.value = '';
+            body.scrollTop = body.scrollHeight;
+            const loadingId = 'loading-' + Date.now();
+            body.innerHTML += `<div class="message bot" id="${loadingId}">...</div>`;
+            body.scrollTop = body.scrollHeight;
+            const responseText = await callGeminiAPI(text);
+            document.getElementById(loadingId).remove();
+            body.innerHTML += `<div class="message bot">${responseText}</div>`;
+            body.scrollTop = body.scrollHeight;
+        }
+
+        async function callGeminiAPI(prompt) {
+            return new Promise((resolve) => {
+                setTimeout(() => {
+                    const answers = ["이 포트폴리오의 주인은 3D 인터랙티브 웹 개발에 관심이 많습니다.", "방금 보신 3D 공은 Three.js와 커스텀 쉐이더로 제작되었습니다.", "마우스 클릭 시 발생하는 물리 엔진은 관성과 탄성을 계산한 결과입니다.", "이 디자인은 그리드 시스템 12컬럼을 기반으로 설계되었습니다.", "더 궁금한 점이 있으신가요?"];
+                    const randomAns = answers[Math.floor(Math.random() * answers.length)];
+                    resolve(randomAns);
+                }, 1000); 
+            });
+        }
+
+        const clock = new THREE.Clock();
+        const lookRange = 45; 
+        const lerp = (start, end, amt) => (1 - amt) * start + amt * end;
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const delta = clock.getDelta();
+            
+            followerX += (pixelMouseX - followerX) * 0.5;
+            followerY += (pixelMouseY - followerY) * 0.5;
+            cursorFollower.style.transform = `translate(${followerX}px, ${followerY}px) translate(-50%, -50%)`;
+
+            if (character) {
+                pointer.x = mouseX; pointer.y = mouseY; 
+                raycaster.setFromCamera(pointer, camera);
+                const intersects = raycaster.intersectObject(character, true);
+                const isIntersecting = intersects.length > 0;
+                if (isIntersecting !== isHoveringBall) {
+                    isHoveringBall = isIntersecting;
+                    updateCursorState();
+                }
+            }
+
+            const currentTime = depthMaterial.uniforms.uTime.value += delta * params.speed;
+            
+            const targetRotY = mouseX * lookRange; 
+            const targetRotX = params.baseRotX + (-mouseY * lookRange); 
+            currentRotX += (targetRotX - currentRotX) * 0.03;
+            currentRotY += (targetRotY - currentRotY) * 0.03;
+            depthMaterial.uniforms.uRotX.value = currentRotX;
+            depthMaterial.uniforms.uRotY.value = currentRotY;
+
+            if (character) {
+                if (isSquashing) {
+                    character.scale.y = lerp(character.scale.y, baseScale * 0.5, 0.4);
+                    character.scale.x = lerp(character.scale.x, baseScale * 1.5, 0.4);
+                    character.scale.z = lerp(character.scale.z, baseScale * 1.5, 0.4);
+                    if (character.scale.y <= baseScale * 0.6) { isSquashing = false; isJumping = true; velocityY = jumpPower; }
+                } 
+                else if (isJumping) {
+                    velocityY += gravity; character.position.y += velocityY;
+                    const stretchAmount = 1 + Math.abs(velocityY) * 0.8; const squashAmount = 1 / Math.sqrt(stretchAmount);
+                    character.scale.y = lerp(character.scale.y, baseScale * stretchAmount, 0.3);
+                    character.scale.x = lerp(character.scale.x, baseScale * squashAmount, 0.3);
+                    character.scale.z = lerp(character.scale.z, baseScale * squashAmount, 0.3);
+                    if (character.position.y <= groundY) {
+                        character.position.y = groundY;
+                        if (Math.abs(velocityY) > 0.1) { velocityY = -velocityY * bounceDamping; character.scale.y = baseScale * 0.8; character.scale.x = baseScale * 1.2; character.scale.z = baseScale * 1.2; } 
+                        else {
+                            isJumping = false; velocityY = 0; character.scale.set(baseScale * 1.3, baseScale * 0.7, baseScale * 1.3);
+                            isLanding = true; tension = baseTension * 1.5; 
+                            if (landingTimer) clearTimeout(landingTimer);
+                            landingTimer = setTimeout(() => { isLanding = false; tension = baseTension; }, 500);
+                        }
+                    }
+                } else {
+                    character.scale.y = lerp(character.scale.y, baseScale, 0.3);
+                    character.scale.x = lerp(character.scale.x, baseScale, 0.3);
+                    character.scale.z = lerp(character.scale.z, baseScale, 0.3);
+                }
+
+                if (!isJumping || isLanding) {
+                    const targetX = mouseX;
+                    const acceleration = (targetX - currentX) * tension;
+                    velocityX += acceleration;
+                }
+                velocityX *= (isJumping && !isLanding) ? 0.99 : friction;
+                currentX += velocityX;
+                character.position.x = currentX * 10.0;
+                if (!isJumping) { character.rotation.z = -currentX * Math.PI * 4; }
+
+                if (Math.abs(velocityX) > 0.005 && !isJumping) {
+                    if (Math.random() > 0.9) {
+                        spawnParticle(character.position, velocityX, currentTime);
+                    }
+                }
+            }
+
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.sprite.position.add(p.velocity); 
+                p.sprite.scale.multiplyScalar(0.96); 
+                p.life -= 0.02;
+                if (p.sprite.scale.x < 0.05 || p.life <= 0) {
+                    particleGroup.remove(p.sprite);
+                    p.material.dispose();
+                    particles.splice(i, 1);
+                }
+            }
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>
