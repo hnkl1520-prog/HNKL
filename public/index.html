@@ -119,9 +119,11 @@
 
         /* 로딩 애니메이션 (점 3개) */
         .typing-indicator {
-            display: none; /* 평소엔 숨김 */
-            align-items: center;
-            margin-bottom: 15px;
+            display: flex;             /* none을 flex로 변경! (중요: 가로로 나열) */
+            align-items: center;       /* 위아래 가운데 정렬 */
+            justify-content: center;   /* 좌우 가운데 정렬 */
+            margin: 0;                 /* 불필요한 여백 제거 (말풍선 안에 쏙 들어가게) */
+            min-height: 20px;          /* 높이 살짝 확보 */
         }
         .typing-indicator span {
             height: 10px;
@@ -185,11 +187,13 @@
         </div>
         <div class="chat-body" id="chat-body">
             <div class="message bot">안녕하세요! 저는 이 포트폴리오의 AI 도슨트입니다. 궁금한 점을 물어보세요.</div>
-            <div class="typing-indicator" id="loading-dots">
-                <span></span>
-                <span></span>
-                <span></span>
-            </div>  
+            <div class="message bot" id="loading-message" style="display: none;">
+                <div class="typing-indicator">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            </div>
         </div>
         <div class="chat-input-area">
             <input type="text" class="chat-input" id="chat-input" placeholder="질문을 입력하세요..." onkeypress="if(event.key==='Enter') sendMessage()">
@@ -417,7 +421,7 @@
         window.restoreChat = function() { document.getElementById('chat-interface').style.display = 'flex'; document.getElementById('chat-minimized-icon').style.display = 'none'; }
         window.toggleChat = function(show) { if (show) restoreChat(); else closeChat(); }
 
-        /* ▼ 324번째 줄: 기존 함수 지우고 이걸로 덮어쓰기 */
+        /* ▼ 324번째 줄 근처 sendMessage 함수 수정 */
         window.sendMessage = async function() {
             const input = document.getElementById('chat-input');
             const body = document.getElementById('chat-body');
@@ -425,34 +429,35 @@
             
             if (!text) return;
 
-            // 1. 내 질문 화면에 표시
+            // 1. 내 질문 표시
             body.innerHTML += `<div class="message user">${text}</div>`;
             input.value = '';
             body.scrollTop = body.scrollHeight;
 
-            // 2. 로딩 애니메이션 켜기 (보여주기)
-            const loadingDots = document.getElementById('loading-dots');
-            loadingDots.style.display = 'flex';
-            body.scrollTop = body.scrollHeight; // 로딩 보이게 스크롤 내리기
+            // 2. 로딩 말풍선 켜기! (이름이 loading-message로 바뀜)
+            const loadingMessage = document.getElementById('loading-message');
+            loadingMessage.style.display = 'block'; // flex 대신 block이나 inherit 추천
+            body.appendChild(loadingMessage); // 로딩바를 맨 아래로 내리기
+            body.scrollTop = body.scrollHeight;
 
             try {
-                // 3. AI에게 질문 보내고 기다리기
+                // 3. AI 답변 기다리기
                 const responseText = await callGeminiAPI(text);
 
-                // 4. 로딩 끄기 (숨기기)
-                loadingDots.style.display = 'none';
+                // 4. 로딩 말풍선 끄기
+                loadingMessage.style.display = 'none';
 
-                // 5. 답변 화면에 표시
+                // 5. 답변 표시
                 body.innerHTML += `<div class="message bot">${responseText}</div>`;
                 body.scrollTop = body.scrollHeight;
 
-                // (중요) 로딩바를 다시 맨 아래로 이동시켜 둠 (다음 대화를 위해)
-                body.appendChild(loadingDots);
+                // (중요) 로딩 말풍선을 다시 채팅창 맨 끝에 붙여둠 (다음 대화 준비)
+                body.appendChild(loadingMessage);
 
             } catch (error) {
-                // 에러 나도 로딩은 끄기
-                loadingDots.style.display = 'none';
-                body.appendChild(loadingDots); // 위치 초기화
+                // 에러 시 끄기
+                loadingMessage.style.display = 'none';
+                body.appendChild(loadingMessage);
             }
         }
 
