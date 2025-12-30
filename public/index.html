@@ -59,7 +59,7 @@
         .grid-col { background-color: rgba(255, 0, 0, 0.0); height: 100%; }
 
         .menu-wrapper { grid-column: 1 / span 4; align-self: start; margin-top: 120px; pointer-events: auto; }
-        .menu-item { width: fit-content; font-size: clamp(2rem, 3vw, 4rem); font-weight: 700; line-height: 1.1; margin-bottom: 12px; color: #1D1D1F; transition: opacity 0.3s; letter-spacing: -0.02em; }
+        .menu-item { width: fit-content; font-size: clamp(2rem, 3vw, 3rem); font-weight: 700; line-height: 1.1; margin-bottom: 12px; color: #1D1D1F; transition: opacity 0.3s; letter-spacing: -0.02em; }
         .menu-item:hover { opacity: 0.5; }
 
         #canvas-container { width: 100%; height: 100%; position: absolute; top: 0; left: 0; z-index: 1; }
@@ -111,7 +111,7 @@
         
         /* 아이콘 필터 스타일 */
         .svg-icon {
-            width: 24px; height: 24px; display: block;
+            width: 20px; height: 20px; display: block;
         }
         .svg-main {
             transition: transform 0.2s;
@@ -187,7 +187,7 @@
             </div>
         </div>
         <div class="chat-body" id="chat-body">
-            <div class="message bot">안녕하세요! 저는 이 포트폴리오의 AI 도슨트입니다. 궁금한 점을 물어보세요.</div>
+            <div class="message bot">안녕하세요! 저는 이 사이트의 AI 도우미입니다. 궁금한 점을 물어보세요.</div>
             <div class="message bot" id="loading-message" style="display: none;">
                 <div class="typing-indicator">
                     <span></span>
@@ -467,11 +467,11 @@
        /* ▼ [배포용] Netlify 비밀 요원에게 요청하는 함수 */
         async function callGeminiAPI(prompt) {
             try {
-                // 1. 내가 만든 비밀 요원(chat.js) 주소
-                const response = await fetch('/.netlify/functions/chat', {
+                
+                const response = await fetch('http://127.0.0.1:5001/hnkl-49a5f/us-central1/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ prompt: prompt }) // 질문만 쏙 보내기
+                    body: JSON.stringify({ prompt: prompt }) 
                 });
 
                 const data = await response.json();

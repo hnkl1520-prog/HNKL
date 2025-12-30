@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portfolio - Logic & Density</title>
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.8/dist/web/static/pretendard.css" />
+    
+    <style>
+        :root {
+            --bg-color: #050505;
+            --text-color: #ffffff;
+            --accent-color: #2997ff; /* HNKL Blue */
+            --sub-color-1: #9c6dff;  /* Purple */
+            --sub-color-2: #4fd1c5;  /* Mint */
+            --dim-color: #555555;
+            --text-sub: #888888;
+        }
+
+        body {
+            margin: 0; padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Pretendard', sans-serif;
+            overflow-x: hidden; width: 100%;
+        }
+
+        /* 네비게이션 */
+        .nav-home {
+            position: fixed; top: 40px; left: 40px;
+            font-weight: 700; font-size: 1.2rem;
+            z-index: 100; cursor: pointer;
+            mix-blend-mode: exclusion;
+            color: white; text-decoration: none;
+        }
+
+        /* 공통 유틸리티 */
+        .container {
+            max-width: 1200px; margin: 0 auto; padding: 0 20px; box-sizing: border-box;
+        }
+
+        /* 1. HERO SECTION */
+        #hero-section {
+            position: relative; width: 100%; height: 100vh;
+            overflow: hidden; display: flex; align-items: center; justify-content: center;
+        }
+        #particle-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
+        
+        .hero-content { position: absolute; width: 100%; text-align: center; z-index: 10; pointer-events: none; }
+        .hero-title { font-size: 3.5rem; font-weight: 700; line-height: 1.3; margin-bottom: 1.5rem; word-break: keep-all; }
+        .hero-desc { font-size: 1.1rem; font-weight: 300; color: #ddd; }
+        
+        .layer-blur { opacity: 0.3; filter: blur(8px); transition: opacity 0.3s; }
+        .layer-sharp {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 100%; height: 100vh; display: flex; flex-direction: column;
+            justify-content: center; align-items: center;
+            clip-path: circle(0px at 50% 50%); background: transparent; z-index: 20;
+        }
+        .layer-sharp .hero-title span { color: var(--accent-color); }
+        .scroll-indicator {
+            position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
+            font-size: 0.8rem; opacity: 0.5; animation: bounce 2s infinite; z-index: 30;
+        }
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% {transform: translateX(-50%) translateY(0);}
+            40% {transform: translateX(-50%) translateY(-10px);}
+            60% {transform: translateX(-50%) translateY(-5px);}
+        }
+
+        /* 2. PHILOSOPHY SECTION */
+        #philosophy-section { position: relative; width: 100%; height: 350vh; display: flex; }
+        .philo-container { display: flex; width: 100%; max-width: 1200px; margin: 0 auto; }
+        .text-col { width: 50%; padding-right: 50px; box-sizing: border-box; z-index: 10; }
+        .text-spacer { height: 40vh; }
+        .text-block {
+            height: 80vh; display: flex; flex-direction: column; justify-content: center;
+            opacity: 0.1; transition: opacity 0.6s ease, transform 0.6s ease;
+            transform: translateY(20px); margin-bottom: 20vh;
+        }
+        .text-block.active { opacity: 1; transform: translateY(0); }
+        .philo-label {
+            color: var(--accent-color); font-size: 14px; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 2px; margin-bottom: 20px; display: block;
+        }
+        .philo-desc { font-size: 1.8rem; line-height: 1.6; font-weight: 600; word-break: keep-all; }
+        .philo-sub { font-size: 1.05rem; line-height: 1.6; color: var(--text-sub); margin-top: 20px; font-weight: 300; word-break: keep-all; }
+        .visual-col {
+            width: 50%; height: 100vh; position: sticky; top: 0;
+            display: flex; align-items: center; justify-content: center;
+        }
+        #three-canvas { width: 100%; height: 100%; outline: none; }
+
+        /* 3. PROFILE & EXPERIENCE */
+        #profile-section { padding: 150px 0; background-color: #0a0a0a; position: relative; z-index: 10; }
+        .section-header {
+            font-size: 1rem; text-transform: uppercase; letter-spacing: 2px;
+            color: var(--dim-color); margin-bottom: 50px; border-bottom: 1px solid #222; padding-bottom: 20px;
+        }
+        .resume-grid { display: grid; grid-template-columns: 1fr 2fr; gap: 50px; margin-bottom: 80px; }
+        .resume-title { font-size: 1.5rem; font-weight: 700; color: #fff; }
+        .resume-list { list-style: none; padding: 0; margin: 0; }
+        .resume-item { margin-bottom: 40px; padding-bottom: 40px; border-bottom: 1px solid #222; }
+        .resume-item:last-child { border-bottom: none; }
+        .date { font-family: monospace; color: var(--accent-color); margin-bottom: 10px; display: block; }
+        .role-name { font-size: 1.6rem; font-weight: 600; margin-bottom: 8px; transition: all 0.3s ease; cursor: default; }
+        .role-name:hover { color: #fff; text-shadow: 0 0 15px rgba(41, 151, 255, 0.8); }
+        .role-desc { color: #888; font-size: 1rem; }
+
+        /* 4. CAPABILITIES */
+        #skills-section { padding: 100px 0 200px 0; position: relative; overflow: hidden; }
+        .skills-container { display: flex; flex-direction: column; gap: 20px; perspective: 1000px; }
+        .skill-item {
+            font-size: 4rem; font-weight: 800; color: #333; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            cursor: pointer; transform-style: preserve-3d; width: fit-content;
+        }
+        .skill-item:hover { color: #fff; transform: translateZ(50px) rotateX(10deg); text-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .distortion-mode { animation: glitch-anim 0.3s infinite; }
+        @keyframes glitch-anim {
+            0% { transform: translate(0); }
+            20% { transform: translate(-2px, 2px); filter: hue-rotate(90deg); }
+            40% { transform: translate(-2px, -2px); }
+            60% { transform: translate(2px, 2px); filter: hue-rotate(-90deg); }
+            80% { transform: translate(2px, -2px); }
+            100% { transform: translate(0); }
+        }
+
+        /* FOOTER */
+        .footer { text-align: center; padding: 100px 20px; border-top: 1px solid #222; }
+        .final-msg { font-size: 1.5rem; margin-bottom: 30px; color: #ccc; }
+        .contact-btn {
+            display: inline-block; padding: 15px 40px; border: 1px solid var(--accent-color);
+            color: var(--accent-color); text-decoration: none; border-radius: 50px; transition: all 0.3s;
+        }
+        .contact-btn:hover { background: var(--accent-color); color: #fff; box-shadow: 0 0 20px rgba(41, 151, 255, 0.4); }
+    </style>
+</head>
+<body>
+
+    <a href="index.html" class="nav-home">HNKL</a>
+
+    <!-- 1. HERO -->
+    <section id="hero-section">
+        <canvas id="particle-canvas"></canvas>
+        <div class="hero-content layer-blur">
+            <h1 class="hero-title">
+                탄탄한 논리 위에<br>
+                밀도 높은 시각화와 인터랙션을 더해<br>
+                설득하는 디자이너
+            </h1>
+            <p class="hero-desc">일상을 깊이 관찰하고, 데이터 이면에 숨겨진 진짜 니즈를 발견하여 문제를 정의합니다.</p>
+        </div>
+        <div class="hero-content layer-sharp" id="hero-lens">
+            <h1 class="hero-title">
+                탄탄한 논리 위에<br>
+                밀도 높은 시각화와 인터랙션을 더해<br>
+                <span>설득하는 디자이너</span>
+            </h1>
+            <p class="hero-desc" style="color:#fff;">일상을 깊이 관찰하고, 데이터 이면에 숨겨진 진짜 니즈를 발견하여 문제를 정의합니다.</p>
+        </div>
+        <div class="scroll-indicator">SCROLL DOWN</div>
+    </section>
+
+    <!-- 2. PHILOSOPHY -->
+    <section id="philosophy-section">
+        <div class="philo-container">
+            <div class="text-col">
+                <div class="text-spacer"></div>
+                <!-- Text 1 -->
+                <div class="text-block active" id="philo-text-1">
+                    <span class="philo-label">01. Logic & Definition</span>
+                    <p class="philo-desc">
+                        단순한 심미성을 넘어<br>
+                        사용자가 납득할 수 있는<br>
+                        <strong>논리적 타당성</strong>을<br>
+                        먼저 고민합니다.
+                    </p>
+                    <p class="philo-sub">
+                        일상을 깊이 관찰하고 데이터 이면에 숨겨진<br>
+                        진짜 니즈를 발견하여 문제를 정의합니다.
+                    </p>
+                </div>
+                <!-- Text 2 -->
+                <div class="text-block" id="philo-text-2">
+                    <span class="philo-label">02. Density & Visualization</span>
+                    <p class="philo-desc">
+                        이를 바탕으로 도출한<br>
+                        인사이트와 아이디어를<br>
+                        감각적이고 <strong>완성도 높은 비주얼</strong>로<br>
+                        표현해냅니다.
+                    </p>
+                    <p class="philo-sub">
+                        설계된 논리 위에 시각적 밀도를 더해<br>
+                        설득력 있는 결과물을 만듭니다.
+                    </p>
+                </div>
+                <!-- Text 3 -->
+                <div class="text-block" id="philo-text-3">
+                    <span class="philo-label">03. Experience & Interaction</span>
+                    <p class="philo-desc">
+                        정적인 화면에 머무르지 않고,<br>
+                        <strong>입체적인 인터랙션</strong>으로 구현하여<br>
+                        즐거운 경험으로 완성합니다.
+                    </p>
+                    <p class="philo-sub">
+                        논리적인 사용성 위에 시각적 재미를 더해,<br>
+                        사용자 경험의 밀도를 높이는 디자이너입니다.
+                    </p>
+                </div>
+                <div style="height: 30vh;"></div>
+            </div>
+            <div class="visual-col">
+                <canvas id="three-canvas"></canvas>
+            </div>
+        </div>
+    </section>
+
+    <!-- 3. PROFILE -->
+    <section id="profile-section">
+        <div class="container">
+            <div class="section-header">03. Profile & Experience</div>
+            <div class="resume-grid">
+                <div class="resume-title">Education</div>
+                <ul class="resume-list">
+                    <li class="resume-item">
+                        <span class="date">GRADUATE</span>
+                        <div class="role-name">홍익대학교 미술대학</div>
+                        <div class="role-desc">디자인학부 산업디자인 전공 (제품 / 인터랙션 심화)</div>
+                    </li>
+                </ul>
+            </div>
+            <div class="resume-grid">
+                <div class="resume-title">Experience</div>
+                <ul class="resume-list">
+                    <li class="resume-item">
+                        <span class="date">2025.02 ~ Present</span>
+                        <div class="role-name">제일기획 (Cheil)</div>
+                        <div class="role-desc">프리랜서 / 글로벌 삼성 리테일 컨텐츠 기획</div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <!-- 4. SKILLS -->
+    <section id="skills-section">
+        <div class="container">
+            <div class="section-header">04. What I Can Do</div>
+            <div class="skills-container">
+                <div class="skill-item">UX UI Design</div>
+                <div class="skill-item">Interaction</div>
+                <div class="skill-item">3D Prototyping</div>
+                <div class="skill-item" id="xr-skill">XR Experience</div>
+            </div>
+        </div>
+    </section>
+
+    <footer class="footer">
+        <p class="final-msg">
+            논리적인 사용성 위에 시각적 재미를 더해,<br>
+            사용자 경험의 밀도를 높이는 디자이너 [이름]입니다.
+        </p>
+        <a href="mailto:email@example.com" class="contact-btn">Get In Touch</a>
+    </footer>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // --------------------------------------------------------
+        // [LOGIC 1] HERO PARTICLES
+        // --------------------------------------------------------
+        (function() {
+            const canvas = document.getElementById('particle-canvas');
+            const ctx = canvas.getContext('2d');
+            const lensLayer = document.getElementById('hero-lens');
+            const LENS_RADIUS = 200;
+            let width, height, particles = [], mouseX = -1000, mouseY = -1000;
+            document.addEventListener('mousemove', (e) => {
+                if(window.scrollY < window.innerHeight) {
+                    mouseX = e.clientX; mouseY = e.clientY;
+                    lensLayer.style.clipPath = `circle(${LENS_RADIUS}px at ${mouseX}px ${mouseY}px)`;
+                }
+            });
+            class Particle {
+                constructor(tx, ty) { this.tx = tx; this.ty = ty; this.x = Math.random()*width; this.y = Math.random()*height; this.vx = (Math.random()-0.5)*0.5; this.vy = (Math.random()-0.5)*0.5; this.size = Math.random()*1.5+0.5; }
+                update() {
+                    const dx = mouseX-this.x, dy = mouseY-this.y;
+                    if(Math.sqrt(dx*dx+dy*dy)<LENS_RADIUS+50) { this.x+=(this.tx-this.x)*0.1; this.y+=(this.ty-this.y)*0.1; }
+                    else { this.x+=this.vx; this.y+=this.vy; if(this.x<0||this.x>width)this.vx*=-1; if(this.y<0||this.y>height)this.vy*=-1; }
+                }
+                draw() {
+                    ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI*2);
+                    if(Math.sqrt(Math.pow(mouseX-this.x,2)+Math.pow(mouseY-this.y,2))<LENS_RADIUS) ctx.fillStyle = `rgba(41,151,255,${1-Math.sqrt(Math.pow(mouseX-this.x,2)+Math.pow(mouseY-this.y,2))/LENS_RADIUS})`;
+                    else ctx.fillStyle='rgba(255,255,255,0.15)'; ctx.fill();
+                }
+            }
+            function init() { width=window.innerWidth; height=window.innerHeight; canvas.width=width; canvas.height=height; particles=[]; const gap=50; for(let x=0; x<width; x+=gap) for(let y=0; y<height; y+=gap) particles.push(new Particle(x, y)); }
+            function animate() { ctx.clearRect(0,0,width,height); particles.forEach(p=>{p.update();p.draw();}); requestAnimationFrame(animate); }
+            window.addEventListener('resize', init); init(); animate();
+        })();
+
+        // --------------------------------------------------------
+        // [LOGIC 2] PHILOSOPHY 3D CUBE SYSTEM
+        // --------------------------------------------------------
+        (function() {
+            const canvas = document.querySelector('#three-canvas');
+            const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+            
+            let width = document.querySelector('.visual-col').clientWidth;
+            let height = window.innerHeight;
+            renderer.setSize(width, height);
+            renderer.setPixelRatio(window.devicePixelRatio);
+
+            const scene = new THREE.Scene();
+            
+            // [ORTHOGRAPHIC CAMERA] Wider frustum (15.0) to prevent clipping
+            const aspect = width / height;
+            const frustumSize = 15.0; 
+            const camera = new THREE.OrthographicCamera(
+                frustumSize * aspect / -2,
+                frustumSize * aspect / 2,
+                frustumSize / 2,
+                frustumSize / -2,
+                0.1,
+                100
+            );
+            // Isometric Angle
+            camera.position.set(10, 10, 10);
+            camera.lookAt(0, 0, 0);
+
+            // Lights
+            scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+            const point = new THREE.PointLight(0x2997ff, 0.8);
+            point.position.set(5, 5, 5);
+            scene.add(point);
+            const dirLight = new THREE.DirectionalLight(0xffffff, 0.5);
+            dirLight.position.set(-5, 5, 2);
+            scene.add(dirLight);
+
+            const group = new THREE.Group();
+            scene.add(group);
+
+            // ============================================
+            // 1. SOLID & WIREFRAME (Base)
+            // ============================================
+            const TOTAL_SIZE = 2.2;
+            const boxGeo = new THREE.BoxGeometry(TOTAL_SIZE, TOTAL_SIZE, TOTAL_SIZE);
+            
+            // Wireframe
+            const wireMat = new THREE.MeshBasicMaterial({ color: 0x444444, wireframe: true, transparent:true, opacity: 0.6 });
+            const wireCube = new THREE.Mesh(boxGeo, wireMat);
+            group.add(wireCube);
+
+            // Solid (Matte, Blue)
+            const solidMat = new THREE.MeshPhysicalMaterial({
+                color: 0x2997ff, metalness: 0.0, roughness: 1.0, 
+                transparent: true, opacity: 0 
+            });
+            const solidCube = new THREE.Mesh(boxGeo, solidMat);
+            group.add(solidCube);
+
+            // ============================================
+            // 2. CLONER SETS
+            // ============================================
+            const unitGeo = new THREE.BoxGeometry(1, 1, 1);
+            
+            // Cloner Material (Matte, White base for vertex colors)
+            const clonerMat = new THREE.MeshPhysicalMaterial({
+                color: 0xffffff,
+                metalness: 0.0, 
+                roughness: 1.0
+            });
+
+            function createSet(gridCnt, colorOrType, baseScale, targetScale, layoutType='standard') {
+                const count = gridCnt ** 3;
+                const mesh = new THREE.InstancedMesh(unitGeo, clonerMat, count);
+                const data = [];
+                const dummy = new THREE.Object3D();
+                
+                const unitSize = TOTAL_SIZE / gridCnt;
+                const gap = unitSize * 1.05; 
+                
+                // Color Definitions for Gradient Logic
+                const purpleColor = new THREE.Color(0x9c6dff);
+                const mintColor = new THREE.Color(0x4fd1c5);
+                const whiteColor = new THREE.Color(0xffffff);
+                
+                // Max distance approx for 5x5x5 or 4x4x4
+                const maxDist = Math.sqrt(3 * Math.pow((gridCnt-1)/2, 2));
+
+                let idx = 0;
+                for(let x=0; x<gridCnt; x++){
+                    for(let y=0; y<gridCnt; y++){
+                        for(let z=0; z<gridCnt; z++){
+                            let ix = x - (gridCnt-1)/2;
+                            let iy = y - (gridCnt-1)/2;
+                            let iz = z - (gridCnt-1)/2;
+
+                            // Apply layout transformation to avoid overlapping
+                            // [MODIFIED] Shift Purple (Standard) slightly to avoid collision
+                            let pos = new THREE.Vector3(ix, iy, iz);
+                            if (layoutType === 'rotated') {
+                                // Rotate: x -> -y, y -> x
+                                pos.set(-iy, ix, iz); 
+                            } else if (layoutType === 'standard') {
+                                // Offset purple just a bit
+                                pos.addScalar(0.2); 
+                            }
+                            
+                            // [REVERTED] NO CULLING, ALL CUBES ALIVE.
+                            
+                            data.push({
+                                ix: pos.x, iy: pos.y, iz: pos.z, 
+                                gap,        
+                                visualBase: baseScale.clone().multiplyScalar(0.9), 
+                                visualTarget: targetScale.clone().multiplyScalar(0.9),
+                                unitSize,
+                                randPhase: Math.random() * 100 // For random organic motion
+                            });
+
+                            dummy.position.set(0,0,0);
+                            dummy.scale.set(0,0,0);
+                            dummy.updateMatrix();
+                            mesh.setMatrixAt(idx, dummy.matrix);
+                            
+                            // Color Logic
+                            const dist = Math.sqrt(ix*ix + iy*iy + iz*iz);
+                            const alpha = Math.min(1, dist / maxDist);
+
+                            if (colorOrType === 'purple_gradient') {
+                                // Center -> White, Outside -> Purple
+                                const t = alpha * alpha; 
+                                const c = whiteColor.clone().lerp(purpleColor, t);
+                                mesh.setColorAt(idx, c);
+                            } else if (colorOrType === 'mint_gradient') {
+                                // Center -> Mint, Outside -> White
+                                const c = mintColor.clone().lerp(whiteColor, alpha);
+                                mesh.setColorAt(idx, c);
+                            } else {
+                                // Fixed Color
+                                mesh.setColorAt(idx, colorOrType);
+                            }
+                            
+                            idx++;
+                        }
+                    }
+                }
+                group.add(mesh);
+                return { mesh, data, count };
+            }
+
+            // [Set 1] Purple Gradient: Random Organic -> Diagonal Wave (Now UNIFIED PATTERN)
+            const set1 = createSet(5, 'purple_gradient', 
+                new THREE.Vector3(0.0, 0.0, 0.0), // Base: Very small
+                new THREE.Vector3(0.4, 0.6, 0.04),  // Target: Plate
+                'rotated' // [MODIFIED] Align with Blue (Rotated)
+            );
+
+            // [Set 2] Blue: Diagonal Wave Packet (Scaled up, Rotated layout)
+            const set2 = createSet(5, new THREE.Color(0x2997ff), 
+                new THREE.Vector3(0.0, 0.0, 0.0), 
+                new THREE.Vector3(0.6, 0.6, 0.6), // Target: Bigger cube
+                'rotated'
+            );
+
+            // [Set 3] Mint Gradient: Y-Spreading -> Diagonal Wave (Now UNIFIED PATTERN)
+            const set3 = createSet(4, 'mint_gradient', 
+                new THREE.Vector3(0.0, 0.0, 0.0), 
+                new THREE.Vector3(0.15, 1.1, 0.15),
+                'offset'
+            );
+
+            const allSets = [set1, set2, set3];
+            allSets.forEach(s => s.mesh.visible = false);
+
+            // Animation Loop
+            const clock = new THREE.Clock();
+            let state = 0; 
+            let tempScale = new THREE.Vector3();
+            const dummy = new THREE.Object3D();
+
+            function animate() {
+                requestAnimationFrame(animate);
+                // [MODIFIED] Speed 0.5x for slow motion
+                const time = clock.getElapsedTime() * 0.5;
+
+                // [ROTATION LOGIC]
+                if (state < 0.9) {
+                    // Rotate while in Wireframe/Solid state
+                    group.rotation.y += 0.005; 
+                } else {
+                    // Lock to Isometric Angle (90 deg = Math.PI / 2)
+                    const targetRot = Math.PI / 2;
+                    group.rotation.y += (targetRot - group.rotation.y) * 0.05;
+                }
+
+                // Cloner Animation Logic
+                if(state > 0.9) {
+                    const p = Math.max(0, state - 1.0); 
+                    
+                    // [MODIFIED] Spread stops at p=0.5 (Mid-scroll)
+                    // spread 1.0 (no spread) -> 1.4 (max spread)
+                    const spreadProgress = Math.min(p * 2.0, 1.0); 
+                    const spread = 1.0 + (spreadProgress * 0.4);
+
+                    allSets.forEach((set, sIdx) => {
+                        let i = 0;
+                        for(let data of set.data) {
+                            dummy.position.set(
+                                data.ix * data.gap * spread,
+                                data.iy * data.gap * spread,
+                                data.iz * data.gap * spread
+                            );
+
+                            // [UNIFIED PATTERN] Diagonal Wave Packet
+                            const diag = data.ix + data.iy + data.iz; 
+                            const speed = 2.5; // Adjusted speed
+                            const offset = diag; 
+                            const timeShift = sIdx * 2.5; 
+                            
+                            // Continuous Sine Wave
+                            const val = time * speed - offset - timeShift;
+                            const wave = Math.sin(val); // -1 to 1
+                            
+                            // Normalize to 0 to 1
+                            let scaleFactor = (wave + 1) / 2;
+                            
+                            // Smoother Curve
+                            scaleFactor = Math.pow(scaleFactor, 1.5);
+
+                            // Morph Scale Logic - LERP (Base <-> Target)
+                            // Now using Lerp instead of Multiply to keep minimum size
+                            // Base Scale is preserved, no disappearing cubes
+                            let animatedScale = new THREE.Vector3().lerpVectors(data.visualBase, data.visualTarget, scaleFactor);
+                            
+                            // [MODIFIED] Transform Speed (Accelerated)
+                            const morphProgress = Math.min(p * 1.5, 1.0);
+                            
+                            const solidLookScale = new THREE.Vector3(data.unitSize, data.unitSize, data.unitSize);
+                            tempScale.lerpVectors(solidLookScale, animatedScale, morphProgress);
+                            
+                            dummy.scale.copy(tempScale);
+                            dummy.updateMatrix();
+                            set.mesh.setMatrixAt(i, dummy.matrix);
+                            i++;
+                        }
+                        set.mesh.instanceMatrix.needsUpdate = true;
+                    });
+                } else {
+                    // Pre-expansion
+                    if (set1.mesh.visible) {
+                        allSets.forEach(set => {
+                            let i = 0;
+                            for(let data of set.data) {
+                                dummy.position.set(data.ix*data.gap, data.iy*data.gap, data.iz*data.gap);
+                                dummy.scale.set(data.unitSize, data.unitSize, data.unitSize); 
+                                dummy.updateMatrix();
+                                set.mesh.setMatrixAt(i, dummy.matrix);
+                                i++;
+                            }
+                            set.mesh.instanceMatrix.needsUpdate = true;
+                        });
+                    }
+                }
+
+                renderer.render(scene, camera);
+            }
+            animate();
+
+            // Scroll Logic
+            const section = document.getElementById('philosophy-section');
+            const texts = [
+                document.getElementById('philo-text-1'),
+                document.getElementById('philo-text-2'),
+                document.getElementById('philo-text-3')
+            ];
+
+            window.addEventListener('scroll', () => {
+                const viewH = window.innerHeight;
+                const rects = texts.map(t => t.getBoundingClientRect());
+                const center = viewH * 0.5;
+
+                // Text Activation
+                if(rects[2].top < center + 100) {
+                    texts[2].classList.add('active'); texts[1].classList.remove('active'); texts[0].classList.remove('active');
+                } else if(rects[1].top < center + 100) {
+                    texts[1].classList.add('active'); texts[0].classList.remove('active'); texts[2].classList.remove('active');
+                } else {
+                    texts[0].classList.add('active'); texts[1].classList.remove('active'); texts[2].classList.remove('active');
+                }
+
+                // State Calculation
+                let val = 0;
+                const p1 = 1 - (rects[1].top / (viewH * 0.7)); 
+                const p2 = 1 - (rects[2].top / (viewH * 0.7));
+
+                if (p1 < 0) val = 0;
+                else if (p1 < 1) val = p1;
+                else val = 1 + Math.max(0, p2);
+
+                state = Math.min(2.0, Math.max(0, val));
+
+                // Visual Update
+                if (state < 1.0) {
+                    // [Stage 1] Wireframe -> Solid
+                    wireMat.opacity = Math.max(0, 0.6 * (1 - state * 4.0));
+                    wireMat.visible = wireMat.opacity > 0;
+                    solidMat.opacity = state;
+                    
+                    allSets.forEach(s => s.mesh.visible = false);
+                } else {
+                    // [Stage 2] Solid -> Cloner
+                    const subP = state - 1.0;
+                    wireMat.opacity = 0; wireMat.visible = false;
+                    
+                    // Solid fades out QUICKLY
+                    solidMat.opacity = Math.max(0, 1.0 - subP * 20.0);
+                    
+                    allSets.forEach(s => s.mesh.visible = true);
+                }
+            });
+            
+            window.addEventListener('resize', () => {
+                width = document.querySelector('.visual-col').clientWidth;
+                height = window.innerHeight;
+                renderer.setSize(width, height);
+                
+                const aspect = width / height;
+                const frustumSize = 15.0; // Keep consistent with init
+                camera.left = frustumSize * aspect / -2;
+                camera.right = frustumSize * aspect / 2;
+                camera.top = frustumSize / 2;
+                camera.bottom = frustumSize / -2;
+                camera.updateProjectionMatrix();
+            });
+
+        })();
+
+        // XR Distortion
+        (function() {
+            const xrItem = document.getElementById('xr-skill');
+            const body = document.body;
+            xrItem.addEventListener('mouseenter', () => { body.style.filter = "hue-rotate(20deg) contrast(1.1)"; xrItem.classList.add('distortion-mode'); });
+            xrItem.addEventListener('mouseleave', () => { body.style.filter = "none"; xrItem.classList.remove('distortion-mode'); });
+        })();
+
+    </script>
+</body>
+</html>
