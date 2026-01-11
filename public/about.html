@@ -3,35 +3,59 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Portfolio - Logic & Density</title>
+    <title>Portfolio - about Hanuk</title>
     <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.8/dist/web/static/pretendard.css" />
     
     <style>
         :root {
-            --bg-color: #050505;
-            --text-color: #ffffff;
-            --accent-color: #2997ff; /* HNKL Blue */
+            /* [Color Theme] Light Mode */
+            --bg-color: #F5F5F7;
+            --text-color: #1D1D1F;
+            --accent-color: #2997ff; /* Blue */
             --sub-color-1: #9c6dff;  /* Purple */
             --sub-color-2: #4fd1c5;  /* Mint */
-            --dim-color: #555555;
-            --text-sub: #888888;
+            --dim-color: #86868b;
+            --text-sub: #6e6e73;
+            --card-bg: #FFFFFF;
         }
 
-        body {
+        body, html {
             margin: 0; padding: 0;
             background-color: var(--bg-color);
             color: var(--text-color);
             font-family: 'Pretendard', sans-serif;
-            overflow-x: hidden; width: 100%;
+            width: 100%;
+            cursor: default;
         }
 
-        /* 네비게이션 */
-        .nav-home {
-            position: fixed; top: 40px; left: 40px;
-            font-weight: 700; font-size: 1.2rem;
-            z-index: 100; cursor: pointer;
-            mix-blend-mode: exclusion;
-            color: white; text-decoration: none;
+        /* [Custom Cursor CSS] */
+        .menu-item, .win-btn, #chat-minimized-icon, button, .send-btn, a, .skill-item, .bento-card, .circle-btn { cursor: pointer; }
+
+        #cursor-follower {
+            position: fixed; top: 0; left: 0;
+            width: 40px; height: 40px;
+            background-color: rgba(0, 0, 0, 0); 
+            border: 1.5px solid #898989; 
+            border-radius: 50%;
+            pointer-events: none; z-index: 9999;
+            transform: translate(-50%, -50%);
+            transition: width 0.3s cubic-bezier(0.19, 1, 0.22, 1),
+                        height 0.3s cubic-bezier(0.19, 1, 0.22, 1),
+                        background-color 0.3s, border-color 0.3s;
+            display: flex; align-items: center; justify-content: center; overflow: hidden;
+            mix-blend-mode: difference;
+        }
+
+        #cursor-text { 
+            font-size: 12px; font-weight: 500; color: white; 
+            opacity: 0; white-space: nowrap; 
+            transition: opacity 0.2s; letter-spacing: 0.05em; 
+        }
+
+        #cursor-follower.active-enter {
+            width: 80px; height: 80px;
+            background-color: rgba(29, 29, 31, 0.2); 
+            border-color: transparent; 
         }
 
         /* 공통 유틸리티 */
@@ -39,28 +63,73 @@
             max-width: 1200px; margin: 0 auto; padding: 0 20px; box-sizing: border-box;
         }
 
-        /* 1. HERO SECTION */
+        /* =========================================
+           1. HERO SECTION
+           ========================================= */
         #hero-section {
             position: relative; width: 100%; height: 100vh;
-            overflow: hidden; display: flex; align-items: center; justify-content: center;
+            display: flex; align-items: center; 
+            background-color: var(--bg-color);
+            overflow: hidden; 
         }
-        #particle-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
-        
-        .hero-content { position: absolute; width: 100%; text-align: center; z-index: 10; pointer-events: none; }
-        .hero-title { font-size: 3.5rem; font-weight: 700; line-height: 1.3; margin-bottom: 1.5rem; word-break: keep-all; }
-        .hero-desc { font-size: 1.1rem; font-weight: 300; color: #ddd; }
-        
-        .layer-blur { opacity: 0.3; filter: blur(8px); transition: opacity 0.3s; }
-        .layer-sharp {
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            width: 100%; height: 100vh; display: flex; flex-direction: column;
-            justify-content: center; align-items: center;
-            clip-path: circle(0px at 50% 50%); background: transparent; z-index: 20;
+
+        .hero-layout {
+            display: flex;
+            justify-content: space-between; 
+            align-items: center; 
+            width: 100%;
+            height: 100%;
+            position: relative;
+            z-index: 10;
         }
-        .layer-sharp .hero-title span { color: var(--accent-color); }
+
+        .hero-left {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end; 
+            margin-right: 60px; 
+            padding-bottom: 5px;
+        }
+
+        .hero-greeting {
+            font-size: 4rem; 
+            font-weight: 700;
+            color: var(--text-color);
+            margin: 0;
+            line-height: 1;
+            letter-spacing: -0.03em;
+            text-align: right;
+            white-space: nowrap;
+            padding-bottom : 56px;
+        }
+        
+        .hero-greeting span {
+            color: var(--accent-color);
+        }
+
+        .hero-right {
+            flex: 1;
+            padding-left: 0; 
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        .hero-title-new {
+            font-size: 1.5rem;
+            font-weight: 400;
+            line-height: 1.6;
+            margin-bottom: 0; 
+            word-break: keep-all;
+            color: var(--text-color);
+        }
+
         .scroll-indicator {
             position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
             font-size: 0.8rem; opacity: 0.5; animation: bounce 2s infinite; z-index: 30;
+            color: var(--text-color);
         }
         @keyframes bounce {
             0%, 20%, 50%, 80%, 100% {transform: translateX(-50%) translateY(0);}
@@ -70,8 +139,23 @@
 
         /* 2. PHILOSOPHY SECTION */
         #philosophy-section { position: relative; width: 100%; height: 350vh; display: flex; }
-        .philo-container { display: flex; width: 100%; max-width: 1200px; margin: 0 auto; }
-        .text-col { width: 50%; padding-right: 50px; box-sizing: border-box; z-index: 10; }
+        
+        .philo-container { 
+            display: flex; 
+            width: 100%; 
+            max-width: 1200px; 
+            margin: 0 auto;
+            height: 100%; 
+        }
+
+        .text-col { 
+            width: 35%; 
+            margin-left: 15%; 
+            padding-right: 50px; 
+            box-sizing: border-box; 
+            z-index: 10; 
+        }
+
         .text-spacer { height: 40vh; }
         .text-block {
             height: 80vh; display: flex; flex-direction: column; justify-content: center;
@@ -79,133 +163,325 @@
             transform: translateY(20px); margin-bottom: 20vh;
         }
         .text-block.active { opacity: 1; transform: translateY(0); }
+        
         .philo-label {
-            color: var(--accent-color); font-size: 14px; font-weight: 700;
-            text-transform: uppercase; letter-spacing: 2px; margin-bottom: 20px; display: block;
+            color: var(--accent-color); font-size: 3.0rem; font-weight: 600;
+            text-transform: uppercase; letter-spacing: 2px; margin-bottom: 0px; display: block;
         }
-        .philo-desc { font-size: 1.8rem; line-height: 1.6; font-weight: 600; word-break: keep-all; }
+        .philo-desc { font-size: 1.5rem; line-height: 1.5; font-weight: 400; word-break: keep-all; color: var(--text-color);margin-top: 12px; }
         .philo-sub { font-size: 1.05rem; line-height: 1.6; color: var(--text-sub); margin-top: 20px; font-weight: 300; word-break: keep-all; }
+
         .visual-col {
-            width: 50%; height: 100vh; position: sticky; top: 0;
+            width: 50%; 
+            height: 100vh; 
+            position: sticky; 
+            top: 0;
             display: flex; align-items: center; justify-content: center;
+            align-self: flex-start;
         }
         #three-canvas { width: 100%; height: 100%; outline: none; }
 
-        /* 3. PROFILE & EXPERIENCE */
-        #profile-section { padding: 150px 0; background-color: #0a0a0a; position: relative; z-index: 10; }
-        .section-header {
-            font-size: 1rem; text-transform: uppercase; letter-spacing: 2px;
-            color: var(--dim-color); margin-bottom: 50px; border-bottom: 1px solid #222; padding-bottom: 20px;
+        /* =========================================
+           3. KEY DETAIL SECTION (Bento Grid) - [UPDATED FLIP LOGIC]
+           ========================================= */
+        #key-detail-section {
+            padding: 100px 0 200px 0;
+            background-color: var(--bg-color);
+            position: relative;
+            z-index: 10;
         }
-        .resume-grid { display: grid; grid-template-columns: 1fr 2fr; gap: 50px; margin-bottom: 80px; }
-        .resume-title { font-size: 1.5rem; font-weight: 700; color: #fff; }
-        .resume-list { list-style: none; padding: 0; margin: 0; }
-        .resume-item { margin-bottom: 40px; padding-bottom: 40px; border-bottom: 1px solid #222; }
-        .resume-item:last-child { border-bottom: none; }
-        .date { font-family: monospace; color: var(--accent-color); margin-bottom: 10px; display: block; }
-        .role-name { font-size: 1.6rem; font-weight: 600; margin-bottom: 8px; transition: all 0.3s ease; cursor: default; }
-        .role-name:hover { color: #fff; text-shadow: 0 0 15px rgba(41, 151, 255, 0.8); }
-        .role-desc { color: #888; font-size: 1rem; }
 
-        /* 4. CAPABILITIES */
-        #skills-section { padding: 100px 0 200px 0; position: relative; overflow: hidden; }
-        .skills-container { display: flex; flex-direction: column; gap: 20px; perspective: 1000px; }
-        .skill-item {
-            font-size: 4rem; font-weight: 800; color: #333; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            cursor: pointer; transform-style: preserve-3d; width: fit-content;
+        .key-detail-title {
+            font-size: 5rem;
+            font-weight: 600; 
+            margin-bottom: 60px;
+            color: var(--text-color);
+            line-height: 1;
+            text-align: center;
         }
-        .skill-item:hover { color: #fff; transform: translateZ(50px) rotateX(10deg); text-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-        .distortion-mode { animation: glitch-anim 0.3s infinite; }
-        @keyframes glitch-anim {
-            0% { transform: translate(0); }
-            20% { transform: translate(-2px, 2px); filter: hue-rotate(90deg); }
-            40% { transform: translate(-2px, -2px); }
-            60% { transform: translate(2px, 2px); filter: hue-rotate(-90deg); }
-            80% { transform: translate(2px, -2px); }
-            100% { transform: translate(0); }
+
+        .bento-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 290px);
+            gap: 10px;
+            justify-content: center;
+            align-items: start;
+        }
+
+        .col-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        /* [FLIP CARD STRUCTURE] */
+        .bento-card {
+            background-color: transparent; /* Container is transparent */
+            perspective: 1000px; /* 3D effect */
+            width: 290px;
+            position: relative;
+            /* Height is defined per specific card class */
+            
+            /* [RESTORED HOVER EFFECT] */
+            transition: transform 0.3s ease; /* Smooth lift */
+            cursor: pointer;
+        }
+        
+        /* [RESTORED HOVER EFFECT] Lift up on hover */
+        .bento-card:hover {
+            transform: translateY(-5px);
+        }
+
+        /* [EXCEPTION] Language Card: No Hover/Move */
+        .bento-card.card-language {
+            cursor: default; 
+        }
+        .bento-card.card-language:hover {
+            transform: none;
+        }
+
+        /* Inner container that does the flip */
+        .card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            text-align: left;
+            transition: transform 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transform-style: preserve-3d;
+            border-radius: 24px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+        }
+
+        .bento-card:hover .card-inner {
+            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+        }
+        
+        /* [EXCEPTION] Remove Shadow Effect for Language Card on Hover */
+        .bento-card.card-language:hover .card-inner {
+            box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+        }
+
+        /* Applied via JS on click */
+        .bento-card.flipped .card-inner {
+            transform: rotateY(180deg);
+        }
+
+        /* Front and Back Faces */
+        .card-front, .card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            background-color: var(--card-bg);
+            border-radius: 24px;
+            padding: 30px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .card-back {
+            transform: rotateY(180deg);
+            overflow: hidden; /* Prevent overflow */
+        }
+
+        /* [Typography & Common] */
+        .card-title {
+            font-size: 2rem; font-weight: 600; margin-top: 0; margin-bottom: 30px;
+            color: var(--text-color); letter-spacing: -0.02em;
+        }
+        .sub-card-title {
+            font-size: 1.5rem; font-weight: 600; margin-top: 0; margin-bottom: 20px;
+            color: var(--text-color);
+        }
+        .item-main-text {
+            font-size: 1rem; font-weight: 600; color: var(--text-color); margin-bottom: 12px;
+        }
+        .item-sub-text {
+            font-size: 12px; font-weight: 400; color: var(--text-sub); margin-bottom: 0px; line-height: 1.2;
+        }
+        .date-text {
+            font-size: 12px; font-weight: 400; color: var(--text-color); margin-top: 10px; display: block;
+        }
+
+        /* [Font Utilities for Updates] */
+        .f-600-12 { font-weight: 600; font-size: 12px; color: var(--text-color); }
+        .f-400-12 { font-weight: 400; font-size: 12px; color: var(--text-sub); }
+        .f-600-10 { font-weight: 600; font-size: 10px; color: var(--text-color); }
+        .f-400-10 { font-weight: 400; font-size: 10px; color: var(--text-sub); }
+        .mb-4 { margin-bottom: 4px; }
+        .mb-8 { margin-bottom: 8px; }
+        .mt-12 { margin-top: 12px; }
+
+        /* --- 1. Education (360px) --- */
+        .card-education { height: 360px; }
+        /* Education Front Specific */
+        .edu-content { margin-top: auto; }
+        
+        /* Education Back Specific */
+        .edu-back-list {
+            display: flex; flex-direction: column; gap: 15px; height: 100%;
+        }
+        .edu-section-title {
+            font-weight: 600; font-size: 12px; color: var(--accent-color);
+            margin-bottom: 6px; padding-bottom: 4px; border-bottom: 1px solid #eee;
+        }
+        .edu-row {
+            display: flex; gap: 10px; align-items: flex-start;
+        }
+        .edu-year-col {
+            width: 30px; flex-shrink: 0; display: flex; flex-direction: column; gap: 4px;
+        }
+        .edu-desc-col {
+            flex: 1; display: flex; flex-direction: column; gap: 4px;
+        }
+
+        /* --- 2. Language (100px) --- */
+        .card-language { height: 100px; }
+        .lang-list { display: flex; flex-direction: column; gap: 2px; }
+        .lang-item { display: flex; justify-content: flex-start; align-items: center; gap: 8px; }
+        .lang-name { font-size: 12px; font-weight: 600; }
+        .lang-level { font-size: 12px; font-weight: 400; color: var(--text-sub); }
+
+        /* --- 3. Experience (250px) --- */
+        .card-experience { height: 250px; }
+        .exp-content { margin-top: auto; }
+        
+        /* Experience Back Specific */
+        .exp-back-content {
+            display: flex; flex-direction: column; gap: 16px; margin-top: auto;
+        }
+        .exp-block {
+            display: flex; flex-direction: column; gap: 2px;
+        }
+
+        /* --- 4. Capabilities (360px) -> [UPDATED: Contains Tools Info on Back] --- */
+        .card-capabilities { height: 360px; }
+        .capa-list {
+            display: flex; flex-direction: column; gap: 5px; margin-top: auto; align-items: flex-start;
+        }
+        .capa-row { display: flex; gap: 5px; }
+        .capa-tag {
+            font-size: 1rem; font-weight: 400; color: var(--text-color);
+            background-color: transparent; border: 1px solid var(--text-color);
+            padding: 6px 10px; border-radius: 999px; width: fit-content; transition: all 0.2s;
+        }
+        .capa-tag:hover { border-color: var(--accent-color); color: var(--accent-color); }
+        
+        /* Capabilities Back (Old Tools Layout - Vertical) */
+        .tools-vertical-list {
+            display: flex; flex-direction: column; gap: 16px; margin-top: auto;
+        }
+        .tool-row-v {
+            display: flex; flex-direction: column; gap: 4px;
+        }
+        .tool-cat-v { font-size: 12px; font-weight: 600; color: var(--text-color); }
+        .tool-items-v { font-size: 12px; font-weight: 400; color: var(--text-sub); line-height: 1.3; }
+
+        /* --- 5. Connect (Old Tools Spot, 200px) --- */
+        .card-connect { height: 200px; }
+        /* Connect Front */
+        .connect-front-list {
+            display: flex; flex-direction: column; gap: 4px; margin-top: auto;
+        }
+        /* Connect Back (Contact) */
+        .contact-back-content {
+            display: flex; flex-direction: column; gap: 16px; margin-top: auto;
+        }
+        .contact-block { display: flex; flex-direction: column; gap: 2px; }
+        .contact-link { text-decoration: none; color: var(--accent-color); transition: opacity 0.2s; }
+        .contact-link:hover { opacity: 0.7; }
+
+
+        /* --- 6. Circle (150px) --- */
+        .circle-wrapper {
+            width: 290px; height: 150px; display: flex; justify-content: flex-end;
+        }
+        .circle-btn {
+            width: 150px; height: 150px; border-radius: 50%;
+            background-color: var(--card-bg);
+            display: flex; align-items: center; justify-content: center;
+            flex-direction: column;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border: 1px solid transparent; text-decoration: none;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.02);
+        }
+        .circle-btn:hover {
+            transform: scale(1.05); border-color: var(--accent-color);
+            box-shadow: 0 10px 20px rgba(41, 151, 255, 0.15);
+        }
+        .circle-arrow {
+            width: 75px; height: 75px; margin-top: 5px;
+            -webkit-mask: url('assets/Go_2.svg') no-repeat center / contain;
+            mask: url('assets/Go_2.svg') no-repeat center / contain;
+            background-color: var(--text-color);
+            transition: transform 0.3s ease, background-color 0.3s ease;
+        }
+        .circle-btn:hover .circle-arrow {
+            transform: translate(3px, -3px); background-color: var(--accent-color);
         }
 
         /* FOOTER */
-        .footer { text-align: center; padding: 100px 20px; border-top: 1px solid #222; }
-        .final-msg { font-size: 1.5rem; margin-bottom: 30px; color: #ccc; }
-        .contact-btn {
-            display: inline-block; padding: 15px 40px; border: 1px solid var(--accent-color);
-            color: var(--accent-color); text-decoration: none; border-radius: 50px; transition: all 0.3s;
-        }
-        .contact-btn:hover { background: var(--accent-color); color: #fff; box-shadow: 0 0 20px rgba(41, 151, 255, 0.4); }
+        .footer { text-align: center; padding: 50px 20px; border-top: 1px solid #eee; background-color: #fff; margin-top: 100px; }
+        .contact-simple { font-size: 0.9rem; color: var(--dim-color); }
     </style>
 </head>
 <body>
 
-    <a href="index.html" class="nav-home">HNKL</a>
+    <div id="cursor-follower">
+        <span id="cursor-text"></span>
+    </div>
 
-    <!-- 1. HERO -->
     <section id="hero-section">
-        <canvas id="particle-canvas"></canvas>
-        <div class="hero-content layer-blur">
-            <h1 class="hero-title">
-                탄탄한 논리 위에<br>
-                밀도 높은 시각화와 인터랙션을 더해<br>
-                설득하는 디자이너
-            </h1>
-            <p class="hero-desc">일상을 깊이 관찰하고, 데이터 이면에 숨겨진 진짜 니즈를 발견하여 문제를 정의합니다.</p>
-        </div>
-        <div class="hero-content layer-sharp" id="hero-lens">
-            <h1 class="hero-title">
-                탄탄한 논리 위에<br>
-                밀도 높은 시각화와 인터랙션을 더해<br>
-                <span>설득하는 디자이너</span>
-            </h1>
-            <p class="hero-desc" style="color:#fff;">일상을 깊이 관찰하고, 데이터 이면에 숨겨진 진짜 니즈를 발견하여 문제를 정의합니다.</p>
+        <div class="container hero-layout">
+            <div class="hero-left">
+                <h1 class="hero-greeting">안녕하세요<span>.</span></h1>
+            </div>
+            <div class="hero-right">
+                <h2 class="hero-title-new">
+                    논리적인 사용성 위에<br>
+                    시각적 재미를 더해<br>
+                    사용자 경험의 밀도를 높이는<br>
+                    디자이너 이한욱 입니다.
+                </h2>
+            </div>
         </div>
         <div class="scroll-indicator">SCROLL DOWN</div>
     </section>
 
-    <!-- 2. PHILOSOPHY -->
     <section id="philosophy-section">
         <div class="philo-container">
             <div class="text-col">
                 <div class="text-spacer"></div>
-                <!-- Text 1 -->
                 <div class="text-block active" id="philo-text-1">
-                    <span class="philo-label">01. Logic & Definition</span>
+                    <span class="philo-label">01.</span>
                     <p class="philo-desc">
-                        단순한 심미성을 넘어<br>
-                        사용자가 납득할 수 있는<br>
-                        <strong>논리적 타당성</strong>을<br>
+                        일상과 데이터 이면의 진짜 니즈를<br>
+                        파악하여 문제를 정의합니다. <br>
+                        심미성 이전에 <strong>논리적 타당성</strong>을<br>
                         먼저 고민합니다.
                     </p>
-                    <p class="philo-sub">
-                        일상을 깊이 관찰하고 데이터 이면에 숨겨진<br>
-                        진짜 니즈를 발견하여 문제를 정의합니다.
-                    </p>
+
                 </div>
-                <!-- Text 2 -->
                 <div class="text-block" id="philo-text-2">
-                    <span class="philo-label">02. Density & Visualization</span>
+                    <span class="philo-label">02.</span>
                     <p class="philo-desc">
                         이를 바탕으로 도출한<br>
                         인사이트와 아이디어를<br>
                         감각적이고 <strong>완성도 높은 비주얼</strong>로<br>
                         표현해냅니다.
                     </p>
-                    <p class="philo-sub">
-                        설계된 논리 위에 시각적 밀도를 더해<br>
-                        설득력 있는 결과물을 만듭니다.
-                    </p>
+
                 </div>
-                <!-- Text 3 -->
                 <div class="text-block" id="philo-text-3">
-                    <span class="philo-label">03. Experience & Interaction</span>
+                    <span class="philo-label">03.</span>
                     <p class="philo-desc">
                         정적인 화면에 머무르지 않고,<br>
                         <strong>입체적인 인터랙션</strong>으로 구현하여<br>
                         즐거운 경험으로 완성합니다.
                     </p>
-                    <p class="philo-sub">
-                        논리적인 사용성 위에 시각적 재미를 더해,<br>
-                        사용자 경험의 밀도를 높이는 디자이너입니다.
-                    </p>
+
                 </div>
                 <div style="height: 30vh;"></div>
             </div>
@@ -215,91 +491,309 @@
         </div>
     </section>
 
-    <!-- 3. PROFILE -->
-    <section id="profile-section">
+    <!-- [UPDATED] KEY DETAIL SECTION (Bento Grid with Flip) -->
+    <section id="key-detail-section" >
         <div class="container">
-            <div class="section-header">03. Profile & Experience</div>
-            <div class="resume-grid">
-                <div class="resume-title">Education</div>
-                <ul class="resume-list">
-                    <li class="resume-item">
-                        <span class="date">GRADUATE</span>
-                        <div class="role-name">홍익대학교 미술대학</div>
-                        <div class="role-desc">디자인학부 산업디자인 전공 (제품 / 인터랙션 심화)</div>
-                    </li>
-                </ul>
-            </div>
-            <div class="resume-grid">
-                <div class="resume-title">Experience</div>
-                <ul class="resume-list">
-                    <li class="resume-item">
-                        <span class="date">2025.02 ~ Present</span>
-                        <div class="role-name">제일기획 (Cheil)</div>
-                        <div class="role-desc">프리랜서 / 글로벌 삼성 리테일 컨텐츠 기획</div>
-                    </li>
-                </ul>
-            </div>
-        </div>
-    </section>
+            <h2 class="key-detail-title" style="margin-bottom: 150px;">Key Info</h2>
+            
+            <div class="bento-grid">
+                <!-- COL 1: Education (360px) -->
+                <!-- [Flip Enabled] -->
+                <div class="bento-card card-education" onclick="toggleFlip(this)">
+                    <div class="card-inner">
+                        <!-- Front -->
+                        <div class="card-front" style="padding-top: 15px; padding-left:20px; padding-bottom:20px">
+                            <h3 class="card-title">Education</h3>
+                            <div class="edu-content">
+                                <div class="item-main-text">Hongik University</div>
+                                <div class="item-sub-text">Industrial Design Major</div>
+                                <div class="item-sub-text">Product & Interaction</div>
+                                <span class="date-text">2017.03 - 2023.02</span>
+                            </div>
+                        </div>
+                        <!-- Back -->
+                        <div class="card-back" style="padding: 20px;">
+                            <div class="edu-back-list">
+                                <!-- Group 1 -->
+                                <div>
+                                    <div class="edu-section-title">Exhibitions & Research</div>
+                                    <div class="edu-row">
+                                        <div class="edu-year-col">
+                                            <div class="f-600-10">2024</div>
+                                            <div class="f-600-10">2024</div>
+                                            <div class="f-600-10">2024</div>
+                                        </div>
+                                        <div class="edu-desc-col">
+                                            <div class="f-400-10">Hongik Industrial Design Degree Show</div>
+                                            <div class="f-400-10">AutomotiveUI’24 International Conference</div>
+                                            <div class="f-400-10">Zurich Design Week 2024</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- Group 2 -->
+                                <div>
+                                    <div class="edu-section-title">Industry Collaborations</div>
+                                    <div class="edu-row">
+                                        <div class="edu-year-col">
+                                            <div class="f-600-10">2023</div>
+                                            <div class="f-600-10" style="margin-top:12px">2023</div>
+                                            <div class="f-600-10" style="margin-top:12px">2023</div>
+                                        </div>
+                                        <div class="edu-desc-col">
+                                            <div>
+                                                <div class="f-600-10">Hyundai Motor Group</div>
+                                                <div class="f-400-10">Future Mobility UX & Air Conditioning System</div>
+                                            </div>
+                                            <div>
+                                                <div class="f-600-10">University of Zurich (Veterinary Dept.)</div>
+                                                <div class="f-400-10">Product for Small Animal</div>
+                                            </div>
+                                            <div>
+                                                <div class="f-600-10">Kolon Glotech</div>
+                                                <div class="f-400-10">Autonomous Mobility Lifestyle & CMF</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- Group 3 -->
+                                <div>
+                                    <div class="edu-section-title">Honors & Activities</div>
+                                    <div class="edu-row">
+                                        <div class="edu-year-col">
+                                            <div class="f-600-10">2024</div>
+                                            <div class="f-600-10" style="margin-top:12px">2022<br>-24</div>
+                                            <div class="f-600-10" style="margin-top:12px">2022<br>-24</div>
+                                        </div>
+                                        <div class="edu-desc-col">
+                                            <div>
+                                                <div class="f-600-10">Patent Application</div>
+                                                <div class="f-400-10">Vehicle Air Conditioning & Control System</div>
+                                            </div>
+                                            <div>
+                                                <div class="f-600-10">Industrial Design Student Council</div>
+                                                <div class="f-400-10">Head of Graphic Design ('24)</div>
+                                            </div>
+                                            <div>
+                                                <div class="f-600-10">Hongik Central Library</div>
+                                                <div class="f-400-10">Institutional Branding & Promotional Visuals</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
-    <!-- 4. SKILLS -->
-    <section id="skills-section">
-        <div class="container">
-            <div class="section-header">04. What I Can Do</div>
-            <div class="skills-container">
-                <div class="skill-item">UX UI Design</div>
-                <div class="skill-item">Interaction</div>
-                <div class="skill-item">3D Prototyping</div>
-                <div class="skill-item" id="xr-skill">XR Experience</div>
-            </div>
+                <!-- COL 2: Language (100px) + Experience (250px) -->
+                <div class="col-stack">
+                    <!-- Language (No Flip) -->
+                    <div class="bento-card card-language">
+                        <div class="card-inner"> <!-- wrapper for consistency -->
+                            <div class="card-front" style="padding-top: 15px; padding-left:20px; padding-bottom:0px; justify-content:center;">
+                                <h4 class="sub-card-title" style="margin-bottom: 0; margin-right: 20px;">Language</h4>
+                                <div class="lang-list" style="flex:1; justify-content:center;">
+                                    <div class="lang-item">
+                                        <span class="lang-name">Korean</span>
+                                        <span class="lang-level">Native</span>
+                                    </div>
+                                    <div class="lang-item">
+                                        <span class="lang-name">English</span>
+                                        <span class="lang-level">Fluent</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Experience [Flip Enabled] -->
+                    <div class="bento-card card-experience" onclick="toggleFlip(this)">
+                        <div class="card-inner">
+                            <!-- Front -->
+                            <div class="card-front" style="padding-top: 15px; padding-left:20px; padding-bottom:20px">
+                                <h3 class="card-title">Experience</h3>
+                                <div class="exp-content">
+                                    <div class="item-main-text">Cheil Worldwide</div>
+                                    <div class="item-sub-text">Global Samsung Retail Store</div>
+                                    <div class="item-sub-text">Device Experience App Content Planning</div>
+                                    <div class="item-sub-text">Freelance</div>
+                                    <span class="date-text">2025.02 - Present</span>
+                                </div>
+                            </div>
+                            <!-- Back -->
+                            <div class="card-back" style="padding-top: 15px; padding-left:20px; padding-bottom:20px">
+                                <h3 class="card-title">Experience</h3>
+                                <div class="exp-back-content">
+                                    <div class="exp-block">
+                                        <div class="f-600-12">1H 2025</div>
+                                        <div class="f-400-12">SmartThings: Galaxy Connected Experience</div>
+                                        <div class="f-400-10" style="margin-top:2px;">Designed multi-device UX flows and visual strategies to showcase Galaxy ecosystem connectivity.</div>
+                                    </div>
+                                    <div class="exp-block">
+                                        <div class="f-600-12">2H 2025</div>
+                                        <div class="f-400-12">Samsung Mobile Flagship Device Experience</div>
+                                        <div class="f-400-10" style="margin-top:2px;">Planned in-app media scenarios and interactive demo content to maximize feature delivery.</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- COL 3: Capabilities (360px) -->
+                <!-- [Flip Enabled] Back contains Tools info -->
+                <div class="bento-card card-capabilities" onclick="toggleFlip(this)">
+                    <div class="card-inner">
+                        <!-- Front -->
+                        <div class="card-front" style="padding-top: 15px; padding-left:20px; padding-bottom:20px">
+                            <h3 class="card-title">Capabilities</h3>
+                            <div class="capa-list">
+                                <div class="capa-row">
+                                    <div class="capa-tag">UX/UI</div>
+                                    <div class="capa-tag">Interaction</div>
+                                </div>
+                                <div class="capa-row">
+                                     <div class="capa-tag">3D</div>
+                                     <div class="capa-tag">XR</div>
+                                     <div class="capa-tag">Prototyping</div>
+                                </div>
+                                <div class="capa-row">
+                                    <div class="capa-tag">Interactive Web</div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Back (Tools Info) -->
+                        <div class="card-back" style="padding-top: 15px; padding-left:20px; padding-bottom:20px">
+                            <h4 class="sub-card-title">Tools</h4>
+                            <div class="tools-vertical-list">
+                                <div class="tool-row-v">
+                                    <span class="tool-cat-v">3D</span>
+                                    <span class="tool-items-v">Blender, Rhino</span>
+                                </div>
+                                <div class="tool-row-v">
+                                    <span class="tool-cat-v">Rendering</span>
+                                    <span class="tool-items-v">KeyShot</span>
+                                </div>
+                                <div class="tool-row-v">
+                                    <span class="tool-cat-v">UX/UI & Prototyping</span>
+                                    <span class="tool-items-v">Figma, Framer, Unity</span>
+                                </div>
+                                <div class="tool-row-v">
+                                    <span class="tool-cat-v">Adobe</span>
+                                    <span class="tool-items-v">Photoshop, Illustrator, Premiere Pro</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- COL 4: Connect (200px) + Circle (150px) -->
+                <div class="col-stack">
+                    <!-- Connect (Old Tools) [Flip Enabled] -->
+                    <div class="bento-card card-connect" onclick="toggleFlip(this)">
+                        <div class="card-inner">
+                            <!-- Front -->
+                            <div class="card-front" style="padding-top: 15px; padding-left:20px; padding-bottom:20px">
+                                <h4 class="sub-card-title">Connect</h4>
+                                <div class="connect-front-list">
+                                    <div class="f-600-12">Based in</div>
+                                    <div class="f-400-12 mb-8">Seoul(KST)</div>
+                                    <div class="f-600-12">Flexible</div>
+                                    <div class="f-400-12">Happy to discuss the right setup.</div>
+                                </div>
+                            </div>
+                            <!-- Back (Contact) -->
+                            <div class="card-back" style="padding-top: 15px; padding-left:20px; padding-bottom:20px">
+                                <h4 class="sub-card-title">Contact</h4>
+                                <div class="contact-back-content">
+                                    <div class="contact-block">
+                                        <div class="f-600-12">E-mail</div>
+                                        <div class="f-400-12">hnkl1520@gmail.com</div>
+                                    </div>
+                                    <div class="contact-block">
+                                        <div class="f-600-12">Linkedin</div>
+                                        <a href="https://www.google.com" target="_blank" class="f-400-12 contact-link">linkedin.com/in/hanuk</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="circle-wrapper">
+                        <a href="works.html" class="circle-btn">
+                            <div class="circle-arrow"></div>
+                        </a>
+                    </div>
+                </div>
+
+            </div> <!-- End Grid -->
         </div>
     </section>
 
     <footer class="footer">
-        <p class="final-msg">
-            논리적인 사용성 위에 시각적 재미를 더해,<br>
-            사용자 경험의 밀도를 높이는 디자이너 [이름]입니다.
-        </p>
-        <a href="mailto:email@example.com" class="contact-btn">Get In Touch</a>
+        <p class="contact-simple">© 2026 Hanwook Lee. All rights reserved.</p>
     </footer>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script>
         // --------------------------------------------------------
-        // [LOGIC 1] HERO PARTICLES
+        // [FLIP CARD LOGIC]
+        // --------------------------------------------------------
+        function toggleFlip(card) {
+            // If already flipped, manually unflip (and clear timer)
+            if (card.classList.contains('flipped')) {
+                card.classList.remove('flipped');
+                if (card.flipTimeout) {
+                    clearTimeout(card.flipTimeout);
+                    card.flipTimeout = null;
+                }
+            } else {
+                // Flip
+                card.classList.add('flipped');
+                
+                // Auto return after 5 seconds
+                card.flipTimeout = setTimeout(() => {
+                    if (card.classList.contains('flipped')) {
+                        card.classList.remove('flipped');
+                    }
+                }, 5000); // 5000ms = 5 seconds
+            }
+        }
+
+        // --------------------------------------------------------
+        // [CUSTOM CURSOR LOGIC]
         // --------------------------------------------------------
         (function() {
-            const canvas = document.getElementById('particle-canvas');
-            const ctx = canvas.getContext('2d');
-            const lensLayer = document.getElementById('hero-lens');
-            const LENS_RADIUS = 200;
-            let width, height, particles = [], mouseX = -1000, mouseY = -1000;
+            const cursor = document.getElementById('cursor-follower');
+            let mouseX = window.innerWidth / 2, mouseY = window.innerHeight / 2;
+            let cursorX = mouseX, cursorY = mouseY;
+
             document.addEventListener('mousemove', (e) => {
-                if(window.scrollY < window.innerHeight) {
-                    mouseX = e.clientX; mouseY = e.clientY;
-                    lensLayer.style.clipPath = `circle(${LENS_RADIUS}px at ${mouseX}px ${mouseY}px)`;
-                }
+                mouseX = e.clientX;
+                mouseY = e.clientY;
             });
-            class Particle {
-                constructor(tx, ty) { this.tx = tx; this.ty = ty; this.x = Math.random()*width; this.y = Math.random()*height; this.vx = (Math.random()-0.5)*0.5; this.vy = (Math.random()-0.5)*0.5; this.size = Math.random()*1.5+0.5; }
-                update() {
-                    const dx = mouseX-this.x, dy = mouseY-this.y;
-                    if(Math.sqrt(dx*dx+dy*dy)<LENS_RADIUS+50) { this.x+=(this.tx-this.x)*0.1; this.y+=(this.ty-this.y)*0.1; }
-                    else { this.x+=this.vx; this.y+=this.vy; if(this.x<0||this.x>width)this.vx*=-1; if(this.y<0||this.y>height)this.vy*=-1; }
-                }
-                draw() {
-                    ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI*2);
-                    if(Math.sqrt(Math.pow(mouseX-this.x,2)+Math.pow(mouseY-this.y,2))<LENS_RADIUS) ctx.fillStyle = `rgba(41,151,255,${1-Math.sqrt(Math.pow(mouseX-this.x,2)+Math.pow(mouseY-this.y,2))/LENS_RADIUS})`;
-                    else ctx.fillStyle='rgba(255,255,255,0.15)'; ctx.fill();
-                }
+
+            // Smooth Follow
+            function animateCursor() {
+                // 부드러운 움직임 (Lerp)
+                cursorX += (mouseX - cursorX) * 0.15;
+                cursorY += (mouseY - cursorY) * 0.15;
+                cursor.style.top = cursorY + 'px';
+                cursor.style.left = cursorX + 'px';
+                requestAnimationFrame(animateCursor);
             }
-            function init() { width=window.innerWidth; height=window.innerHeight; canvas.width=width; canvas.height=height; particles=[]; const gap=50; for(let x=0; x<width; x+=gap) for(let y=0; y<height; y+=gap) particles.push(new Particle(x, y)); }
-            function animate() { ctx.clearRect(0,0,width,height); particles.forEach(p=>{p.update();p.draw();}); requestAnimationFrame(animate); }
-            window.addEventListener('resize', init); init(); animate();
+            animateCursor();
+
+            // Interactive Elements Hover
+            const interactives = document.querySelectorAll('a, button, .skill-item, .contact-btn, .bento-card, .circle-btn');
+            interactives.forEach(el => {
+                el.addEventListener('mouseenter', () => cursor.classList.add('active-enter'));
+                el.addEventListener('mouseleave', () => cursor.classList.remove('active-enter'));
+            });
         })();
 
         // --------------------------------------------------------
-        // [LOGIC 2] PHILOSOPHY 3D CUBE SYSTEM
+        // [LOGIC 2] PHILOSOPHY 3D CUBE SYSTEM (FULL LOGIC PRESERVED)
         // --------------------------------------------------------
         (function() {
             const canvas = document.querySelector('#three-canvas');
@@ -346,7 +840,7 @@
             const boxGeo = new THREE.BoxGeometry(TOTAL_SIZE, TOTAL_SIZE, TOTAL_SIZE);
             
             // Wireframe
-            const wireMat = new THREE.MeshBasicMaterial({ color: 0x444444, wireframe: true, transparent:true, opacity: 0.6 });
+            const wireMat = new THREE.MeshBasicMaterial({ color: 0x888888, wireframe: true, transparent:true, opacity: 0.6 });
             const wireCube = new THREE.Mesh(boxGeo, wireMat);
             group.add(wireCube);
 
@@ -365,7 +859,7 @@
             
             // Cloner Material (Matte, White base for vertex colors)
             const clonerMat = new THREE.MeshPhysicalMaterial({
-                color: 0xffffff,
+                color: 0xe0e0e0, // Light Grey for base
                 metalness: 0.0, 
                 roughness: 1.0
             });
@@ -382,7 +876,7 @@
                 // Color Definitions for Gradient Logic
                 const purpleColor = new THREE.Color(0x9c6dff);
                 const mintColor = new THREE.Color(0x4fd1c5);
-                const whiteColor = new THREE.Color(0xffffff);
+                const baseColor = new THREE.Color(0xe0e0e0); // Base color
                 
                 // Max distance approx for 5x5x5 or 4x4x4
                 const maxDist = Math.sqrt(3 * Math.pow((gridCnt-1)/2, 2));
@@ -396,7 +890,6 @@
                             let iz = z - (gridCnt-1)/2;
 
                             // Apply layout transformation to avoid overlapping
-                            // [MODIFIED] Shift Purple (Standard) slightly to avoid collision
                             let pos = new THREE.Vector3(ix, iy, iz);
                             if (layoutType === 'rotated') {
                                 // Rotate: x -> -y, y -> x
@@ -405,8 +898,6 @@
                                 // Offset purple just a bit
                                 pos.addScalar(0.2); 
                             }
-                            
-                            // [REVERTED] NO CULLING, ALL CUBES ALIVE.
                             
                             data.push({
                                 ix: pos.x, iy: pos.y, iz: pos.z, 
@@ -429,11 +920,11 @@
                             if (colorOrType === 'purple_gradient') {
                                 // Center -> White, Outside -> Purple
                                 const t = alpha * alpha; 
-                                const c = whiteColor.clone().lerp(purpleColor, t);
+                                const c = baseColor.clone().lerp(purpleColor, t);
                                 mesh.setColorAt(idx, c);
                             } else if (colorOrType === 'mint_gradient') {
                                 // Center -> Mint, Outside -> White
-                                const c = mintColor.clone().lerp(whiteColor, alpha);
+                                const c = mintColor.clone().lerp(baseColor, alpha);
                                 mesh.setColorAt(idx, c);
                             } else {
                                 // Fixed Color
@@ -448,7 +939,7 @@
                 return { mesh, data, count };
             }
 
-            // [Set 1] Purple Gradient: Random Organic -> Diagonal Wave (Now UNIFIED PATTERN)
+            // [Set 1] Purple Gradient: Random Organic -> Diagonal Wave
             const set1 = createSet(5, 'purple_gradient', 
                 new THREE.Vector3(0.0, 0.0, 0.0), // Base: Very small
                 new THREE.Vector3(0.4, 0.6, 0.04),  // Target: Plate
@@ -462,7 +953,7 @@
                 'rotated'
             );
 
-            // [Set 3] Mint Gradient: Y-Spreading -> Diagonal Wave (Now UNIFIED PATTERN)
+            // [Set 3] Mint Gradient: Y-Spreading -> Diagonal Wave
             const set3 = createSet(4, 'mint_gradient', 
                 new THREE.Vector3(0.0, 0.0, 0.0), 
                 new THREE.Vector3(0.15, 1.1, 0.15),
@@ -528,8 +1019,6 @@
                             scaleFactor = Math.pow(scaleFactor, 1.5);
 
                             // Morph Scale Logic - LERP (Base <-> Target)
-                            // Now using Lerp instead of Multiply to keep minimum size
-                            // Base Scale is preserved, no disappearing cubes
                             let animatedScale = new THREE.Vector3().lerpVectors(data.visualBase, data.visualTarget, scaleFactor);
                             
                             // [MODIFIED] Transform Speed (Accelerated)
@@ -634,15 +1123,6 @@
             });
 
         })();
-
-        // XR Distortion
-        (function() {
-            const xrItem = document.getElementById('xr-skill');
-            const body = document.body;
-            xrItem.addEventListener('mouseenter', () => { body.style.filter = "hue-rotate(20deg) contrast(1.1)"; xrItem.classList.add('distortion-mode'); });
-            xrItem.addEventListener('mouseleave', () => { body.style.filter = "none"; xrItem.classList.remove('distortion-mode'); });
-        })();
-
     </script>
 </body>
 </html>

@@ -6,18 +6,88 @@
     <title>HNKL Portfolio</title>
     
     <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+    <!-- GSAP for Preloader Animation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
     
     <style>
-        /* 1. 기본 커서 설정 */
+        /* * Project HNKL Design System Variables */
+        :root {
+            --color-main-blue: #2b50f1;
+            --color-purple: #9c6dff;
+            --color-white: #ffffff;
+            --color-mint: #4fd1c5;
+            --bg-color: #F5F5F7;
+            --text-color: #1a1a1a;
+        }
+
+        /* 1. 기본 커서 및 설정 */
         body, html { 
             margin: 0; padding: 0; overflow: hidden; 
-            background-color: #F5F5F7; 
+            background-color: var(--bg-color); 
             font-family: 'Pretendard', sans-serif; 
             width: 100vw; height: 100vh; 
             cursor: default; 
         }
 
         .menu-item, .win-btn, #chat-minimized-icon, button, .send-btn { cursor: pointer; }
+
+        /* * 2. PRELOADER STYLES (NEW) * */
+        #preloader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--bg-color);
+            z-index: 10000; /* 커서(9999)보다 높게 설정 */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .logo-container {
+            position: relative;
+            /* [수정] 로고 크기 */
+            width: 240px; 
+            height: 240px;
+        }
+
+        /* 공통 로고 스타일 */
+        .logo-img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: contain; /* 비율 유지하며 맞춤 */
+        }
+
+        /* Layer 1: 배경 (연한 로고) */
+        .logo-bg {
+            opacity: 0.2; /* 연하게 처리 (회색조 느낌) */
+            filter: grayscale(100%); 
+        }
+
+        /* Layer 2: 채워지는 로고 (클리핑 마스크) */
+        .logo-fill-wrapper {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            /* 아래에서 위로 차오르는 효과 */
+            clip-path: inset(100% 0 0 0); 
+            /* [수정] 부드러운 움직임을 위해 CSS transition 제거 (JS로 직접 제어) */
+            /* transition: clip-path 0.1s linear; */ 
+        }
+        
+        /* 전경 이미지는 원본 색상 그대로 표시 */
+        .logo-fg {
+            opacity: 1;
+        }
+
+        /* [삭제] .progress-text 스타일 삭제됨 */
 
         /* 커서 팔로워 스타일 */
         #cursor-follower {
@@ -98,7 +168,6 @@
         #chat-minimized-icon:hover { transform: scale(1.1); }
         @keyframes bounceIn { from { transform: scale(0); } to { transform: scale(1); } }
 
-        /* 아이콘 내부 이미지 크기 조절 */
         #chat-minimized-icon img {
             width: 36px !important; 
             height: 36px !important;
@@ -109,7 +178,6 @@
             transform: scale(1.1);
         }
         
-        /* 아이콘 필터 스타일 */
         .svg-icon {
             width: 20px; height: 20px; display: block;
         }
@@ -117,13 +185,12 @@
             transition: transform 0.2s;
         }
 
-        /* 로딩 애니메이션 (점 3개) */
         .typing-indicator {
-            display: flex;             /* none을 flex로 변경! (중요: 가로로 나열) */
-            align-items: center;       /* 위아래 가운데 정렬 */
-            justify-content: center;   /* 좌우 가운데 정렬 */
-            margin-top: 2px;                 /* 점 살짝 아래로/
-            min-height: 20px;          /* 높이 살짝 확보 */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-top: 2px;
+            min-height: 20px;
             padding-top: 5px;
         }
         .typing-indicator span {
@@ -131,18 +198,18 @@
             width: 10px;
             float: left;
             margin: 0 2px;
-            background-color: #9E9EA1; /* 점 색상 */
+            background-color: #9E9EA1;
             display: block;
             border-radius: 50%;
             opacity: 0.4;
-            animation: loading 1s infinite alternate; /* 애니메이션 적용 */
+            animation: loading 1s infinite alternate;
         }
         .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
         .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
 
         @keyframes loading {
             from { transform: translateY(0px); }
-            to { transform: translateY(-8px); } /* 위로 튀어 오름 */
+            to { transform: translateY(-8px); }
         }
 
     
@@ -151,14 +218,31 @@
     <script type="importmap">
         {
             "imports": {
-                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+                "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
             }
         }
     </script>
 </head>
 <body>
 
+    <!-- 1. LOADING SCREEN (Inserted Here) -->
+    <div id="preloader">
+        <div class="logo-container">
+            <!-- [STEP 1] 배경 로고 (연한 색): 여기에 가지고 계신 svg 파일 경로를 입력하세요 -->
+            <!-- 예: <img src="images/my-logo-outline.svg" ... > -->
+            <img src="assets/logo_line.svg" class="logo-img logo-bg" alt="Logo Background">
+
+            <!-- [STEP 2] 채워지는 로고 (진한 색): 안쪽이 꽉 찬(Filled) 로고 파일이 있다면 여기에 해당 파일 경로를 넣으세요! -->
+            <div class="logo-fill-wrapper" id="fillMask">
+                <img src="assets/logo.svg" class="logo-img logo-fg" alt="Logo Foreground">
+            </div>
+        </div>
+        
+        <!-- [삭제] progress-text 영역 삭제 -->
+    </div>
+
+    <!-- 2. Existing Content -->
     <div id="cursor-follower">
         <span id="cursor-text"></span>
     </div>
@@ -209,6 +293,56 @@
     </div>
 
     <div id="canvas-container"></div>
+
+    <!-- Preloader Logic Script -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const fillMask = document.getElementById('fillMask');
+            const preloader = document.getElementById('preloader');
+            
+            let currentProgress = 0;
+            
+            // [속도 조절] 이 값을 변경하세요 (클수록 빠름, 작을수록 느리고 부드러움)
+            const loadingSpeed = 1.5; 
+
+            // 시뮬레이션 로딩 함수 (Three.js 로딩과 별개로 UI 애니메이션 실행)
+            function simulateLoading() {
+                // 이전의 불규칙한 랜덤 값 대신 고정된 값을 사용하여 부드럽게(Smooth) 처리
+                currentProgress += loadingSpeed;
+
+                if (currentProgress >= 100) {
+                    currentProgress = 100;
+                    updateLoader(100);
+                    setTimeout(finishLoading, 500);
+                } else {
+                    updateLoader(currentProgress);
+                    requestAnimationFrame(simulateLoading);
+                }
+            }
+
+            function updateLoader(percent) {
+                // 텍스트 업데이트 부분 삭제됨
+                const insetBottom = 100 - percent;
+                fillMask.style.clipPath = `inset(${insetBottom}% 0 0 0)`;
+            }
+
+            function finishLoading() {
+                // GSAP를 사용하여 Preloader 페이드 아웃
+                gsap.to(preloader, {
+                    opacity: 0,
+                    duration: 0.8,
+                    ease: "power2.inOut",
+                    onComplete: () => {
+                        preloader.style.display = 'none';
+                        // Three.js 씬이 뒤에서 이미 렌더링 되고 있음
+                    }
+                });
+            }
+
+            // 시작
+            requestAnimationFrame(simulateLoading);
+        });
+    </script>
 
     <script type="module">
         import * as THREE from 'three';
@@ -295,6 +429,7 @@
         const baseScale = 1.25; 
         const groundY = -3;
 
+        // [GLB Loader Restored]
         const loader = new GLTFLoader();
         loader.load('model_2.glb', function (gltf) {
             character = gltf.scene;
@@ -304,6 +439,8 @@
                 if (node.isMesh) { node.material = depthMaterial; node.castShadow = true; }
             });
             scene.add(character);
+        }, undefined, function (error) {
+            console.error('An error happened while loading the model:', error);
         });
 
         const particles = [];
