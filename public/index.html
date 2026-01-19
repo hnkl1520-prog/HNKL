@@ -6,7 +6,7 @@
     <title>HNKL Portfolio</title>
     
     <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
-    <!-- GSAP for Preloader Animation -->
+    <!-- [필수] GSAP 추가 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
     
     <style>
@@ -16,14 +16,14 @@
             --color-purple: #9c6dff;
             --color-white: #ffffff;
             --color-mint: #4fd1c5;
-            --bg-color: #F5F5F7;
+            --color-bg: #F5F5F7; 
             --text-color: #1a1a1a;
         }
 
         /* 1. 기본 커서 및 설정 */
         body, html { 
             margin: 0; padding: 0; overflow: hidden; 
-            background-color: var(--bg-color); 
+            background-color: var(--color-bg); 
             font-family: 'Pretendard', sans-serif; 
             width: 100vw; height: 100vh; 
             cursor: default; 
@@ -31,92 +31,71 @@
 
         .menu-item, .win-btn, #chat-minimized-icon, button, .send-btn { cursor: pointer; }
 
-        /* * 2. PRELOADER STYLES (NEW) * */
-        #preloader {
+        /* [NEW] 페이지 전환용 검은 커튼 */
+        #transition-curtain {
             position: fixed;
-            top: 0;
+            top: -100%; /* 위에서 대기 */
             left: 0;
             width: 100%;
             height: 100%;
-            background-color: var(--bg-color);
-            z-index: 10000; /* 커서(9999)보다 높게 설정 */
+            background-color: #000;
+            z-index: 20000; /* 최상단 */
             display: flex;
-            flex-direction: column;
-            justify-content: center;
             align-items: center;
-        }
-
-        .logo-container {
-            position: relative;
-            /* [수정] 로고 크기 */
-            width: 240px; 
-            height: 240px;
-        }
-
-        /* 공통 로고 스타일 */
-        .logo-img {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            object-fit: contain; /* 비율 유지하며 맞춤 */
-        }
-
-        /* Layer 1: 배경 (연한 로고) */
-        .logo-bg {
-            opacity: 0.2; /* 연하게 처리 (회색조 느낌) */
-            filter: grayscale(100%); 
-        }
-
-        /* Layer 2: 채워지는 로고 (클리핑 마스크) */
-        .logo-fill-wrapper {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            /* 아래에서 위로 차오르는 효과 */
-            clip-path: inset(100% 0 0 0); 
-            /* [수정] 부드러운 움직임을 위해 CSS transition 제거 (JS로 직접 제어) */
-            /* transition: clip-path 0.1s linear; */ 
+            justify-content: center;
+            pointer-events: none; 
         }
         
-        /* 전경 이미지는 원본 색상 그대로 표시 */
-        .logo-fg {
-            opacity: 1;
+        .transition-text {
+            color: white;
+            font-size: 1.5rem;
+            font-weight: 300;
+            opacity: 0;
         }
-
-        /* [삭제] .progress-text 스타일 삭제됨 */
 
         /* 커서 팔로워 스타일 */
         #cursor-follower {
             position: fixed; top: 0; left: 0;
+            width: 0; height: 0; 
+            z-index: 9999;
+            pointer-events: none;
+            will-change: transform;
+            display: flex; align-items: center; justify-content: center;
+        }
+
+        #cursor-circle {
+            position: absolute;
             width: 40px; height: 40px;
-            background-color: rgba(0, 0, 0, 0); 
-            border: 1.5px solid #898989; 
+            background-color: rgba(0, 0, 0, 0);
+            border: 1.5px solid #898989;
             border-radius: 50%;
-            pointer-events: none; z-index: 9999;
-            transform: translate(-50%, -50%);
+            transform-origin: center center;
             transition: width 0.3s cubic-bezier(0.19, 1, 0.22, 1),
                         height 0.3s cubic-bezier(0.19, 1, 0.22, 1),
                         background-color 0.3s, border-color 0.3s;
-            display: flex; align-items: center; justify-content: center; overflow: hidden;
+            top: -20px; left: -20px;
         }
 
-        #cursor-text { font-size: 14px; font-weight: 500; color: white; opacity: 0; white-space: nowrap; transition: opacity 0.2s; letter-spacing: 0.05em; }
+        #cursor-text { 
+            position: absolute; 
+            font-size: 14px; font-weight: 500; color: white; 
+            opacity: 0; white-space: nowrap; 
+            transition: opacity 0.2s; letter-spacing: 0.05em; 
+            pointer-events: none;
+            z-index: 10001; 
+            transform: translate(-50%, -50%); 
+            top: 0; left: 0;
+        }
 
-        /* active-enter, active-chat 클래스가 붙으면 커서가 커짐 */
-        #cursor-follower.active-enter, #cursor-follower.active-chat {
+        #cursor-follower.active-enter #cursor-circle, 
+        #cursor-follower.active-chat #cursor-circle {
             width: 80px; height: 80px;
             background-color: rgba(29, 29, 31, 0.6); 
             border-color: transparent; 
+            top: -40px; left: -40px;
         }
 
-        /* 텍스트 투명도 조절: active-chat일 때만 글씨 보임 */
         #cursor-follower.active-chat #cursor-text { opacity: 1; }
-        
-        /* active-enter(메뉴/버튼)일 때는 글씨 숨김 (커서만 커짐) */
         #cursor-follower.active-enter #cursor-text { opacity: 0; }
 
         /* 레이아웃 */
@@ -128,9 +107,63 @@
         }
         .grid-col { background-color: rgba(255, 0, 0, 0.0); height: 100%; }
 
-        .menu-wrapper { grid-column: 1 / span 4; align-self: start; margin-top: 120px; pointer-events: auto; }
-        .menu-item { width: fit-content; font-size: clamp(2rem, 3vw, 3rem); font-weight: 700; line-height: 1.1; margin-bottom: 12px; color: #1D1D1F; transition: opacity 0.3s; letter-spacing: -0.02em; }
-        .menu-item:hover { opacity: 0.5; }
+        .menu-wrapper { 
+            grid-column: 1 / span 5; 
+            align-self: start; 
+            margin-top: 120px; 
+            pointer-events: auto; 
+        }
+
+        /* [핵심 수정] 이중 레이어 텍스트 구조 */
+        .reveal-container {
+            position: relative;
+            display: table; /* 텍스트 크기에 맞춤 */
+            margin-bottom: 12px;
+            cursor: pointer;
+        }
+
+        /* 공통 폰트 스타일 */
+        .menu-text {
+            font-size: clamp(2rem, 3vw, 3rem);
+            font-weight: 700;
+            line-height: 1.1;
+            letter-spacing: -0.02em;
+            display: block;
+            padding: 10px 15px 10px 0; /* 박스 여유 공간 */
+            transition: opacity 0.3s;
+        }
+
+        /* 1. 바닥층 (최종적으로 보일 검은색 텍스트) */
+        .base-layer {
+            color: #1a1a1a; /* 확실한 검은색 */
+            position: relative;
+            z-index: 1;
+            opacity: 0; /* 처음엔 안 보임 (애니메이션 중간에 켜짐) */
+        }
+
+        /* 2. 덮개층 (애니메이션용 검은 박스 + 흰색 텍스트) */
+        .overlay-layer {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background-color: #000000; /* 검은 박스 */
+            color: #ffffff; /* 흰색 텍스트 */
+            z-index: 2;
+            overflow: hidden; /* 박스 크기만큼만 내용이 보임 */
+            
+            /* 초기 상태: 오른쪽 100%가 잘려서 안 보임 */
+            clip-path: inset(0 100% 0 0); 
+            pointer-events: none; /* 클릭은 바닥층이 받음 */
+        }
+        
+        .overlay-text {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; /* 부모와 동일 너비 */
+        }
+
+        /* 마우스 오버 효과 */
+        .reveal-container:hover .base-layer { opacity: 0.5; }
 
         #canvas-container { width: 100%; height: 100%; position: absolute; top: 0; left: 0; z-index: 1; }
 
@@ -211,8 +244,6 @@
             from { transform: translateY(0px); }
             to { transform: translateY(-8px); }
         }
-
-    
     </style>
 
     <script type="importmap">
@@ -226,24 +257,14 @@
 </head>
 <body>
 
-    <!-- 1. LOADING SCREEN (Inserted Here) -->
-    <div id="preloader">
-        <div class="logo-container">
-            <!-- [STEP 1] 배경 로고 (연한 색): 여기에 가지고 계신 svg 파일 경로를 입력하세요 -->
-            <!-- 예: <img src="images/my-logo-outline.svg" ... > -->
-            <img src="assets/logo_line.svg" class="logo-img logo-bg" alt="Logo Background">
-
-            <!-- [STEP 2] 채워지는 로고 (진한 색): 안쪽이 꽉 찬(Filled) 로고 파일이 있다면 여기에 해당 파일 경로를 넣으세요! -->
-            <div class="logo-fill-wrapper" id="fillMask">
-                <img src="assets/logo.svg" class="logo-img logo-fg" alt="Logo Foreground">
-            </div>
-        </div>
-        
-        <!-- [삭제] progress-text 영역 삭제 -->
+    <!-- [NEW] TRANSITION CURTAIN (Only used for leaving page) -->
+    <div id="transition-curtain">
+        <div class="transition-text">Loading...</div>
     </div>
 
-    <!-- 2. Existing Content -->
+    <!-- Cursor Follower -->
     <div id="cursor-follower">
+        <div id="cursor-circle"></div>
         <span id="cursor-text"></span>
     </div>
 
@@ -253,8 +274,29 @@
         <div class="grid-col"></div><div class="grid-col"></div><div class="grid-col"></div><div class="grid-col"></div>
 
         <div class="menu-wrapper">
-            <div class="menu-item link-item" onclick="location.href='about.html'">ABOUT</div>
-            <div class="menu-item link-item" onclick="location.href='works.html'">WORKS</div>
+            <!-- 
+                [구조 변경] 2중 레이어 방식: Base(검정) + Overlay(검정박스/흰글씨) 
+                - Base Layer: 실제 링크 역할 및 최종 검정 텍스트
+                - Overlay Layer: 애니메이션 효과 담당 (pointer-events: none)
+            -->
+            
+            <!-- 1. ABOUT -->
+            <div class="reveal-container link-item" onclick="triggerPageTransition('about.html')">
+                <!-- 바닥: 진짜 검정 텍스트 -->
+                <div class="menu-text base-layer">ABOUT</div>
+                <!-- 덮개: 검정 박스 + 흰 텍스트 -->
+                <div class="overlay-layer">
+                    <div class="menu-text overlay-text">ABOUT</div>
+                </div>
+            </div>
+            
+            <!-- 2. WORKS -->
+            <div class="reveal-container link-item" onclick="triggerPageTransition('works.html')">
+                <div class="menu-text base-layer">WORKS</div>
+                <div class="overlay-layer">
+                    <div class="menu-text overlay-text">WORKS</div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -293,56 +335,6 @@
     </div>
 
     <div id="canvas-container"></div>
-
-    <!-- Preloader Logic Script -->
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const fillMask = document.getElementById('fillMask');
-            const preloader = document.getElementById('preloader');
-            
-            let currentProgress = 0;
-            
-            // [속도 조절] 이 값을 변경하세요 (클수록 빠름, 작을수록 느리고 부드러움)
-            const loadingSpeed = 1.5; 
-
-            // 시뮬레이션 로딩 함수 (Three.js 로딩과 별개로 UI 애니메이션 실행)
-            function simulateLoading() {
-                // 이전의 불규칙한 랜덤 값 대신 고정된 값을 사용하여 부드럽게(Smooth) 처리
-                currentProgress += loadingSpeed;
-
-                if (currentProgress >= 100) {
-                    currentProgress = 100;
-                    updateLoader(100);
-                    setTimeout(finishLoading, 500);
-                } else {
-                    updateLoader(currentProgress);
-                    requestAnimationFrame(simulateLoading);
-                }
-            }
-
-            function updateLoader(percent) {
-                // 텍스트 업데이트 부분 삭제됨
-                const insetBottom = 100 - percent;
-                fillMask.style.clipPath = `inset(${insetBottom}% 0 0 0)`;
-            }
-
-            function finishLoading() {
-                // GSAP를 사용하여 Preloader 페이드 아웃
-                gsap.to(preloader, {
-                    opacity: 0,
-                    duration: 0.8,
-                    ease: "power2.inOut",
-                    onComplete: () => {
-                        preloader.style.display = 'none';
-                        // Three.js 씬이 뒤에서 이미 렌더링 되고 있음
-                    }
-                });
-            }
-
-            // 시작
-            requestAnimationFrame(simulateLoading);
-        });
-    </script>
 
     <script type="module">
         import * as THREE from 'three';
@@ -419,6 +411,7 @@
         dirLight.shadow.camera.top = 30; dirLight.shadow.camera.bottom = -30; 
         dirLight.shadow.camera.left = -30; dirLight.shadow.camera.right = 30; dirLight.shadow.camera.far = 100; 
         scene.add(dirLight);
+        
         const planeGeometry = new THREE.PlaneGeometry(100, 100);
         const planeMaterial = new THREE.ShadowMaterial({ opacity: 0.104, color: 0x000000 });
         const plane = new THREE.Mesh(planeGeometry, planeMaterial);
@@ -428,13 +421,12 @@
         let character = null;
         const baseScale = 1.25; 
         const groundY = -3;
-
-        // [GLB Loader Restored]
+        
         const loader = new GLTFLoader();
         loader.load('model_2.glb', function (gltf) {
             character = gltf.scene;
             character.scale.set(baseScale, baseScale, baseScale);
-            character.position.y = groundY;
+            character.position.y = groundY; 
             character.traverse(function (node) {
                 if (node.isMesh) { node.material = depthMaterial; node.castShadow = true; }
             });
@@ -476,9 +468,10 @@
         }
 
         let mouseX = 0; let mouseY = 0;
-        let pixelMouseX = 0; let pixelMouseY = 0;
+        let pixelMouseX = window.innerWidth / 2; 
+        let pixelMouseY = window.innerHeight / 2;
         let currentX = 0; let velocityX = 0;
-        const baseTension = 0.001; let tension = baseTension; const friction = 0.93;
+        const baseTension = 0.002; let tension = baseTension; const friction = 0.93;
         let currentRotX = params.baseRotX; let currentRotY = params.baseRotY;
 
         let isJumping = false; let isSquashing = false; let isLanding = false;
@@ -489,12 +482,91 @@
         const pointer = new THREE.Vector2();
 
         const cursorFollower = document.getElementById('cursor-follower');
+        const cursorCircle = document.getElementById('cursor-circle'); 
         const cursorText = document.getElementById('cursor-text');
-        let followerX = 0; let followerY = 0;
+        
+        let cursorX = window.innerWidth / 2;
+        let cursorY = window.innerHeight / 2;
         
         let isHoveringLink = false;
         let isHoveringBall = false;
         let isHoveringButton = false;
+
+        let ignoreFloor = false;
+
+        // [애니메이션] GSAP Reveal Logic - "Layer Masking" (Double Layer)
+        // [수정사항] 초기 상태 0(안보임) -> 등장 애니메이션 -> 중간에 1로 셋팅
+        function initIntroAnimation() {
+            const tl = gsap.timeline({ 
+                delay: 0.5, 
+            });
+
+            // 1. 초기에는 .base-layer를 보이지 않게 설정 (CSS와 JS 이중 안전장치)
+            // 주의: 이전에 있던 'gsap.set opacity:1' 코드는 삭제됨.
+
+            // ABOUT 애니메이션
+            // Phase 1: 덮개(Overlay)가 나타남 (왼->오)
+            // 이때 화면엔 검정 박스와 흰 글씨가 보임
+            tl.to('.reveal-container:nth-child(1) .overlay-layer', {
+                clipPath: 'inset(0 0% 0 0)',
+                duration: 0.6,
+                ease: 'power3.inOut'
+            })
+            // [중요] 박스가 글자를 다 덮었을 때, 바닥의 진짜 검은 글씨를 켜둠 (박스 뒤라 안 보임)
+            .set('.reveal-container:nth-child(1) .base-layer', { opacity: 1 })
+            
+            // Phase 2: 덮개가 사라짐 (왼->오)
+            // 박스가 사라지면서 미리 켜둔 바닥의 검은 글씨가 드러남
+            .to('.reveal-container:nth-child(1) .overlay-layer', {
+                clipPath: 'inset(0 0% 0 100%)',
+                duration: 0.6,
+                ease: 'power3.inOut'
+            });
+
+            // WORKS 애니메이션 (동일 로직)
+            tl.to('.reveal-container:nth-child(2) .overlay-layer', {
+                clipPath: 'inset(0 0% 0 0)',
+                duration: 0.6,
+                ease: 'power3.inOut'
+            }, "-=0.4") // 약간 겹치게
+            .set('.reveal-container:nth-child(2) .base-layer', { opacity: 1 })
+            .to('.reveal-container:nth-child(2) .overlay-layer', {
+                clipPath: 'inset(0 0% 0 100%)',
+                duration: 0.6,
+                ease: 'power3.inOut'
+            });
+        }
+
+        // 페이지 로드 시 인트로 시작
+        window.addEventListener('load', initIntroAnimation);
+
+        window.triggerPageTransition = function(targetUrl) {
+            if (!character) {
+                location.href = targetUrl;
+                return;
+            }
+            isJumping = true;
+            isSquashing = false;
+            isLanding = false;
+            velocityY = 0.5; 
+            ignoreFloor = true; 
+            if (plane) plane.visible = false;
+
+            const curtain = document.getElementById('transition-curtain');
+            const transitionText = curtain.querySelector('.transition-text');
+            
+            gsap.to(curtain, {
+                top: 0,
+                duration: 0.6,
+                ease: "power3.inOut",
+                delay: 0.7,
+                onComplete: () => {
+                    window.location.href = targetUrl;
+                }
+            });
+
+            gsap.to(transitionText, { opacity: 1, duration: 0.3, delay: 0.8 });
+        };
 
         window.addEventListener('pointerdown', (event) => {
             pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
@@ -534,20 +606,17 @@
         chatIcon.addEventListener('mouseenter', () => { isHoveringButton = true; updateCursorState(); });
         chatIcon.addEventListener('mouseleave', () => { isHoveringButton = false; updateCursorState(); });
 
-        // [핵심 수정] 상태별 커서 모양 및 텍스트 정의
         function updateCursorState() {
             cursorFollower.classList.remove('active-enter', 'active-chat');
             cursorText.innerText = "";
             
             if (isHoveringBall) {
-                // 공: 커서 커짐(O) + 텍스트 "CHAT"(O)
                 cursorFollower.classList.add('active-chat');
                 cursorText.innerText = "CHAT";
             } 
             else if (isHoveringLink || isHoveringButton) {
-                // 메뉴/버튼: 커서 커짐(O) + 텍스트(X)
                 cursorFollower.classList.add('active-enter');
-                cursorText.innerText = ""; // 텍스트 없음
+                cursorText.innerText = ""; 
             }
         }
         
@@ -559,7 +628,6 @@
         window.restoreChat = function() { document.getElementById('chat-interface').style.display = 'flex'; document.getElementById('chat-minimized-icon').style.display = 'none'; }
         window.toggleChat = function(show) { if (show) restoreChat(); else closeChat(); }
 
-        /* ▼ 324번째 줄 근처 sendMessage 함수 수정 */
         window.sendMessage = async function() {
             const input = document.getElementById('chat-input');
             const body = document.getElementById('chat-body');
@@ -567,73 +635,48 @@
             
             if (!text) return;
 
-            // 1. 내 질문 표시
             body.innerHTML += `<div class="message user">${text}</div>`;
             input.value = '';
             body.scrollTop = body.scrollHeight;
 
-            // 2. 로딩 말풍선 켜기! (이름이 loading-message로 바뀜)
             const loadingMessage = document.getElementById('loading-message');
-            loadingMessage.style.display = 'block'; // flex 대신 block이나 inherit 추천
-            body.appendChild(loadingMessage); // 로딩바를 맨 아래로 내리기
+            loadingMessage.style.display = 'block'; 
+            body.appendChild(loadingMessage); 
             body.scrollTop = body.scrollHeight;
 
             try {
-                // 3. AI 답변 기다리기
                 const responseText = await callGeminiAPI(text);
-
-                // 4. 로딩 말풍선 끄기
                 loadingMessage.style.display = 'none';
-
-                // 5. 답변 표시
                 body.innerHTML += `<div class="message bot">${responseText}</div>`;
                 body.scrollTop = body.scrollHeight;
-
-                // (중요) 로딩 말풍선을 다시 채팅창 맨 끝에 붙여둠 (다음 대화 준비)
                 body.appendChild(loadingMessage);
 
             } catch (error) {
-                // 에러 시 끄기
                 loadingMessage.style.display = 'none';
                 body.appendChild(loadingMessage);
             }
         }
 
-
-
-       /* ▼ [배포용 수정] 서버 통신 함수 */
         async function callGeminiAPI(prompt) {
             try {
-                // [중요] 배포 완료! 실제 Firebase 서버 주소로 변경했습니다.
                 const apiUrl = 'https://us-central1-hnkl-49a5f.cloudfunctions.net/chat'; 
-
                 const response = await fetch(apiUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ prompt: prompt }) 
                 });
-
-                if (!response.ok) {
-                   // 403, 500 등 에러 발생 시 처리
-                   throw new Error(`HTTP error! status: ${response.status}`);
-                }
-
+                if (!response.ok) { throw new Error(`HTTP error! status: ${response.status}`); }
                 const data = await response.json();
-
-                // 2. 답변 꺼내기
                 if (data.candidates && data.candidates.length > 0) {
                     return data.candidates[0].content.parts[0].text;
                 } else {
                     return "죄송해요, 답변을 못 들었어요.";
                 }
-
             } catch (error) {
                 console.error("통신 에러:", error);
                 return `오류가 발생했습니다: ${error.message}. (관리자에게 문의하세요)`;
             }
         }
-
-
 
         const clock = new THREE.Clock();
         const lookRange = 45; 
@@ -643,9 +686,24 @@
             requestAnimationFrame(animate);
             const delta = clock.getDelta();
             
-            followerX += (pixelMouseX - followerX) * 0.5;
-            followerY += (pixelMouseY - followerY) * 0.5;
-            cursorFollower.style.transform = `translate(${followerX}px, ${followerY}px) translate(-50%, -50%)`;
+            const ease = 0.2; 
+            const nextX = cursorX + (pixelMouseX - cursorX) * ease;
+            const nextY = cursorY + (pixelMouseY - cursorY) * ease;
+            
+            const velX = nextX - cursorX;
+            const velY = nextY - cursorY;
+            cursorX = nextX;
+            cursorY = nextY;
+            
+            const dist = Math.sqrt(velX * velX + velY * velY);
+            const angle = Math.atan2(velY, velX);
+            const stretch = Math.min(dist * 0.1, 0.5);
+            
+            const scaleX = 1 + stretch;
+            const scaleY = 1 - stretch * 0.4;
+            
+            cursorFollower.style.transform = `translate3d(${cursorX}px, ${cursorY}px, 0)`;
+            cursorCircle.style.transform = `rotate(${angle}rad) scale(${scaleX}, ${scaleY})`;
 
             if (character) {
                 pointer.x = mouseX; pointer.y = mouseY; 
@@ -675,14 +733,23 @@
                     if (character.scale.y <= baseScale * 0.6) { isSquashing = false; isJumping = true; velocityY = jumpPower; }
                 } 
                 else if (isJumping) {
-                    velocityY += gravity; character.position.y += velocityY;
-                    const stretchAmount = 1 + Math.abs(velocityY) * 0.8; const squashAmount = 1 / Math.sqrt(stretchAmount);
+                    velocityY += gravity; 
+                    character.position.y += velocityY;
+                    
+                    const stretchAmount = 1 + Math.abs(velocityY) * 0.8; 
+                    const squashAmount = 1 / Math.sqrt(stretchAmount);
                     character.scale.y = lerp(character.scale.y, baseScale * stretchAmount, 0.3);
                     character.scale.x = lerp(character.scale.x, baseScale * squashAmount, 0.3);
                     character.scale.z = lerp(character.scale.z, baseScale * squashAmount, 0.3);
-                    if (character.position.y <= groundY) {
+                    
+                    if (!ignoreFloor && character.position.y <= groundY) {
                         character.position.y = groundY;
-                        if (Math.abs(velocityY) > 0.1) { velocityY = -velocityY * bounceDamping; character.scale.y = baseScale * 0.8; character.scale.x = baseScale * 1.2; character.scale.z = baseScale * 1.2; } 
+                        if (Math.abs(velocityY) > 0.1) { 
+                            velocityY = -velocityY * bounceDamping; 
+                            character.scale.y = baseScale * 0.8; 
+                            character.scale.x = baseScale * 1.2; 
+                            character.scale.z = baseScale * 1.2; 
+                        } 
                         else {
                             isJumping = false; velocityY = 0; character.scale.set(baseScale * 1.3, baseScale * 0.7, baseScale * 1.3);
                             isLanding = true; tension = baseTension * 1.5; 
@@ -690,7 +757,8 @@
                             landingTimer = setTimeout(() => { isLanding = false; tension = baseTension; }, 500);
                         }
                     }
-                } else {
+                } 
+                else {
                     character.scale.y = lerp(character.scale.y, baseScale, 0.3);
                     character.scale.x = lerp(character.scale.x, baseScale, 0.3);
                     character.scale.z = lerp(character.scale.z, baseScale, 0.3);
@@ -701,9 +769,11 @@
                     const acceleration = (targetX - currentX) * tension;
                     velocityX += acceleration;
                 }
+                
                 velocityX *= (isJumping && !isLanding) ? 0.99 : friction;
                 currentX += velocityX;
                 character.position.x = currentX * 10.0;
+                
                 if (!isJumping) { character.rotation.z = -currentX * Math.PI * 4; }
 
                 if (Math.abs(velocityX) > 0.005 && !isJumping) {

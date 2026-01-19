@@ -3,9 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Portfolio - about Hanuk</title>
+    <title>Portfolio - About Hanuk</title>
     <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.8/dist/web/static/pretendard.css" />
     
+    <!-- [필수] GSAP 추가 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+
     <style>
         :root {
             /* [Color Theme] Light Mode */
@@ -26,77 +29,286 @@
             font-family: 'Pretendard', sans-serif;
             width: 100%;
             cursor: default;
+            
+            /* 텍스트 렌더링 품질 개선 */
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            text-rendering: optimizeLegibility;
         }
 
-        /* [Custom Cursor CSS] */
-        .menu-item, .win-btn, #chat-minimized-icon, button, .send-btn, a, .skill-item, .bento-card, .circle-btn, .profile-card, .marquee-item { cursor: pointer; }
+        /* =========================================
+           HEADER SECTION
+           ========================================= */
+        #global-header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 60px;
+            z-index: 900; 
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: rgba(245, 245, 247, 0.7); 
+            backdrop-filter: blur(10px); 
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+            transition: transform 0.3s ease, background-color 0.3s ease, height 0.3s ease, border-bottom 0.3s ease;
+        }
 
-        #cursor-follower {
-            position: fixed; top: 0; left: 0;
-            width: 40px; height: 40px;
-            
-            /* [수정됨] 평상시 그라데이션 적용 & 테두리 제거 */
+        #global-header.at-top {
+            height: 90px; 
+            background-color: rgba(245, 245, 247, 0); 
+            border-bottom: 1px solid rgba(0,0,0,0); 
+        }
+
+        #global-header.header-hidden {
+            transform: translateY(-100%);
+        }
+
+        .header-inner {
+            width: 100%;
+            max-width: 1200px;
+            padding: 0 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-sizing: border-box;
+            height: 100%; 
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 40px; 
+        }
+
+        .header-logo {
+            display: flex;
+            align-items: center;
+            text-decoration: none;
+        }
+        
+        .header-logo img {
+            height: 24px; 
+            width: auto;
+            display: block;
+            transition: height 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
+            will-change: height; 
+        }
+
+        #global-header.at-top .header-logo img {
+            height: 31px; 
+        }
+
+        .header-nav {
+            display: flex;
+            gap: 24px;
+            transition: transform 0.3s ease;
+        }
+
+        .nav-link {
+            font-size: 1.1rem; 
+            color: var(--text-sub);
+            text-decoration: none;
+            font-weight: 500;
+            position: relative;
+            transition: color 0.2s;
+        }
+
+        .nav-link:hover {
+            color: var(--text-color);
+        }
+
+        .nav-link.active {
+            color: var(--text-color);
+            font-weight: 600;
+        }
+        .nav-link.active::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            bottom: -4px;
+            width: 100%;
+            height: 2px;
+            background-color: var(--text-color);
+            border-radius: 2px;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.95rem;
+            font-weight: 500;
+        }
+
+        .lang-btn {
+            background: none;
             border: none;
+            padding: 4px;
+            cursor: pointer;
+            color: var(--text-sub);
+            font-family: 'Pretendard', sans-serif;
+            font-size: inherit;
+            transition: color 0.2s;
+        }
+        
+        .lang-btn.active {
+            color: var(--text-color);
+            font-weight: 700;
+        }
+        
+        .lang-btn:hover {
+            color: var(--accent-color);
+        }
+
+        .lang-divider {
+            color: var(--dim-color);
+            opacity: 0.5;
+        }
+
+        #page-entry-curtain {
+            position: fixed;
+            top: 0; 
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #000;
+            z-index: 99998; 
+        }
+
+        #loading-screen {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background-color: transparent; 
+            z-index: 99999; 
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.6s ease, visibility 0.6s ease;
+        }
+        
+        #loading-screen.hidden {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+
+        .loading-text {
+            font-size: 1.2rem;
+            font-weight: 500;
+            color: #ffffff; 
+            margin-bottom: 10px;
+            letter-spacing: -0.01em;
+        }
+
+        .loading-bar-bg {
+            width: 200px;
+            height: 2px;
+            background-color: #333; 
+            border-radius: 2px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .loading-bar-fill {
+            width: 0%;
+            height: 100%;
+            background-color: var(--accent-color);
+            transition: width 0.2s linear;
+        }
+
+        .menu-item, .win-btn, #chat-minimized-icon, button, .send-btn, a, .skill-item, .bento-card, .circle-btn, .profile-card, .marquee-item, .lang-btn, .nav-link, .header-logo { cursor: pointer; }
+
+        /* [최종 해결] 커서 레이어 분리 및 블렌딩 모드 제어 */
+        
+        /* 레이어 1: 원 (배경 반전용) */
+        #cursor-bg-layer {
+            position: fixed; top: 0; left: 0;
+            width: 0; height: 0; 
+            z-index: 9990; /* 텍스트 레이어보다 아래 */
+            pointer-events: none;
+            will-change: transform;
+            display: flex; align-items: center; justify-content: center;
+            
+            /* [수정] 평소에는 반전 효과 끔 (그라데이션 색상 유지) */
+            mix-blend-mode: normal; 
+        }
+
+        /* [수정] 호버 시에만 반전 효과 적용 */
+        #cursor-bg-layer.active-enter {
+            mix-blend-mode: difference; 
+        }
+
+        #cursor-circle {
+            position: absolute;
+            width: 40px; height: 40px;
+            border-radius: 50%;
+            
+            /* 기본 상태: 그라데이션 */
             background: linear-gradient(120deg, var(--accent-color), var(--sub-color-1), var(--sub-color-2), var(--accent-color));
             background-size: 300% 300%;
-            animation: gradientCursor 4s ease infinite; /* 그라데이션이 흐르는 애니메이션 */
-            
-            /* [수정됨] 투명도 추가 (0.6 = 60% 불투명) */
+            animation: gradientCursor 4s ease infinite; 
             opacity: 0.6; 
             
-            border-radius: 50%;
-            pointer-events: none; z-index: 9999;
-            margin-left: -20px; 
-            margin-top: -20px;
-            
-            /* 트랜지션에 opacity 추가하여 호버 시 자연스럽게 전환 */
+            transform-origin: center center;
             transition: width 0.3s cubic-bezier(0.19, 1, 0.22, 1),
                         height 0.3s cubic-bezier(0.19, 1, 0.22, 1),
-                        background-color 0.3s, margin 0.3s, mix-blend-mode 0.3s, opacity 0.3s;
-                        
-            display: flex; align-items: center; justify-content: center; overflow: hidden;
-            
-            /* 평상시엔 지정된 그라데이션 색상을 보여주기 위해 normal로 설정 */
-            mix-blend-mode: normal; 
-            will-change: transform; 
+                        background-color 0.3s, margin 0.3s, opacity 0.3s;
         }
 
-        /* 그라데이션 애니메이션 키프레임 */
+        /* 호버 시: 원을 흰색으로 변경 (흰색 + difference = 반전 효과) */
+        #cursor-bg-layer.active-enter #cursor-circle {
+            width: 120px; height: 120px;
+            background: #ffffff; /* 흰색이어야 반전이 확실하게 일어남 */
+            opacity: 1;
+            animation: none;
+        }
+
+        /* 레이어 2: 텍스트 (그냥 위에 얹음, 블렌딩 없음) */
+        #cursor-text-layer {
+            position: fixed; top: 0; left: 0;
+            width: 0; height: 0; 
+            z-index: 9995; /* 원보다 위에 있어야 함 */
+            pointer-events: none;
+            will-change: transform;
+            display: flex; align-items: center; justify-content: center;
+            
+            /* 블렌딩 모드 없음 (Normal) */
+            mix-blend-mode: normal; 
+        }
+
+        #cursor-text {
+            position: absolute; 
+            /* 중앙 정렬 */
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%); 
+            
+            font-size: 24px; font-weight: 500; 
+            color: #ffffff; /* 깔끔한 흰색 텍스트 */
+            opacity: 0; 
+            white-space: nowrap; 
+            transition: opacity 0.2s; 
+            letter-spacing: 0.05em; 
+            -webkit-font-smoothing: antialiased;
+        }
+
+        #cursor-text-layer.active-enter #cursor-text {
+            opacity: 1;
+        }
+
         @keyframes gradientCursor {
             0% { background-position: 0% 50%; }
             50% { background-position: 100% 50%; }
             100% { background-position: 0% 50%; }
         }
 
-        #cursor-text { 
-            font-size: 12px; font-weight: 500; color: white; 
-            opacity: 0; white-space: nowrap; 
-            transition: opacity 0.2s; letter-spacing: 0.05em; 
-        }
-
-        #cursor-follower.active-enter {
-            width: 80px; height: 80px;
-            margin-left: -40px; margin-top: -40px; 
-            
-            /* [수정됨] 호버 시에는 흰색 배경 + 색상 반전(difference) 모드로 전환 */
-            background: #ffffff;
-            border-color: transparent; 
-            mix-blend-mode: difference;
-            
-            /* [수정됨] 반전 효과 시에는 투명도를 100%로 하여 선명하게 반전되도록 함 */
-            opacity: 1;
-            
-            /* 호버 시 그라데이션 애니메이션 멈춤 (단색 배경이므로) */
-            animation: none;
-        }
-
         .container {
             max-width: 1200px; margin: 0 auto; padding: 0 20px; box-sizing: border-box;
         }
 
-        /* =========================================
-           1. HERO SECTION
-           ========================================= */
         #hero-section {
             position: relative; 
             width: 100%; 
@@ -118,7 +330,7 @@
             justify-content: center; 
             align-items: flex-start; 
             padding-left: 0;
-            padding-top: 60px; 
+            padding-top: 100px; 
         }
 
         .hero-text-block {
@@ -133,6 +345,7 @@
             width: 100%; 
             z-index: 10; 
             position: relative;
+            transform: translateZ(0);
         }
 
         .profile-card {
@@ -145,6 +358,9 @@
             z-index: 20;
             align-self: flex-end; 
             margin-top: -55px; 
+            -webkit-font-smoothing: subpixel-antialiased;
+            backface-visibility: hidden;
+            transform-style: preserve-3d;
         }
         .profile-card:hover { transform: translate(2px, -4px); }
 
@@ -185,7 +401,7 @@
             animation: bounce 2s infinite; 
             z-index: 30;
             color: var(--text-color);
-            margin-top: 0px; /* 사용자 조절 가능 */
+            margin-top: 40px; 
             margin-bottom: 60px; 
         }
 
@@ -205,12 +421,8 @@
             .profile-card { width: 280px; height: 373px; }
         }
 
-        /* =========================================
-           1.5. IMAGE MARQUEE SECTION
-           ========================================= */
         #image-marquee-section {
             width: 100%;
-            /* [수정됨] 높이를 줄임 (90vh -> 70vh, 800px -> 600px) */
             height: 70vh; 
             min-height: 600px; 
             background-color: var(--bg-color);
@@ -228,9 +440,8 @@
             display: flex; align-items: flex-start; 
             overflow: hidden;
             pointer-events: none; 
-            /* 트랙 자체는 패딩의 영향을 받지 않고 전체를 쓰되, 내부 아이템 배치를 조절 */
             padding-top: 0; 
-            transition: z-index 0.3s; /* 트랙 간 순서 변경 시 부드럽게 */
+            transition: z-index 0.3s; 
         }
 
         .marquee-track {
@@ -240,7 +451,6 @@
             will-change: transform;
         }
 
-        /* [수정됨] 속도 더 느리게 조정 (300s, 340s, 320s) */
         .track-1 { animation-duration: 300s; z-index: 1; }
         .track-2 { animation-duration: 340s; z-index: 2; margin-left: -15vw;} 
         .track-3 { animation-duration: 320s; z-index: 3; margin-left: -5vw;} 
@@ -250,10 +460,9 @@
             100% { transform: translateX(-50%); } 
         }
 
-        /* [NEW] 위치와 드래그를 담당하는 래퍼 */
         .marquee-item-wrapper {
             flex-shrink: 0;
-            position: relative; /* z-index 적용을 위해 */
+            position: relative; 
             pointer-events: auto;
             user-select: none;
             -webkit-user-drag: none;
@@ -261,16 +470,16 @@
             transition: z-index 0.2s;
         }
 
-        /* [MODIFIED] 디자인과 호버 효과를 담당하는 내부 아이템 */
         .marquee-item {
             width: 100%; height: 100%;
             border-radius: 24px;
             overflow: hidden;
             background-color: #e0e0e0; 
             position: relative;
-            /* 호버 시 확대 효과 트랜지션 */
             transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease;
             transform-origin: center center;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
         }
         
         .marquee-item img {
@@ -280,13 +489,11 @@
             pointer-events: none; 
         }
 
-        /* [Hover Effect] 래퍼에 마우스를 올리면 내부 아이템이 커짐 */
         .marquee-item-wrapper:hover .marquee-item {
-            transform: scale(1.15); /* 1.15배 확대 */
+            transform: scale(1.15); 
             box-shadow: 0 25px 50px rgba(0,0,0,0.25);
         }
         
-        /* 드래그 중인 아이템 스타일 */
         .marquee-item-wrapper.dragging .marquee-item {
             cursor: grabbing;
             box-shadow: 0 30px 60px rgba(0,0,0,0.3);
@@ -297,13 +504,10 @@
             #image-marquee-section { height: 60vh; min-height: 500px; }
         }
 
-        /* =========================================
-           2. PHILOSOPHY SECTION
-           ========================================= */
         #philosophy-section { 
             position: relative; 
             width: 100%; 
-            height: 600vh; 
+            height: 400vh; 
             background-color: var(--bg-color);
         }
         
@@ -339,14 +543,13 @@
             padding: 0; 
             opacity: 0; 
             pointer-events: none; 
+            transition: opacity 0.5s ease, transform 0.5s ease;
         }
 
         .philo-intro-title {
-            /* [수정됨] 크기 5rem -> 4rem으로 축소 */
             font-size: 4rem; 
             font-weight: 300; 
-            line-height: 1;   
-            
+            line-height: 1;    
             color: var(--text-color); margin-bottom: 20px;
             letter-spacing: -0.02em;
         }
@@ -368,9 +571,6 @@
         }
         #three-canvas { width: 100%; height: 100%; outline: none; }
 
-        /* =========================================
-           3. KEY DETAIL SECTION
-           ========================================= */
         #key-detail-section {
             padding: 100px 0 200px 0;
             background-color: var(--bg-color);
@@ -397,6 +597,8 @@
         .bento-card {
             background-color: transparent; perspective: 1000px; width: 290px;
             position: relative; transition: transform 0.3s ease; cursor: pointer;
+            transform: translateZ(0); 
+            -webkit-font-smoothing: subpixel-antialiased; 
         }
         .bento-card:hover { transform: translateY(-5px); }
         .bento-card.card-language { cursor: default; }
@@ -407,6 +609,7 @@
             transition: transform 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             transform-style: preserve-3d; border-radius: 24px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+            will-change: transform;
         }
         .bento-card:hover .card-inner { box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
         .bento-card.flipped .card-inner { transform: rotateY(180deg); }
@@ -416,6 +619,8 @@
             -webkit-backface-visibility: hidden; backface-visibility: hidden;
             background-color: var(--card-bg); border-radius: 24px;
             padding: 30px; box-sizing: border-box; display: flex; flex-direction: column;
+            transform: translateZ(0);
+            text-shadow: 0 0 0 transparent; 
         }
         .card-back { transform: rotateY(180deg); overflow: hidden; }
 
@@ -469,10 +674,31 @@
         .contact-link:hover { opacity: 0.7; }
 
         .circle-wrapper { width: 290px; height: 150px; display: flex; justify-content: flex-end; }
-        .circle-btn { width: 150px; height: 150px; border-radius: 50%; background-color: var(--card-bg); display: flex; align-items: center; justify-content: center; flex-direction: column; transition: all 0.3s; border: 1px solid transparent; text-decoration: none; box-shadow: 0 4px 20px rgba(0,0,0,0.02); }
-        .circle-btn:hover { transform: scale(1.05); border-color: var(--accent-color); box-shadow: 0 10px 20px rgba(41, 151, 255, 0.15); }
-        .circle-arrow { width: 75px; height: 75px; margin-top: 5px; -webkit-mask: url('assets/Go_2.svg') no-repeat center / contain; mask: url('assets/Go_2.svg') no-repeat center / contain; background-color: var(--text-color); transition: transform 0.3s ease, background-color 0.3s ease; }
-        .circle-btn:hover .circle-arrow { transform: translate(3px, -3px); background-color: var(--accent-color); }
+        .circle-btn { 
+            width: 150px; height: 150px; border-radius: 50%; 
+            background-color: var(--card-bg); 
+            display: flex; align-items: center; justify-content: center; flex-direction: column; 
+            transition: all 0.3s; border: 1px solid transparent; text-decoration: none; 
+            box-shadow: 0 4px 20px rgba(0,0,0,0.02); 
+            transform: translateZ(0);
+        }
+        .circle-btn:hover { 
+            transform: scale(1.05); 
+            background: linear-gradient(135deg, var(--accent-color), var(--sub-color-1));
+            border-color: transparent; 
+            box-shadow: 0 10px 20px rgba(41, 151, 255, 0.25); 
+        }
+        .circle-arrow { 
+            width: 75px; height: 75px; margin-top: 5px; 
+            -webkit-mask: url('assets/Go_2.svg') no-repeat center / contain; 
+            mask: url('assets/Go_2.svg') no-repeat center / contain; 
+            background-color: var(--text-color); 
+            transition: transform 0.3s ease, background-color 0.3s ease; 
+        }
+        .circle-btn:hover .circle-arrow { 
+            transform: translate(3px, -3px); 
+            background-color: #ffffff; 
+        }
 
         .footer { text-align: center; padding: 50px 20px; border-top: 1px solid #eee; background-color: #fff; margin-top: 100px; }
         .contact-simple { font-size: 0.9rem; color: var(--dim-color); }
@@ -480,7 +706,47 @@
 </head>
 <body>
 
-    <div id="cursor-follower">
+    <!-- GLOBAL HEADER -->
+    <header id="global-header" class="at-top">
+        <div class="header-inner">
+            <div class="header-left">
+                <!-- Logo -->
+                <a href="#" class="header-logo">
+                    <img src="assets/logo.svg" alt="HANUK Logo">
+                </a>
+                
+                <!-- Navigation -->
+                <nav class="header-nav">
+                    <a href="#" class="nav-link active">About</a>
+                    <a href="works.html" class="nav-link">Works</a>
+                </nav>
+            </div>
+            
+            <div class="header-right">
+                <!-- Language Toggle -->
+                <button class="lang-btn active">KR</button>
+                <span class="lang-divider">/</span>
+                <button class="lang-btn">EN</button>
+            </div>
+        </div>
+    </header>
+
+    <div id="page-entry-curtain"></div>
+
+    <div id="loading-screen">
+        <div class="loading-text"><span id="loading-percent">0</span>%</div>
+        <div class="loading-bar-bg">
+            <div class="loading-bar-fill" id="loading-bar"></div>
+        </div>
+    </div>
+
+    <!-- [수정] 레이어 분리: 1. 배경용 원 (Difference) -->
+    <div id="cursor-bg-layer">
+        <div id="cursor-circle"></div>
+    </div>
+
+    <!-- [수정] 레이어 분리: 2. 텍스트 (Normal, 상위 레이어) -->
+    <div id="cursor-text-layer">
         <span id="cursor-text"></span>
     </div>
 
@@ -520,7 +786,6 @@
     <section id="philosophy-section">
         <div class="philo-container">
             <div class="text-col">
-                <!-- [수정됨] 타이틀 텍스트 변경: How I Work -> My Approach -->
                 <div class="text-block" id="philo-text-intro">
                     <h2 class="philo-intro-title">My Approach</h2>
                     
@@ -782,7 +1047,7 @@
     </section>
 
     <footer class="footer">
-        <p class="contact-simple">© 2026 Hanwook Lee. All rights reserved.</p>
+        <p class="contact-simple">© 2026 Hanuk Lee. All rights reserved.</p>
     </footer>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -814,27 +1079,54 @@
             }
         }
 
-        // Custom Jelly Cursor Logic
+        // [수정됨] Custom Jelly Cursor Logic (레이어 분리형)
         (function() {
-            const cursor = document.getElementById('cursor-follower');
+            // 레이어 1 (원)
+            const cursorBgLayer = document.getElementById('cursor-bg-layer');
+            const cursorCircle = document.getElementById('cursor-circle'); 
+            
+            // 레이어 2 (텍스트)
+            const cursorTextLayer = document.getElementById('cursor-text-layer');
+            const cursorText = document.getElementById('cursor-text');      
+
             let mouseX = window.innerWidth / 2;
             let mouseY = window.innerHeight / 2;
             let cursorX = mouseX;
             let cursorY = mouseY;
             let velX = 0;
             let velY = 0;
-            let scaleX = 1;
-            let scaleY = 1;
 
             document.addEventListener('mousemove', (e) => {
                 mouseX = e.clientX;
                 mouseY = e.clientY;
+                
+                // [NEW] 프로필 카드 내부 호버 로직 (Spatial Detection)
+                const profileCard = e.target.closest('.profile-card');
+                if (profileCard) {
+                    const rect = profileCard.getBoundingClientRect();
+                    const relX = e.clientX - rect.left;
+                    const relY = e.clientY - rect.top;
+                    
+                    // Grid 3x3 Logic
+                    const colWidth = rect.width / 3;
+                    const rowHeight = rect.height / 3;
+                    
+                    const isCenterCol = relX > colWidth && relX < colWidth * 2;
+                    const isBottomTwoRows = relY > rowHeight;
+                    
+                    if (isCenterCol && isBottomTwoRows) {
+                        if (profileCard.classList.contains('flipped')) {
+                            cursorText.innerText = "It's also me!";
+                        } else {
+                            cursorText.innerText = "It's me!";
+                        }
+                    } else {
+                        cursorText.innerText = "Click";
+                    }
+                }
             });
 
             function animateCursor() {
-                // [속도 조절] 0.15 -> 0.1로 변경
-                // 이 값이 작을수록(0.05 ~ 0.1) 커서가 더 느리고 부드럽게(쫀득하게) 따라옵니다.
-                // 이 값이 클수록(0.2 ~ 0.3) 커서가 빠릿하게 붙습니다.
                 const ease = 0.1; 
                 
                 const nextX = cursorX + (mouseX - cursorX) * ease;
@@ -848,31 +1140,99 @@
                 const dist = Math.sqrt(velX * velX + velY * velY);
                 const angle = Math.atan2(velY, velX);
                 
-                // [쫀득함 조절] 0.05 -> 0.1로 변경
-                // 움직일 때 원이 찌그러지는 정도입니다. 값이 클수록 더 많이 늘어납니다.
                 const stretch = Math.min(dist * 0.1, 0.5); 
                 
-                scaleX = 1 + stretch;      
-                scaleY = 1 - stretch * 0.4; 
+                const scaleX = 1 + stretch;        
+                const scaleY = 1 - stretch * 0.4; 
                 
-                cursor.style.transform = `translate3d(${cursorX}px, ${cursorY}px, 0) rotate(${angle}rad) scale(${scaleX}, ${scaleY})`;
+                // 1. 배경 레이어 이동 (원)
+                cursorBgLayer.style.transform = `translate3d(${cursorX}px, ${cursorY}px, 0)`;
+                // 2. 텍스트 레이어 이동 (동일하게 따라감)
+                cursorTextLayer.style.transform = `translate3d(${cursorX}px, ${cursorY}px, 0)`;
+                
+                // 원의 모양 변형
+                cursorCircle.style.transform = `rotate(${angle}rad) scale(${scaleX}, ${scaleY})`;
+
                 requestAnimationFrame(animateCursor);
             }
             animateCursor();
 
-            // [수정됨] 이벤트 위임(Delegation) 방식으로 변경
-            // 동적으로 생성되는 marquee-item-wrapper도 감지하기 위해 document 전체에서 이벤트를 잡습니다.
+            // [수정됨] 이벤트 위임 (두 레이어 모두 active 클래스 적용)
             document.addEventListener('mouseover', (e) => {
-                // 커서가 커져야 할 요소들 정의
-                const target = e.target.closest('a, button, .skill-item, .contact-btn, .bento-card, .circle-btn, .profile-card, .marquee-item, .marquee-item-wrapper');
-                if (target) {
-                    cursor.classList.add('active-enter');
-                } else {
-                    cursor.classList.remove('active-enter');
+                const target = e.target.closest('a, button, .skill-item, .contact-btn, .bento-card, .circle-btn, .marquee-item, .marquee-item-wrapper, .lang-btn, .nav-link, .header-logo');
+                const profileCard = e.target.closest('.profile-card');
+                const circleBtn = e.target.closest('.circle-btn');
+
+                if (profileCard) {
+                    cursorBgLayer.classList.add('active-enter');
+                    cursorTextLayer.classList.add('active-enter');
+                } 
+                else if (circleBtn) {
+                    cursorBgLayer.classList.add('active-enter');
+                    cursorTextLayer.classList.add('active-enter');
+                    cursorText.innerText = "Works"; 
+                }
+                else if (target) {
+                    cursorBgLayer.classList.add('active-enter');
+                    cursorTextLayer.classList.add('active-enter');
+                    cursorText.innerText = ""; 
+                } 
+                else {
+                    cursorBgLayer.classList.remove('active-enter');
+                    cursorTextLayer.classList.remove('active-enter');
+                    cursorText.innerText = "";
                 }
             });
             
-            // 기존 정적 바인딩 코드는 제거하거나 위 로직으로 대체됨
+        })();
+
+        // [New] Scroll Logic for Header & Logo
+        (function() {
+            let lastScrollY = 0;
+            const header = document.getElementById('global-header');
+            const heroText = document.querySelector('.hero-text-block');
+
+            // [NEW] 스크롤 임계값 동적 계산 (히어로 텍스트 위치 기준)
+            let hideThreshold = 0;
+            
+            function updateThreshold() {
+                if(heroText) {
+                    // 헤더 높이만큼 뺀 위치나, 텍스트 상단 위치에서 숨기기 시작
+                    hideThreshold = Math.max(50, heroText.offsetTop - 100); 
+                } else {
+                    hideThreshold = 100; // fallback
+                }
+            }
+            
+            updateThreshold();
+            window.addEventListener('resize', updateThreshold);
+
+            window.addEventListener('scroll', () => {
+                const currentScrollY = window.scrollY;
+
+                // 1. Logo Resize & Header Height Logic (At Top)
+                if (currentScrollY <= 10) {
+                    header.classList.add('at-top');
+                } else {
+                    header.classList.remove('at-top');
+                }
+
+                // 2. Header Hide/Show Logic
+                if (currentScrollY > hideThreshold) {
+                    if (currentScrollY > lastScrollY) {
+                        // 스크롤 내림 -> 헤더 숨김
+                        header.classList.add('header-hidden');
+                    } else {
+                        // 스크롤 올림 -> 헤더 보임
+                        header.classList.remove('header-hidden');
+                    }
+                } else {
+                    // 최상단 근처에서는 항상 보임
+                    header.classList.remove('header-hidden');
+                }
+
+                lastScrollY = currentScrollY <= 0 ? 0 : currentScrollY;
+            });
         })();
 
         // 3D Logic + Scroll
@@ -1101,81 +1461,70 @@
 
             function mapPercentToState(p) {
                 // [수정됨] 타이밍 조절
-                // 기존: 0.55까지 와이어프레임 유지 -> 02 텍스트(0.40 등장)와 불일치
-                // 변경: 0.40부터 솔리드화 시작하여 텍스트 등장과 싱크를 맞춤
                 
                 // Phase 1: Wireframe (Intro ~ 01 구간)
                 if (p <= 0.40) {
                     return 0; 
                 }
                 // Phase 2: Solidify (02 구간: 0.40 ~ 0.60)
-                // 0.40에서 시작해 0.60이 되면 완전히 솔리드 큐브가 됨
                 else if (p <= 0.60) {
                     return (p - 0.40) / 0.2; 
                 }
                 // Phase 3: Explode (03 구간: 0.60 이후)
-                // 0.60부터 폭발 시작
                 else {
                     return 1.0 + ((p - 0.60) / 0.40);
                 }
             }
 
             function updateCards(percent) {
-                // [수정됨] 스크롤 간격 단축 로직 적용
+                // [수정됨] 스크롤 위치에 따라 0 또는 1로 명확하게 상태 변경 (구간 설정)
                 
-                // Text 0 (Intro)
-                let op0 = 0, tr0 = 0;
-                if (percent < 0.10) {
-                    op0 = 1;
-                } else if (percent < 0.15) {
-                    op0 = 1 - (percent - 0.10) * 20; 
-                    tr0 = (percent - 0.10) * -50;
+                // Helper: 텍스트 보임/숨김 처리
+                const setVisible = (index, isVisible, direction = 'up') => {
+                    const el = texts[index];
+                    if (isVisible) {
+                        el.style.opacity = 1;
+                        el.style.transform = 'translateY(-50%)'; // 정위치
+                    } else {
+                        el.style.opacity = 0;
+                        // 안 보일 때 약간의 위치 이동으로 등장감을 줌 (취향에 따라 제거 가능)
+                        if (direction === 'up') {
+                            // 위로 사라짐 (Intro 등)
+                            el.style.transform = 'translateY(calc(-50% - 30px))';
+                        } else {
+                            // 아래로 대기 (나머지)
+                            el.style.transform = 'translateY(calc(-50% + 30px))';
+                        }
+                    }
+                };
+
+                // 1. Intro ("My Approach") : ~ 12%까지 보임
+                if (percent < 0.12) {
+                    setVisible(0, true);
+                } else {
+                    setVisible(0, false, 'up'); // 위로 사라짐
                 }
 
-                // Text 1 ("01")
-                let op1 = 0, tr1 = 50;
-                if (percent >= 0.15 && percent < 0.20) {
-                    op1 = (percent - 0.15) * 20;
-                    tr1 = 50 - (op1 * 50);
-                } else if (percent >= 0.20 && percent < 0.35) {
-                    op1 = 1; tr1 = 0;
-                } else if (percent >= 0.35 && percent < 0.40) {
-                    op1 = 1 - (percent - 0.35) * 20;
-                    tr1 = (percent - 0.35) * -50;
+                // 2. Text 01 : 15% ~ 38%
+                if (percent >= 0.15 && percent < 0.38) {
+                    setVisible(1, true);
+                } else {
+                    setVisible(1, false, 'down'); // 아래에서 대기
                 }
 
-                // Text 2 ("02")
-                let op2 = 0, tr2 = 50;
-                if (percent >= 0.40 && percent < 0.45) {
-                    op2 = (percent - 0.40) * 20;
-                    tr2 = 50 - (op2 * 50);
-                } else if (percent >= 0.45 && percent < 0.60) {
-                    op2 = 1; tr2 = 0;
-                } else if (percent >= 0.60 && percent < 0.65) {
-                    op2 = 1 - (percent - 0.60) * 20;
-                    tr2 = (percent - 0.60) * -50;
+                // 3. Text 02 : 40% ~ 63%
+                if (percent >= 0.40 && percent < 0.63) {
+                    setVisible(2, true);
+                } else {
+                    setVisible(2, false, 'down');
                 }
 
-                // Text 3 ("03")
-                let op3 = 0, tr3 = 50;
-                if (percent >= 0.65 && percent < 0.70) {
-                    op3 = (percent - 0.65) * 20;
-                    tr3 = 50 - (op3 * 50);
-                } else if (percent >= 0.70) {
-                    op3 = 1; tr3 = 0;
+                // 4. Text 03 : 65% ~ 끝
+                if (percent >= 0.65) {
+                    setVisible(3, true);
+                } else {
+                    setVisible(3, false, 'down');
                 }
-
-                texts[0].style.opacity = op0;
-                texts[0].style.transform = `translateY(calc(-50% + ${tr0}px))`;
-                
-                texts[1].style.opacity = op1;
-                texts[1].style.transform = `translateY(calc(-50% + ${tr1}px))`;
-
-                texts[2].style.opacity = op2;
-                texts[2].style.transform = `translateY(calc(-50% + ${tr2}px))`;
-
-                texts[3].style.opacity = op3;
-                texts[3].style.transform = `translateY(calc(-50% + ${tr3}px))`;
             }
 
             window.addEventListener('scroll', () => {
@@ -1247,7 +1596,11 @@
                 return Math.floor(Math.random() * (max - min + 1)) + min;
             }
 
+            // [FIX] 화면 높이에 따라 이미지 배치를 유동적으로 조절하는 함수
             function createMarqueeItems(start, end, container) {
+                // 현재 컨테이너 높이 계산 (노트북 등 작은 화면 대응)
+                const sectionHeight = containerSection.clientHeight;
+                
                 for(let i=start; i<=end; i++) {
                     
                     // [구조 변경] Wrapper(위치) -> Item(디자인) -> Img
@@ -1263,8 +1616,15 @@
                     const mr = randomInt(300, 600);
                     wrapper.style.marginRight = `${mr}px`; // 간격도 래퍼에 지정
 
-                    // [수정됨] 배치 범위 확장 (0~300 -> 0~550)
-                    const mt = randomInt(0, 550); 
+                    // [수정됨] 반응형 배치 로직
+                    // 이미지가 섹션 밖으로 튀어나가지 않도록 최대 Y값을 계산
+                    // sectionHeight - h(이미지 높이) - 50(여유 공간)
+                    const maxTop = sectionHeight - h - 50; 
+                    
+                    // maxTop이 음수면(이미지가 너무 크면) 0으로 고정
+                    const safeMaxTop = maxTop > 0 ? maxTop : 0;
+                    
+                    const mt = randomInt(0, safeMaxTop); 
                     
                     // 초기 위치 설정 (Wrapper가 담당)
                     wrapper.style.transform = `translateY(${mt}px)`;
@@ -1323,11 +1683,6 @@
                 if (wrapper) {
                     // 1. 해당 아이템을 트랙 내에서 맨 앞으로
                     wrapper.style.zIndex = 5000;
-                    
-                    // [삭제됨] 트랙 전체를 앞으로 가져오는 코드를 삭제하여 
-                    // 다른 이미지들이 덩달아 튀어나오는 현상 제거
-                    // const trackWrapper = wrapper.closest('.marquee-track-wrapper');
-                    // if (trackWrapper) trackWrapper.style.zIndex = 5000;
                 }
             });
 
@@ -1336,8 +1691,6 @@
                 if (wrapper) {
                     // 1. 아이템 z-index 초기화
                     wrapper.style.zIndex = '';
-                    
-                    // [삭제됨] 트랙 z-index 복구 코드 삭제
                 }
             });
 
@@ -1426,6 +1779,64 @@
                 dragTrack = null;
             }
 
+        })();
+
+        // [New] Loading Logic
+        (function() {
+            // 스크롤 잠금
+            document.body.style.overflow = 'hidden';
+
+            const loader = document.getElementById('loading-screen');
+            const percentEl = document.getElementById('loading-percent');
+            const barEl = document.getElementById('loading-bar');
+            
+            // [NEW] 트랜지션 커튼 (검은 배경)
+            const entryCurtain = document.getElementById('page-entry-curtain');
+
+            let loadPercent = 0;
+            
+            const interval = setInterval(() => {
+                if (loadPercent < 90) {
+                    loadPercent += Math.floor(Math.random() * 5) + 1;
+                    if(loadPercent > 90) loadPercent = 90;
+                    
+                    percentEl.innerText = loadPercent;
+                    barEl.style.width = loadPercent + '%';
+                }
+            }, 100);
+
+            // 로딩 완료
+            function finishLoading() {
+                clearInterval(interval);
+                
+                percentEl.innerText = 100;
+                barEl.style.width = '100%';
+
+                // [순서]
+                // 1. 로딩 숫자/바 사라짐
+                // 2. 검은 커튼이 아래로 내려가며 화면을 보여줌
+                
+                setTimeout(() => {
+                    // 로딩 텍스트/바 숨김
+                    loader.classList.add('hidden');
+                    loader.style.display = 'none';
+
+                    // 커튼 걷어내기 (위에서 덮고 있으므로 아래로 내림: top 0 -> 100%)
+                    gsap.to(entryCurtain, {
+                        top: "100%", 
+                        duration: 0.8,
+                        ease: "power3.inOut",
+                        onComplete: () => {
+                            entryCurtain.style.display = 'none';
+                            document.body.style.overflow = ''; // 스크롤 잠금 해제
+                        }
+                    });
+
+                }, 500);
+            }
+
+            window.addEventListener('load', finishLoading);
+            setTimeout(finishLoading, 5000);
         })();
     </script>
 </body>

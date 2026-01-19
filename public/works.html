@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>404 - Project HNKL</title>
+    
+    <!-- GSAP for Transition -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+
+    <style>
+        /* * Project HNKL Design System - 404 Page Styles
+         * Color Palette & Typography
+         */
+        :root {
+            --color-main-blue: #2b50f1;
+            --color-purple: #9c6dff;
+            --color-white: #ffffff;
+            --color-mint: #4fd1c5;
+            --color-bg: #f2f4f6;
+            --font-family: 'Helvetica Neue', Arial, sans-serif;
+            
+            /* Cursor Colors Mapped */
+            --accent-color: var(--color-main-blue);
+            --sub-color-1: var(--color-purple);
+            --sub-color-2: var(--color-mint);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            /* 기본 커서 보임 (Jelly Cursor가 뒤따라다님) */
+        }
+
+        body {
+            width: 100vw;
+            height: 100vh;
+            background-color: var(--color-bg);
+            font-family: var(--font-family);
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        /* [NEW] 페이지 진입 트랜지션 커튼 */
+        #page-entry-curtain {
+            position: fixed;
+            top: 0; 
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #000;
+            z-index: 99998; /* 커서(99999) 바로 아래 */
+        }
+
+        /* Canvas: 파티클 인터랙션 영역 */
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+
+        /* UI Container: 텍스트 및 버튼 */
+        .ui-container {
+            position: absolute;
+            bottom: 10%; 
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+            text-align: center;
+            pointer-events: none;
+        }
+
+        .status-text {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 2rem;
+            letter-spacing: -0.02em;
+            opacity: 0;
+            animation: fadeIn 1s ease-out 0.5s forwards;
+        }
+
+        .back-btn {
+            pointer-events: auto;
+            display: inline-block;
+            padding: 0.8rem 2rem;
+            background-color: var(--color-main-blue);
+            color: var(--color-white);
+            text-decoration: none;
+            border-radius: 50px;
+            font-weight: 400;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(43, 80, 241, 0.3);
+            border: 2px solid transparent;
+        }
+
+        .back-btn:hover {
+            background-color: transparent;
+            color: var(--color-main-blue);
+            border-color: var(--color-main-blue);
+            transform: translateY(-2px);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* =========================================
+           CUSTOM JELLY CURSOR CSS
+           ========================================= */
+        #cursor-follower {
+            position: fixed; top: 0; left: 0;
+            width: 0; height: 0;
+            z-index: 99999; /* 커튼보다 위에 있어야 함 */
+            pointer-events: none;
+            will-change: transform;
+            display: flex; align-items: center; justify-content: center;
+            mix-blend-mode: normal;
+        }
+
+        #cursor-circle {
+            position: absolute;
+            width: 40px; height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(120deg, var(--accent-color), var(--sub-color-1), var(--sub-color-2), var(--accent-color));
+            background-size: 300% 300%;
+            animation: gradientCursor 4s ease infinite; 
+            opacity: 0.6; 
+            transform-origin: center center;
+            transition: width 0.3s cubic-bezier(0.19, 1, 0.22, 1),
+                        height 0.3s cubic-bezier(0.19, 1, 0.22, 1),
+                        background-color 0.3s, margin 0.3s, opacity 0.3s;
+        }
+
+        @keyframes gradientCursor {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        #cursor-text { 
+            position: absolute; 
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 12px; font-weight: 500; color: white; 
+            opacity: 0; white-space: nowrap; 
+            transition: opacity 0.2s; letter-spacing: 0.05em; 
+            z-index: 10001; 
+        }
+
+        #cursor-follower.active-enter {
+            mix-blend-mode: difference;
+        }
+
+        #cursor-follower.active-enter #cursor-circle {
+            width: 80px; height: 80px;
+            background: #ffffff;
+            opacity: 1;
+            animation: none;
+        }
+        
+        #cursor-follower.active-enter #cursor-text {
+            opacity: 1;
+            color: black; 
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- [NEW] 검은 커튼 (초기상태: 화면을 덮고 있음) -->
+    <div id="page-entry-curtain"></div>
+
+    <!-- Custom Cursor Structure -->
+    <div id="cursor-follower">
+        <div id="cursor-circle"></div>
+        <span id="cursor-text"></span>
+    </div>
+
+    <canvas id="canvas1"></canvas>
+
+    <div class="ui-container">
+        <h2 class="status-text">Under Construction!</h2>
+        <!-- [MODIFIED] Go Back 버튼 및 뒤로가기 로직 -->
+        <a href="#" class="back-btn" onclick="history.back(); return false;" data-hover-text="Go Back">Go Back</a>
+    </div>
+
+    <script>
+        /**
+         * Project HNKL - 404 Particle Interaction
+         * Reverted to: Velocity-based Repulsion (Original Version)
+         * - Mouse Speed determines force (Max 40)
+         * - Radius 120
+         * - Size 2~15px
+         */
+
+        const canvas = document.getElementById('canvas1');
+        const ctx = canvas.getContext('2d');
+        
+        let particlesArray = [];
+        const colors = ['#2b50f1', '#9c6dff', '#4fd1c5', '#333333'];
+
+        const mouse = { 
+            x: null, 
+            y: null, 
+            radius: 120, // [RESTORED] 반경 120
+            speed: 0,
+            lastX: null,
+            lastY: null
+        };
+
+        window.addEventListener('mousemove', function(event){
+            if (mouse.lastX === null) {
+                mouse.lastX = event.clientX;
+                mouse.lastY = event.clientY;
+            }
+
+            const dx = event.clientX - mouse.lastX;
+            const dy = event.clientY - mouse.lastY;
+            const distance = Math.sqrt(dx*dx + dy*dy);
+
+            mouse.speed = distance;
+            
+            mouse.x = event.clientX;
+            mouse.y = event.clientY;
+            mouse.lastX = event.clientX;
+            mouse.lastY = event.clientY;
+        });
+
+        class Particle {
+            constructor(x, y){
+                this.x = x; 
+                this.y = y;
+                // [RESTORED] 2px ~ 15px 사이의 오리지널 크기
+                this.size = (Math.random() * 13) + 2; 
+                this.baseX = x; 
+                this.baseY = y;
+                
+                this.density = (Math.random() * 30) + 1;
+                this.color = colors[Math.floor(Math.random() * colors.length)];
+                this.lineWidth = (Math.random() * 1.5) + 1; 
+                
+                this.returnSpeed = Math.random() * 0.04 + 0.01; 
+            }
+
+            draw() {
+                ctx.strokeStyle = this.color;
+                ctx.lineWidth = this.lineWidth;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.closePath();
+                ctx.stroke(); 
+            }
+
+            update() {
+                let dx = mouse.x - this.x;
+                let dy = mouse.y - this.y;
+                let distance = Math.sqrt(dx * dx + dy * dy);
+                
+                let forceDirectionX = dx / distance;
+                let forceDirectionY = dy / distance;
+                
+                let maxDistance = mouse.radius;
+                
+                // [RESTORED] 최대 40배의 강력한 반발력
+                let velocityFactor = Math.min(mouse.speed * 0.8, 10); 
+                if (velocityFactor < 1) velocityFactor = 1;
+
+                let force = (maxDistance - distance) / maxDistance;
+                
+                let directionX = forceDirectionX * force * this.density * velocityFactor;
+                let directionY = forceDirectionY * force * this.density * velocityFactor;
+
+                if (distance < mouse.radius) {
+                    this.x -= directionX;
+                    this.y -= directionY;
+                } else {
+                    if (this.x !== this.baseX) {
+                        let dx = this.x - this.baseX;
+                        this.x -= dx * this.returnSpeed; 
+                    }
+                    if (this.y !== this.baseY) {
+                        let dy = this.y - this.baseY;
+                        this.y -= dy * this.returnSpeed;
+                    }
+                }
+            }
+        }
+
+        function init() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+
+            if (canvas.width <= 0 || canvas.height <= 0) {
+                setTimeout(init, 100);
+                return;
+            }
+
+            ctx.fillStyle = 'white';
+            ctx.font = 'bold 450px Verdana'; 
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            
+            const textX = canvas.width / 2;
+            const textY = canvas.height / 2 - 50; 
+            ctx.fillText('404', textX, textY);
+            
+            const textCoordinates = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+            particlesArray = [];
+            
+            const gap = 9; 
+
+            for (let y = 0, y2 = textCoordinates.height; y < y2; y += gap) {
+                for (let x = 0, x2 = textCoordinates.width; x < x2; x += gap) {
+                    if (textCoordinates.data[(y * 4 * textCoordinates.width) + (x * 4) + 3] > 128) {
+                        let positionX = x;
+                        let positionY = y;
+                        particlesArray.push(new Particle(positionX, positionY));
+                    }
+                }
+            }
+        }
+
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            for (let i = 0; i < particlesArray.length; i++){
+                particlesArray[i].draw();
+                particlesArray[i].update();
+            }
+            
+            // 속도 감쇠
+            mouse.speed *= 0.9;
+            if (mouse.speed < 0.1) mouse.speed = 0;
+
+            requestAnimationFrame(animate);
+        }
+
+        init();
+        animate();
+
+        window.addEventListener('resize', init);
+        window.addEventListener('mouseout', function(){
+            mouse.x = undefined;
+            mouse.y = undefined;
+            mouse.speed = 0;
+        });
+
+        // Jelly Cursor Logic
+        (function() {
+            const cursorFollower = document.getElementById('cursor-follower');
+            const cursorCircle = document.getElementById('cursor-circle'); 
+            const cursorText = document.getElementById('cursor-text');     
+
+            let cMouseX = window.innerWidth / 2;
+            let cMouseY = window.innerHeight / 2;
+            let cursorX = cMouseX;
+            let cursorY = cMouseY;
+            let velX = 0;
+            let velY = 0;
+
+            document.addEventListener('mousemove', (e) => {
+                cMouseX = e.clientX;
+                cMouseY = e.clientY;
+            });
+
+            function animateCursor() {
+                const ease = 0.1; 
+                
+                const nextX = cursorX + (cMouseX - cursorX) * ease;
+                const nextY = cursorY + (cMouseY - cursorY) * ease;
+                
+                velX = nextX - cursorX;
+                velY = nextY - cursorY;
+                cursorX = nextX;
+                cursorY = nextY;
+                
+                const dist = Math.sqrt(velX * velX + velY * velY);
+                const angle = Math.atan2(velY, velX);
+                
+                const stretch = Math.min(dist * 0.1, 0.5); 
+                const scaleX = 1 + stretch;        
+                const scaleY = 1 - stretch * 0.4; 
+                
+                cursorFollower.style.transform = `translate3d(${cursorX}px, ${cursorY}px, 0)`;
+                cursorCircle.style.transform = `rotate(${angle}rad) scale(${scaleX}, ${scaleY})`;
+
+                requestAnimationFrame(animateCursor);
+            }
+            animateCursor();
+
+            const backBtn = document.querySelector('.back-btn');
+            backBtn.addEventListener('mouseenter', () => {
+                cursorFollower.classList.add('active-enter');
+                cursorText.innerText = ""; // 텍스트도 간결하게 "Back"으로 변경
+            });
+            backBtn.addEventListener('mouseleave', () => {
+                cursorFollower.classList.remove('active-enter');
+                cursorText.innerText = "";
+            });
+        })();
+
+        // [NEW] Page Entry Transition (Curtain Effect)
+        window.addEventListener('load', () => {
+            const entryCurtain = document.getElementById('page-entry-curtain');
+            
+            // 0.8초 동안 커튼이 아래로 내려감 (reveal)
+            gsap.to(entryCurtain, {
+                top: "100%",
+                duration: 0.8,
+                ease: "power3.inOut",
+                onComplete: () => {
+                    entryCurtain.style.display = 'none';
+                }
+            });
+        });
+
+    </script>
+</body>
+</html>
