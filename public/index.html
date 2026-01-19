@@ -601,15 +601,22 @@
 
 
 
-       /* ▼ [배포용] Netlify 비밀 요원에게 요청하는 함수 */
+       /* ▼ [배포용 수정] 서버 통신 함수 */
         async function callGeminiAPI(prompt) {
             try {
-                
-                const response = await fetch('http://127.0.0.1:5001/hnkl-49a5f/us-central1/chat', {
+                // [중요] 배포 완료! 실제 Firebase 서버 주소로 변경했습니다.
+                const apiUrl = 'https://us-central1-hnkl-49a5f.cloudfunctions.net/chat'; 
+
+                const response = await fetch(apiUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ prompt: prompt }) 
                 });
+
+                if (!response.ok) {
+                   // 403, 500 등 에러 발생 시 처리
+                   throw new Error(`HTTP error! status: ${response.status}`);
+                }
 
                 const data = await response.json();
 
@@ -622,7 +629,7 @@
 
             } catch (error) {
                 console.error("통신 에러:", error);
-                return "잠시 연결이 안 돼요. 나중에 다시 시도해 주세요.";
+                return `오류가 발생했습니다: ${error.message}. (관리자에게 문의하세요)`;
             }
         }
 
