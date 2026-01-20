@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>Project HNKL - Interactive Hero Sphere</title>
+    <style>
+        body { 
+            margin: 0; 
+            padding: 0;
+            overflow: hidden; 
+            background: #000; 
+            cursor: none; 
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+        }
+        
+        /* 커서 디자인 */
+        .cursor {
+            position: fixed; top: 0; left: 0;
+            width: 20px; height: 20px;
+            background: rgba(255, 255, 255, 0.1); 
+            border: 1.5px solid rgba(255, 255, 255, 0.5);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none; z-index: 999;
+            backdrop-filter: blur(2px);
+            transition: transform 0.1s, background 0.2s;
+        }
+        .cursor.active { 
+            width: 30px; height: 30px;
+            background: rgba(255, 255, 255, 0.3); 
+            border-color: #fff;
+        }
+
+        #container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="cursor"></div>
+    <div id="container"></div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+
+        // 1. Scene Setup
+        const container = document.getElementById('container');
+        const cursorDot = document.querySelector('.cursor');
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+        camera.position.z = 4.2; 
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        container.appendChild(renderer.domElement);
+
+        // 2. Fixed Parameters (함께 확정한 최적의 설정값)
+        const params = {
+            objectSpeed: 0.6,
+            rippleStrength: 0.15,
+            rippleSpeed: 6.0,     
+            rippleRadius: 0.8,    
+            trailDecay: 0.90,     
+            roughness: 0.15,
+            specularIntensity: 0.15,
+
+            colorBottom: '#9c6dff', // 보라색
+            colorTop: '#6aaeff',    // 하늘색
+            colorRim: '#a3ffac',    // 연두색(민트)
+            rimBoost: 1.2
+        };
+
+        // --- TRAIL SYSTEM ---
+        const TRAIL_SIZE = 40; 
+        const trailData = new Float32Array(TRAIL_SIZE * 4); 
+        for(let i=0; i<TRAIL_SIZE; i++) trailData[i*4 + 3] = 0; 
+
+        // 3. Shader Definition
+        const noiseFunction = `
+            vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+            vec4 mod289(vec4 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+            vec4 permute(vec4 x) { return mod289(((x*34.0)+1.0)*x); }
+            vec4 taylorInvSqrt(vec4 r) { return 1.79284291400159 - 0.85373472095314 * r; }
+            float snoise(vec3 v) {
+                const vec2  C = vec2(1.0/6.0, 1.0/3.0) ;
+                const vec4  D = vec4(0.0, 0.5, 1.0, 2.0);
+                vec3 i  = floor(v + dot(v, C.yyy) );
+                vec3 x0 = v - i + dot(i, C.xxx) ;
+                vec3 g = step(x0.yzx, x0.xyz);
+                vec3 l = 1.0 - g;
+                vec3 i1 = min( g.xyz, l.zxy );
+                vec3 i2 = max( g.xyz, l.zxy );
+                vec3 x1 = x0 - i1 + C.xxx;
+                vec3 x2 = x0 - i2 + C.yyy;
+                vec3 x3 = x0 - D.yyy;
+                i = mod289(i);
+                vec4 p = permute( permute( permute(
+                        i.z + vec4(0.0, i1.z, i2.z, 1.0 ))
+                        + i.y + vec4(0.0, i1.y, i2.y, 1.0 )) 
+                        + i.x + vec4(0.0, i1.x, i2.x, 1.0 ));
+                float n_ = 0.142857142857;
+                vec3  ns = n_ * D.wyz - D.xzx;
+                vec4 j = p - 49.0 * floor(p * ns.z * ns.z);
+                vec4 x_ = floor(j * ns.z);
+                vec4 y_ = floor(j - 7.0 * x_ );
+                vec4 x = x_ *ns.x + ns.yyyy;
+                vec4 y = y_ *ns.x + ns.yyyy;
+                vec4 h = 1.0 - abs(x) - abs(y);
+                vec4 b0 = vec4( x.xy, y.xy );
+                vec4 b1 = vec4( x.zw, y.zw );
+                vec4 s0 = floor(b0)*2.0 + 1.0;
+                vec4 s1 = floor(b1)*2.0 + 1.0;
+                vec4 sh = -step(h, vec4(0.0));
+                vec4 a0 = b0.xzyw + s0.xzyw*sh.xxyy ;
+                vec4 a1 = b1.xzyw + s1.xzyw*sh.zzww ;
+                vec3 p0 = vec3(a0.xy,h.x);
+                vec3 p1 = vec3(a0.zw,h.y);
+                vec3 p2 = vec3(a1.xy,h.z);
+                vec3 p3 = vec3(a1.zw,h.w);
+                vec4 norm = taylorInvSqrt(vec4(dot(p0,p0), dot(p1,p1), dot(p2, p2), dot(p3,p3)));
+                p0 *= norm.x;
+                p1 *= norm.y;
+                p2 *= norm.z;
+                p3 *= norm.w;
+                vec4 m = max(0.6 - vec4(dot(x0,x0), dot(x1,x1), dot(x2,x2), dot(x3,x3)), 0.0);
+                m = m * m;
+                return 42.0 * dot( m*m, vec4( dot(p0,x0), dot(p1,x1), dot(p2,x2), dot(p3,x3) ) );
+            }
+        `;
+
+        const vertexShader = `
+            uniform float uTimeObject;
+            uniform vec4 uTrail[${TRAIL_SIZE}]; 
+            uniform float uRippleStrength;
+            uniform float uRippleRadius;
+            uniform float uSpreadSpeed;
+
+            varying vec2 vUv;
+            varying vec3 vNormal; 
+            varying vec3 vViewPosition;
+
+            ${noiseFunction}
+
+            float getDisplacement(vec3 pos) {
+                vec4 worldPos = modelMatrix * vec4(pos, 1.0);
+                float totalWave = 0.0;
+                
+                for(int i = 0; i < ${TRAIL_SIZE}; i++) {
+                    vec3 trailPos = uTrail[i].xyz;
+                    float strength = uTrail[i].w; 
+                    if(strength <= 0.01) continue; 
+
+                    float dist = distance(worldPos.xyz, trailPos);
+                    float wavePhase = (1.0 - strength) * uSpreadSpeed;
+                    
+                    float normDist = dist / uRippleRadius;
+                    float mask = exp(-normDist * normDist * 4.0);
+                    mask *= smoothstep(1.5, 0.0, normDist);
+                    
+                    float ripple = (cos(dist * 8.0 - wavePhase) - 1.0) * mask;
+                    totalWave += ripple * strength;
+                }
+                
+                totalWave = tanh(totalWave * 1.5); 
+                float displacement = totalWave * uRippleStrength;
+                float idle = snoise(pos * 0.4 + uTimeObject * 0.2) * 0.04;
+                
+                return displacement + idle;
+            }
+
+            void main() {
+                vUv = uv;
+                float disp = getDisplacement(position);
+                vec3 newPos = position + normal * disp;
+
+                float epsilon = 0.05; 
+                vec3 tangent = normalize(cross(normal, vec3(0.0, 1.0, 0.0)));
+                if (length(tangent) < 0.001) tangent = normalize(cross(normal, vec3(0.0, 0.0, 1.0)));
+                vec3 bitangent = normalize(cross(normal, tangent));
+
+                vec3 p1 = position + tangent * epsilon;
+                vec3 p2 = position + bitangent * epsilon;
+                float d1 = getDisplacement(p1);
+                float d2 = getDisplacement(p2);
+                
+                vec3 v1 = p1 + normal * d1; 
+                vec3 v2 = p2 + normal * d2; 
+                vec3 smoothedNormal = normalize(cross(v1 - newPos, v2 - newPos));
+                
+                vNormal = normalize(normalMatrix * smoothedNormal);
+                vec4 mvPosition = modelViewMatrix * vec4(newPos, 1.0);
+                vViewPosition = -mvPosition.xyz;
+                
+                gl_Position = projectionMatrix * mvPosition;
+            }
+        `;
+
+        const fragmentShader = `
+            uniform vec3 uColorBottom;
+            uniform vec3 uColorTop;
+            uniform vec3 uColorRim;
+            uniform float uRimBoost;
+            uniform float uRoughness;
+            uniform float uSpecularIntensity;
+            
+            varying vec2 vUv;
+            varying vec3 vNormal;
+            varying vec3 vViewPosition;
+
+            void main() {
+                vec3 normal = normalize(vNormal);
+                vec3 viewDir = normalize(vViewPosition);
+
+                float gradientFactor = smoothstep(-0.8, 0.8, normal.y);
+                vec3 bodyColor = mix(uColorBottom, uColorTop, gradientFactor);
+
+                float rimPower = mix(4.0, 1.5, uRoughness);
+                float specularShininess = mix(180.0, 30.0, uRoughness);
+
+                float NdotV = dot(normal, viewDir);
+                float fresnel = pow(1.0 - max(0.0, NdotV), rimPower);
+                
+                vec3 rimLightDir = normalize(vec3(-1.0, -1.0, 0.5)); 
+                float directionalMask = dot(normal, rimLightDir);
+                directionalMask = smoothstep(-0.2, 1.0, directionalMask); 
+                
+                float rimIntensity = fresnel * (0.3 + 0.7 * directionalMask) * uRimBoost;
+                rimIntensity *= mix(1.0, 0.4, uRoughness);
+
+                vec3 lightDir = normalize(vec3(-0.5, 1.0, 1.0));
+                vec3 halfVector = normalize(lightDir + viewDir);
+                float NdotH = dot(normal, halfVector);
+                float specular = pow(max(0.0, NdotH), specularShininess);
+                
+                specular *= uSpecularIntensity; 
+
+                vec3 color = bodyColor;
+                color += uColorRim * rimIntensity;
+                color += vec3(1.0) * specular;
+                
+                float topHighlight = smoothstep(0.8, 1.0, normal.y) * 0.05;
+                color += vec3(1.0) * topHighlight;
+
+                gl_FragColor = vec4(color, 1.0);
+            }
+        `;
+
+        // 4. Object Setup
+        const geometry = new THREE.SphereGeometry(1.6, 512, 512); 
+        const material = new THREE.ShaderMaterial({
+            vertexShader,
+            fragmentShader,
+            uniforms: {
+                uTimeObject: { value: 0 },
+                uTrail: { value: trailData },
+                uRippleStrength: { value: params.rippleStrength },
+                uRippleRadius: { value: params.rippleRadius },
+                uSpreadSpeed: { value: params.rippleSpeed },
+                uRoughness: { value: params.roughness },
+                uSpecularIntensity: { value: params.specularIntensity },
+                uColorBottom: { value: new THREE.Color(params.colorBottom) },
+                uColorTop: { value: new THREE.Color(params.colorTop) },
+                uColorRim: { value: new THREE.Color(params.colorRim) },
+                uRimBoost: { value: params.rimBoost }
+            }
+        });
+
+        const sphere = new THREE.Mesh(geometry, material);
+        scene.add(sphere);
+
+        // 5. Interaction
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+        let trailIndex = 0;
+
+        window.addEventListener('mousemove', (e) => {
+            cursorDot.style.left = e.clientX + 'px';
+            cursorDot.style.top = e.clientY + 'px';
+
+            mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObject(sphere);
+
+            if (intersects.length > 0) {
+                let intersectPoint = intersects[0].point;
+                const i = trailIndex * 4;
+                trailData[i] = intersectPoint.x;
+                trailData[i+1] = intersectPoint.y;
+                trailData[i+2] = intersectPoint.z;
+                trailData[i+3] = 1.0; 
+                trailIndex = (trailIndex + 1) % TRAIL_SIZE;
+                cursorDot.classList.add('active');
+            } else {
+                cursorDot.classList.remove('active');
+            }
+        });
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // 6. Animation
+        const clock = new THREE.Clock();
+        let timeObjectAccumulated = 0;
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const delta = clock.getDelta();
+            timeObjectAccumulated += delta * params.objectSpeed;
+
+            for(let i=0; i<TRAIL_SIZE; i++) {
+                if(trailData[i*4 + 3] > 0) {
+                    trailData[i*4 + 3] *= params.trailDecay; 
+                    if(trailData[i*4 + 3] < 0.001) trailData[i*4 + 3] = 0;
+                }
+            }
+
+            material.uniforms.uTimeObject.value = timeObjectAccumulated;
+            sphere.rotation.y += 0.002 * params.objectSpeed;
+            sphere.rotation.z = Math.sin(timeObjectAccumulated * 0.1) * 0.05;
+
+            renderer.render(scene, camera);
+        }
+
+        animate();
+    </script>
+</body>
+</html>

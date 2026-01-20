@@ -4,11 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HNKL Portfolio</title>
-    
+
     <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
     <!-- [필수] GSAP 추가 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
-    
+
     <style>
         /* * Project HNKL Design System Variables */
         :root {
@@ -16,36 +16,48 @@
             --color-purple: #9c6dff;
             --color-white: #ffffff;
             --color-mint: #4fd1c5;
-            --color-bg: #F5F5F7; 
+            --color-bg: #F5F5F7;
             --text-color: #1a1a1a;
         }
 
         /* 1. 기본 커서 및 설정 */
-        body, html { 
-            margin: 0; padding: 0; overflow: hidden; 
-            background-color: var(--color-bg); 
-            font-family: 'Pretendard', sans-serif; 
-            width: 100vw; height: 100vh; 
-            cursor: default; 
+        body, html {
+            margin: 0; padding: 0; overflow: hidden;
+            background-color: var(--color-bg);
+            font-family: 'Pretendard', sans-serif;
+            width: 100vw; height: 100vh;
+            cursor: default;
+            transition: background-color 0.55s ease;
         }
 
         .menu-item, .win-btn, #chat-minimized-icon, button, .send-btn { cursor: pointer; }
 
+        /* [NEW] THEME TRANSITION OVERLAY (smooth theme change) */
+        #theme-transition-overlay {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: #000;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 18000;
+        }
+
         /* [NEW] 페이지 전환용 검은 커튼 */
         #transition-curtain {
             position: fixed;
-            top: -100%; /* 위에서 대기 */
+            top: -100%;
             left: 0;
             width: 100%;
             height: 100%;
             background-color: #000;
-            z-index: 20000; /* 최상단 */
+            z-index: 20000;
             display: flex;
             align-items: center;
             justify-content: center;
-            pointer-events: none; 
+            pointer-events: none;
         }
-        
+
         .transition-text {
             color: white;
             font-size: 1.5rem;
@@ -56,7 +68,7 @@
         /* 커서 팔로워 스타일 */
         #cursor-follower {
             position: fixed; top: 0; left: 0;
-            width: 0; height: 0; 
+            width: 0; height: 0;
             z-index: 9999;
             pointer-events: none;
             will-change: transform;
@@ -76,22 +88,22 @@
             top: -20px; left: -20px;
         }
 
-        #cursor-text { 
-            position: absolute; 
-            font-size: 14px; font-weight: 500; color: white; 
-            opacity: 0; white-space: nowrap; 
-            transition: opacity 0.2s; letter-spacing: 0.05em; 
+        #cursor-text {
+            position: absolute;
+            font-size: 14px; font-weight: 500; color: white;
+            opacity: 0; white-space: nowrap;
+            transition: opacity 0.2s; letter-spacing: 0.05em;
             pointer-events: none;
-            z-index: 10001; 
-            transform: translate(-50%, -50%); 
+            z-index: 10001;
+            transform: translate(-50%, -50%);
             top: 0; left: 0;
         }
 
-        #cursor-follower.active-enter #cursor-circle, 
+        #cursor-follower.active-enter #cursor-circle,
         #cursor-follower.active-chat #cursor-circle {
             width: 80px; height: 80px;
-            background-color: rgba(29, 29, 31, 0.6); 
-            border-color: transparent; 
+            background-color: rgba(29, 29, 31, 0.6);
+            border-color: transparent;
             top: -40px; left: -40px;
         }
 
@@ -103,77 +115,82 @@
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             padding: 0 120px; box-sizing: border-box;
             display: grid; grid-template-columns: repeat(12, 1fr); column-gap: 24px;
-            pointer-events: none; z-index: 10; align-content: start; 
+            pointer-events: none; z-index: 10; align-content: start;
         }
         .grid-col { background-color: rgba(255, 0, 0, 0.0); height: 100%; }
 
-        .menu-wrapper { 
-            grid-column: 1 / span 5; 
-            align-self: start; 
-            margin-top: 120px; 
-            pointer-events: auto; 
+        .menu-wrapper {
+            grid-column: 1 / span 5;
+            align-self: start;
+            margin-top: 120px;
+            pointer-events: auto;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
         }
 
-        /* [핵심 수정] 이중 레이어 텍스트 구조 */
         .reveal-container {
             position: relative;
-            display: table; /* 텍스트 크기에 맞춤 */
+            display: table;
             margin-bottom: 12px;
             cursor: pointer;
         }
 
-        /* 공통 폰트 스타일 */
         .menu-text {
             font-size: clamp(2rem, 3vw, 3rem);
             font-weight: 700;
             line-height: 1.1;
             letter-spacing: -0.02em;
             display: block;
-            padding: 10px 15px 10px 0; /* 박스 여유 공간 */
-            transition: opacity 0.3s;
+            padding: 10px 15px 10px 0;
+            transition: opacity 0.3s, color 0.35s ease;
         }
 
-        /* 1. 바닥층 (최종적으로 보일 검은색 텍스트) */
         .base-layer {
-            color: #1a1a1a; /* 확실한 검은색 */
+            color: #1a1a1a;
             position: relative;
             z-index: 1;
-            opacity: 0; /* 처음엔 안 보임 (애니메이션 중간에 켜짐) */
+            opacity: 0;
         }
 
-        /* 2. 덮개층 (애니메이션용 검은 박스 + 흰색 텍스트) */
         .overlay-layer {
             position: absolute;
             top: 0; left: 0;
             width: 100%; height: 100%;
-            background-color: #000000; /* 검은 박스 */
-            color: #ffffff; /* 흰색 텍스트 */
+            background-color: #000000;
+            color: #ffffff;
             z-index: 2;
-            overflow: hidden; /* 박스 크기만큼만 내용이 보임 */
-            
-            /* 초기 상태: 오른쪽 100%가 잘려서 안 보임 */
-            clip-path: inset(0 100% 0 0); 
-            pointer-events: none; /* 클릭은 바닥층이 받음 */
+            overflow: hidden;
+            clip-path: inset(0 100% 0 0);
+            pointer-events: none;
         }
-        
+
         .overlay-text {
             position: absolute;
             top: 0; left: 0;
-            width: 100%; /* 부모와 동일 너비 */
+            width: 100%;
         }
 
-        /* 마우스 오버 효과 */
         .reveal-container:hover .base-layer { opacity: 0.5; }
 
         #canvas-container { width: 100%; height: 100%; position: absolute; top: 0; left: 0; z-index: 1; }
 
+        #hero-sphere-container {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0; left: 0;
+            z-index: 1;
+            display: none;
+        }
+
         /* 챗봇 UI */
         #chat-interface {
-            display: none; 
-            position: absolute; 
-            bottom: 40px; right: 40px; 
+            display: none;
+            position: absolute;
+            bottom: 40px; right: 40px;
             width: 360px; height: 500px;
-            background: rgba(255, 255, 255, 0.95); border-radius: 24px; 
+            background: rgba(255, 255, 255, 0.95); border-radius: 24px;
             box-shadow: 0 10px 40px rgba(0,0,0,0.15);
             z-index: 100; flex-direction: column; overflow: hidden; border: 1px solid rgba(0,0,0,0.05);
             animation: popUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
@@ -202,15 +219,15 @@
         @keyframes bounceIn { from { transform: scale(0); } to { transform: scale(1); } }
 
         #chat-minimized-icon img {
-            width: 36px !important; 
+            width: 36px !important;
             height: 36px !important;
-            object-fit: contain; 
+            object-fit: contain;
         }
-        
+
         #chat-minimized-icon:hover .svg-main {
             transform: scale(1.1);
         }
-        
+
         .svg-icon {
             width: 20px; height: 20px; display: block;
         }
@@ -244,6 +261,79 @@
             from { transform: translateY(0px); }
             to { transform: translateY(-8px); }
         }
+
+        /* [Theme Toggle] */
+        #theme-toggle {
+            position: fixed;
+            left: 120px;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 15000;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            pointer-events: auto;
+        }
+
+        .theme-dot {
+            width: 18px;
+            height: 18px;
+            border-radius: 999px;
+            border: 1.5px solid rgba(0,0,0,0.35);
+            background: transparent;
+            padding: 0;
+            transition: transform 0.2s ease, background-color 0.25s ease, border-color 0.25s ease;
+        }
+        .theme-dot:hover { transform: scale(1.08); }
+
+        .theme-dot.active {
+            background: rgba(0,0,0,0.85);
+            border-color: rgba(0,0,0,0.85);
+        }
+
+        /* Theme 2: full black background + text to white */
+        body.theme-dark {
+            background-color: #000000;
+        }
+
+        body.theme-dark .menu-text.base-layer {
+            color: #ffffff;
+        }
+
+        /* [CRITICAL FIX] Dark theme cursor Color Inversion */
+        /* Apply mix-blend-mode to the CONTAINER so everything inside creates a difference effect */
+        body.theme-dark #cursor-follower {
+            mix-blend-mode: difference;
+        }
+
+        /* The circle itself must be WHITE to create the inversion effect (White - Black = White, White - White = Black) */
+        body.theme-dark #cursor-circle {
+            background-color: #ffffff; 
+            border-color: transparent;
+        }
+        
+        /* Ensure active states also keep the white fill for consistent inversion */
+        body.theme-dark #cursor-follower.active-enter #cursor-circle,
+        body.theme-dark #cursor-follower.active-chat #cursor-circle {
+            background-color: #ffffff;
+            border-color: transparent;
+        }
+
+        body.theme-dark #cursor-text {
+            color: #ffffff; /* Inverts to black over white background inside the diff context */
+        }
+
+        body.theme-dark .reveal-container:hover .base-layer {
+            opacity: 0.85;
+        }
+
+        body.theme-dark .theme-dot {
+            border-color: rgba(255,255,255,0.5);
+        }
+        body.theme-dark .theme-dot.active {
+            background: rgba(255,255,255,0.9);
+            border-color: rgba(255,255,255,0.9);
+        }
     </style>
 
     <script type="importmap">
@@ -256,6 +346,9 @@
     </script>
 </head>
 <body>
+
+    <!-- [NEW] THEME TRANSITION OVERLAY -->
+    <div id="theme-transition-overlay"></div>
 
     <!-- [NEW] TRANSITION CURTAIN (Only used for leaving page) -->
     <div id="transition-curtain">
@@ -274,22 +367,14 @@
         <div class="grid-col"></div><div class="grid-col"></div><div class="grid-col"></div><div class="grid-col"></div>
 
         <div class="menu-wrapper">
-            <!-- 
-                [구조 변경] 2중 레이어 방식: Base(검정) + Overlay(검정박스/흰글씨) 
-                - Base Layer: 실제 링크 역할 및 최종 검정 텍스트
-                - Overlay Layer: 애니메이션 효과 담당 (pointer-events: none)
-            -->
-            
             <!-- 1. ABOUT -->
             <div class="reveal-container link-item" onclick="triggerPageTransition('about.html')">
-                <!-- 바닥: 진짜 검정 텍스트 -->
                 <div class="menu-text base-layer">ABOUT</div>
-                <!-- 덮개: 검정 박스 + 흰 텍스트 -->
                 <div class="overlay-layer">
                     <div class="menu-text overlay-text">ABOUT</div>
                 </div>
             </div>
-            
+
             <!-- 2. WORKS -->
             <div class="reveal-container link-item" onclick="triggerPageTransition('works.html')">
                 <div class="menu-text base-layer">WORKS</div>
@@ -300,6 +385,12 @@
         </div>
     </div>
 
+    <!-- [NEW] THEME TOGGLE (Fixed Left Middle) -->
+    <div id="theme-toggle" aria-label="Theme toggle">
+        <button class="theme-dot active" id="theme-dot-1" onclick="setTheme(1, event)" aria-label="Theme 1"></button>
+        <button class="theme-dot" id="theme-dot-2" onclick="setTheme(2, event)" aria-label="Theme 2"></button>
+    </div>
+
     <div id="chat-interface" onmouseenter="setCursorDefault()" onmouseleave="setCursorActive()">
         <div class="chat-header">
             <span>HNKL AI</span>
@@ -308,7 +399,7 @@
                     <img src="assets/Min_2.svg" alt="최소화" class="svg-icon">
                 </span>
                 <span class="win-btn" onclick="closeChat()" title="닫기">
-                    <img src="assets/Close_2.svg" alt="닫기" class="svg-icon">    
+                    <img src="assets/Close_2.svg" alt="닫기" class="svg-icon">
                 </span>
             </div>
         </div>
@@ -316,9 +407,7 @@
             <div class="message bot">안녕하세요! 저는 이 사이트의 AI 도우미입니다. 궁금한 점을 물어보세요.</div>
             <div class="message bot" id="loading-message" style="display: none;">
                 <div class="typing-indicator">
-                    <span></span>
-                    <span></span>
-                    <span></span>
+                    <span></span><span></span><span></span>
                 </div>
             </div>
         </div>
@@ -336,15 +425,21 @@
 
     <div id="canvas-container"></div>
 
+    <!-- [NEW] Interactive object container for Theme 2 -->
+    <div id="hero-sphere-container"></div>
+
     <script type="module">
         import * as THREE from 'three';
         import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
+        /* ============================
+           기존 씬 (Theme 1)
+           ============================ */
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0xF5F5F7); 
+        scene.background = new THREE.Color(0xF5F5F7);
 
         const camera = new THREE.PerspectiveCamera(8, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.set(0, 50, 75); 
+        camera.position.set(0, 50, 75);
         camera.lookAt(0, 0, 0);
 
         const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
@@ -355,7 +450,7 @@
 
         const params = {
             color1: '#2b50f1', color2: '#9c6dff', color3: '#ffffff', color4: '#4fd1c5', color5: '#2b50f1',
-            speed: 0.2, scale: 0.006, offset: 0.8, baseRotX: 90.0, baseRotY: 0.0, baseRotZ: 0.0 
+            speed: 0.2, scale: 0.006, offset: 0.8, baseRotX: 90.0, baseRotY: 0.0, baseRotZ: 0.0
         };
 
         const depthMaterial = new THREE.ShaderMaterial({
@@ -374,7 +469,7 @@
             },
             vertexShader: `
                 uniform float uRotX; uniform float uRotY; uniform float uRotZ;
-                varying float vPos; 
+                varying float vPos;
                 mat3 rotateX(float angle) { float s = sin(angle); float c = cos(angle); return mat3(1.0, 0.0, 0.0, 0.0, c, -s, 0.0, s, c); }
                 mat3 rotateY(float angle) { float s = sin(angle); float c = cos(angle); return mat3(c, 0.0, s, 0.0, 1.0, 0.0, -s, 0.0, c); }
                 mat3 rotateZ(float angle) { float s = sin(angle); float c = cos(angle); return mat3(c, -s, 0.0, s, c, 0.0, 0.0, 0.0, 1.0); }
@@ -393,9 +488,9 @@
                 void main() {
                     float t = fract((vPos * uScale) + uOffset - uTime);
                     vec3 finalColor;
-                    if (t < 0.25) { finalColor = mix(uColor1, uColor2, t * 4.0); } 
-                    else if (t < 0.5) { finalColor = mix(uColor2, uColor3, (t - 0.25) * 4.0); } 
-                    else if (t < 0.75) { finalColor = mix(uColor3, uColor4, (t - 0.5) * 4.0); } 
+                    if (t < 0.25) { finalColor = mix(uColor1, uColor2, t * 4.0); }
+                    else if (t < 0.5) { finalColor = mix(uColor2, uColor3, (t - 0.25) * 4.0); }
+                    else if (t < 0.75) { finalColor = mix(uColor3, uColor4, (t - 0.5) * 4.0); }
                     else { finalColor = mix(uColor4, uColor5, (t - 0.75) * 4.0); }
                     gl_FragColor = vec4(finalColor, 1.0);
                 }
@@ -405,13 +500,13 @@
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.75);
         scene.add(ambientLight);
         const dirLight = new THREE.DirectionalLight(0xffffff, 4.5);
-        dirLight.position.set(20, 41.05, 15); 
-        dirLight.castShadow = true; dirLight.shadow.radius = 50; 
-        dirLight.shadow.mapSize.width = 2048; dirLight.shadow.mapSize.height = 2048; 
-        dirLight.shadow.camera.top = 30; dirLight.shadow.camera.bottom = -30; 
-        dirLight.shadow.camera.left = -30; dirLight.shadow.camera.right = 30; dirLight.shadow.camera.far = 100; 
+        dirLight.position.set(20, 41.05, 15);
+        dirLight.castShadow = true; dirLight.shadow.radius = 50;
+        dirLight.shadow.mapSize.width = 2048; dirLight.shadow.mapSize.height = 2048;
+        dirLight.shadow.camera.top = 30; dirLight.shadow.camera.bottom = -30;
+        dirLight.shadow.camera.left = -30; dirLight.shadow.camera.right = 30; dirLight.shadow.camera.far = 100;
         scene.add(dirLight);
-        
+
         const planeGeometry = new THREE.PlaneGeometry(100, 100);
         const planeMaterial = new THREE.ShadowMaterial({ opacity: 0.104, color: 0x000000 });
         const plane = new THREE.Mesh(planeGeometry, planeMaterial);
@@ -419,18 +514,22 @@
         scene.add(plane);
 
         let character = null;
-        const baseScale = 1.25; 
+        const baseScale = 1.25;
         const groundY = -3;
-        
+
         const loader = new GLTFLoader();
         loader.load('model_2.glb', function (gltf) {
             character = gltf.scene;
             character.scale.set(baseScale, baseScale, baseScale);
-            character.position.y = groundY; 
+            character.position.y = groundY;
             character.traverse(function (node) {
                 if (node.isMesh) { node.material = depthMaterial; node.castShadow = true; }
             });
             scene.add(character);
+
+            // theme 적용이 로딩보다 빠를 수 있으니, 현재 상태를 반영
+            character.visible = (currentTheme === 1);
+
         }, undefined, function (error) {
             console.error('An error happened while loading the model:', error);
         });
@@ -450,85 +549,82 @@
         const circleTexture = createCircleTexture();
         const particleMaterialBase = new THREE.SpriteMaterial({ map: circleTexture, transparent: true, opacity: 1.0 });
 
-        const baseColors = [new THREE.Color(params.color1), new THREE.Color(params.color2), new THREE.Color(params.color3), new THREE.Color(params.color4), new THREE.Color(params.color5)];
+        const baseColors = [
+            new THREE.Color(params.color1),
+            new THREE.Color(params.color2),
+            new THREE.Color(params.color3),
+            new THREE.Color(params.color4),
+            new THREE.Color(params.color5)
+        ];
 
-        function spawnParticle(position, velocityX, currentTime) {
+        function spawnParticle(position, velocityX) {
             const material = particleMaterialBase.clone();
             material.color.copy(baseColors[Math.floor(Math.random() * baseColors.length)]);
             const sprite = new THREE.Sprite(material);
             sprite.position.copy(position);
             const offset = 0.8;
             if (velocityX > 0) { sprite.position.x -= offset; } else { sprite.position.x += offset; }
-            sprite.position.y += 0.5; sprite.position.z -= 0.5; 
+            sprite.position.y += 0.5; sprite.position.z -= 0.5;
             const scale = 0.3 + Math.random() * 0.3;
             sprite.scale.set(scale, scale, scale);
-            const velocity = new THREE.Vector3(-velocityX * 0.5 + (Math.random() - 0.5) * 0.1, Math.random() * 0.05, -0.05 - Math.random() * 0.05);
+            const velocity = new THREE.Vector3(
+                -velocityX * 0.5 + (Math.random() - 0.5) * 0.1,
+                Math.random() * 0.05,
+                -0.05 - Math.random() * 0.05
+            );
             particleGroup.add(sprite);
-            particles.push({ sprite, velocity, life: 1.0, material }); 
+            particles.push({ sprite, velocity, life: 1.0, material });
         }
 
         let mouseX = 0; let mouseY = 0;
-        let pixelMouseX = window.innerWidth / 2; 
+        let pixelMouseX = window.innerWidth / 2;
         let pixelMouseY = window.innerHeight / 2;
+
         let currentX = 0; let velocityX = 0;
         const baseTension = 0.002; let tension = baseTension; const friction = 0.93;
         let currentRotX = params.baseRotX; let currentRotY = params.baseRotY;
 
         let isJumping = false; let isSquashing = false; let isLanding = false;
-        let velocityY = 0; const gravity = -0.025; const jumpPower = 0.45; const bounceDamping = 0.3; 
+        let velocityY = 0; const gravity = -0.025; const jumpPower = 0.45; const bounceDamping = 0.3;
         let landingTimer = null;
 
         const raycaster = new THREE.Raycaster();
         const pointer = new THREE.Vector2();
 
         const cursorFollower = document.getElementById('cursor-follower');
-        const cursorCircle = document.getElementById('cursor-circle'); 
+        const cursorCircle = document.getElementById('cursor-circle');
         const cursorText = document.getElementById('cursor-text');
-        
+
         let cursorX = window.innerWidth / 2;
         let cursorY = window.innerHeight / 2;
-        
+
         let isHoveringLink = false;
         let isHoveringBall = false;
         let isHoveringButton = false;
 
         let ignoreFloor = false;
 
-        // [애니메이션] GSAP Reveal Logic - "Layer Masking" (Double Layer)
-        // [수정사항] 초기 상태 0(안보임) -> 등장 애니메이션 -> 중간에 1로 셋팅
+        // GSAP Reveal (intro)
         function initIntroAnimation() {
-            const tl = gsap.timeline({ 
-                delay: 0.5, 
-            });
+            const tl = gsap.timeline({ delay: 0.5 });
 
-            // 1. 초기에는 .base-layer를 보이지 않게 설정 (CSS와 JS 이중 안전장치)
-            // 주의: 이전에 있던 'gsap.set opacity:1' 코드는 삭제됨.
-
-            // ABOUT 애니메이션
-            // Phase 1: 덮개(Overlay)가 나타남 (왼->오)
-            // 이때 화면엔 검정 박스와 흰 글씨가 보임
             tl.to('.reveal-container:nth-child(1) .overlay-layer', {
                 clipPath: 'inset(0 0% 0 0)',
                 duration: 0.6,
                 ease: 'power3.inOut'
             })
-            // [중요] 박스가 글자를 다 덮었을 때, 바닥의 진짜 검은 글씨를 켜둠 (박스 뒤라 안 보임)
             .set('.reveal-container:nth-child(1) .base-layer', { opacity: 1 })
-            
-            // Phase 2: 덮개가 사라짐 (왼->오)
-            // 박스가 사라지면서 미리 켜둔 바닥의 검은 글씨가 드러남
             .to('.reveal-container:nth-child(1) .overlay-layer', {
                 clipPath: 'inset(0 0% 0 100%)',
                 duration: 0.6,
                 ease: 'power3.inOut'
             });
 
-            // WORKS 애니메이션 (동일 로직)
             tl.to('.reveal-container:nth-child(2) .overlay-layer', {
                 clipPath: 'inset(0 0% 0 0)',
                 duration: 0.6,
                 ease: 'power3.inOut'
-            }, "-=0.4") // 약간 겹치게
+            }, "-=0.4")
             .set('.reveal-container:nth-child(2) .base-layer', { opacity: 1 })
             .to('.reveal-container:nth-child(2) .overlay-layer', {
                 clipPath: 'inset(0 0% 0 100%)',
@@ -536,8 +632,6 @@
                 ease: 'power3.inOut'
             });
         }
-
-        // 페이지 로드 시 인트로 시작
         window.addEventListener('load', initIntroAnimation);
 
         window.triggerPageTransition = function(targetUrl) {
@@ -548,33 +642,345 @@
             isJumping = true;
             isSquashing = false;
             isLanding = false;
-            velocityY = 0.5; 
-            ignoreFloor = true; 
+            velocityY = 0.5;
+            ignoreFloor = true;
             if (plane) plane.visible = false;
 
             const curtain = document.getElementById('transition-curtain');
             const transitionText = curtain.querySelector('.transition-text');
-            
+
             gsap.to(curtain, {
                 top: 0,
                 duration: 0.6,
                 ease: "power3.inOut",
                 delay: 0.7,
-                onComplete: () => {
-                    window.location.href = targetUrl;
-                }
+                onComplete: () => { window.location.href = targetUrl; }
             });
 
             gsap.to(transitionText, { opacity: 1, duration: 0.3, delay: 0.8 });
         };
 
+        /* ============================
+           Theme 2: 제공한 인터랙티브 오브젝트 (Hero Sphere)
+           ============================ */
+        const heroContainer = document.getElementById('hero-sphere-container');
+
+        const heroScene = new THREE.Scene();
+        const heroCamera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+        heroCamera.position.z = 4.2;
+
+        const heroRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        heroRenderer.setSize(window.innerWidth, window.innerHeight);
+        heroRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        heroContainer.appendChild(heroRenderer.domElement);
+
+        // [Updated] 사용자 요청 파라미터 적용
+        const heroParams = {
+            objectSpeed: 1.35,    
+            rippleStrength: 0.07,  
+            rippleSpeed: 15.0,    
+            rippleFrequency: 17.0, 
+            rippleRadius: 1.0,    
+            trailDecay: 0.94,      
+            
+            roughness: 0.15,       
+            specularIntensity: 0.4,
+
+            colorBlue: '#2b50f1',
+            colorPurple: '#9c6dff',
+            colorMint: '#a3ffac',
+            rimBoost: 1.5
+        };
+
+        const TRAIL_SIZE = 40;
+        const trailData = new Float32Array(TRAIL_SIZE * 4);
+        for (let i = 0; i < TRAIL_SIZE; i++) trailData[i * 4 + 3] = 0;
+
+        // [NEW] Updated Shaders with Blue-Purple Flow Logic
+        const noiseFunction = `
+            vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+            vec4 mod289(vec4 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+            vec4 permute(vec4 x) { return mod289(((x*34.0)+1.0)*x); }
+            vec4 taylorInvSqrt(vec4 r) { return 1.79284291400159 - 0.85373472095314 * r; }
+            float snoise(vec3 v) {
+                const vec2  C = vec2(1.0/6.0, 1.0/3.0) ;
+                const vec4  D = vec4(0.0, 0.5, 1.0, 2.0);
+                vec3 i  = floor(v + dot(v, C.yyy) );
+                vec3 x0 = v - i + dot(i, C.xxx) ;
+                vec3 g = step(x0.yzx, x0.xyz);
+                vec3 l = 1.0 - g;
+                vec3 i1 = min( g.xyz, l.zxy );
+                vec3 i2 = max( g.xyz, l.zxy );
+                vec3 x1 = x0 - i1 + C.xxx;
+                vec3 x2 = x0 - i2 + C.yyy;
+                vec3 x3 = x0 - D.yyy;
+                i = mod289(i);
+                vec4 p = permute( permute( permute(
+                        i.z + vec4(0.0, i1.z, i2.z, 1.0 ))
+                        + i.y + vec4(0.0, i1.y, i2.y, 1.0 ))
+                        + i.x + vec4(0.0, i1.x, i2.x, 1.0 ));
+                float n_ = 0.142857142857;
+                vec3  ns = n_ * D.wyz - D.xzx;
+                vec4 j = p - 49.0 * floor(p * ns.z * ns.z);
+                vec4 x_ = floor(j * ns.z);
+                vec4 y_ = floor(j - 7.0 * x_ );
+                vec4 x = x_ *ns.x + ns.yyyy;
+                vec4 y = y_ *ns.x + ns.yyyy;
+                vec4 h = 1.0 - abs(x) - abs(y);
+                vec4 b0 = vec4( x.xy, y.xy );
+                vec4 b1 = vec4( x.zw, y.zw );
+                vec4 s0 = floor(b0)*2.0 + 1.0;
+                vec4 s1 = floor(b1)*2.0 + 1.0;
+                vec4 sh = -step(h, vec4(0.0));
+                vec4 a0 = b0.xzyw + s0.xzyw*sh.xxyy ;
+                vec4 a1 = b1.xzyw + s1.xzyw*sh.zzww ;
+                vec3 p0 = vec3(a0.xy,h.x);
+                vec3 p1 = vec3(a0.zw,h.y);
+                vec3 p2 = vec3(a1.xy,h.z);
+                vec3 p3 = vec3(a1.zw,h.w);
+                vec4 norm = taylorInvSqrt(vec4(dot(p0,p0), dot(p1,p1), dot(p2, p2), dot(p3,p3)));
+                p0 *= norm.x;
+                p1 *= norm.y;
+                p2 *= norm.z;
+                p3 *= norm.w;
+                vec4 m = max(0.6 - vec4(dot(x0,x0), dot(x1,x1), dot(x2,x2), dot(x3,x3)), 0.0);
+                m = m * m;
+                return 42.0 * dot( m*m, vec4( dot(p0,x0), dot(p1,x1), dot(p2,x2), dot(p3,x3) ) );
+            }
+        `;
+
+        const heroVertexShader = `
+            uniform float uTime;
+            uniform vec4 uTrail[${TRAIL_SIZE}];
+            uniform float uRippleStrength;
+            uniform float uRippleRadius;
+            uniform float uSpreadSpeed;
+            uniform float uRippleFrequency;
+
+            varying vec2 vUv;
+            varying vec3 vNormal;
+            varying vec3 vViewPosition;
+            varying vec3 vModelPos;
+
+            ${noiseFunction}
+
+            float getDisplacement(vec3 pos) {
+                vec4 worldPos = modelMatrix * vec4(pos, 1.0);
+                float totalWave = 0.0;
+
+                for(int i = 0; i < ${TRAIL_SIZE}; i++) {
+                    vec3 trailPos = uTrail[i].xyz;
+                    float strength = uTrail[i].w;
+                    if(strength <= 0.01) continue;
+
+                    float dist = distance(worldPos.xyz, trailPos);
+                    float wavePhase = (1.0 - strength) * uSpreadSpeed;
+
+                    float normDist = dist / uRippleRadius;
+                    float mask = exp(-normDist * normDist * 4.0);
+                    mask *= smoothstep(1.5, 0.0, normDist);
+
+                    float ripple = (cos(dist * uRippleFrequency - wavePhase) - 1.0) * mask;
+                    totalWave += ripple * strength;
+                }
+
+                totalWave = tanh(totalWave * 1.5);
+                float displacement = totalWave * uRippleStrength;
+                
+                // [Motion Speed Applied here via uTime]
+                float idle = snoise(pos * 0.3 + uTime * 0.1) * 0.03 + snoise(pos * 0.6 + uTime * 0.2) * 0.01;
+
+                return displacement + idle;
+            }
+
+            void main() {
+                vUv = uv;
+                float disp = getDisplacement(position);
+                vec3 newPos = position + normal * disp;
+                vModelPos = position;
+
+                float epsilon = 0.05;
+                vec3 tangent = normalize(cross(normal, vec3(0.0, 1.0, 0.0)));
+                if (length(tangent) < 0.001) tangent = normalize(cross(normal, vec3(0.0, 0.0, 1.0)));
+                vec3 bitangent = normalize(cross(normal, tangent));
+
+                vec3 p1 = position + tangent * epsilon;
+                vec3 p2 = position + bitangent * epsilon;
+                float d1 = getDisplacement(p1);
+                float d2 = getDisplacement(p2);
+
+                vec3 v1 = p1 + normal * d1;
+                vec3 v2 = p2 + normal * d2;
+                vec3 smoothedNormal = normalize(cross(v1 - newPos, v2 - newPos));
+
+                vNormal = normalize(normalMatrix * smoothedNormal);
+                vec4 mvPosition = modelViewMatrix * vec4(newPos, 1.0);
+                vViewPosition = -mvPosition.xyz;
+
+                gl_Position = projectionMatrix * mvPosition;
+            }
+        `;
+
+        const heroFragmentShader = `
+            uniform float uTime;
+            uniform vec3 uColorBlue;
+            uniform vec3 uColorPurple;
+            uniform vec3 uColorMint;
+            uniform float uRimBoost;
+            uniform float uRoughness;
+            uniform float uSpecularIntensity;
+
+            varying vec2 vUv;
+            varying vec3 vNormal;
+            varying vec3 vViewPosition;
+            varying vec3 vModelPos;
+
+            ${noiseFunction}
+
+            void main() {
+                vec3 normal = normalize(vNormal);
+                vec3 viewDir = normalize(vViewPosition);
+                float NdotV = dot(normal, viewDir);
+
+                // [Flow Animation] 색상 변화 속도
+                float flow1 = snoise(vModelPos * 0.5 + uTime * 0.15); 
+                float flow2 = snoise(vModelPos * 0.8 - uTime * 0.075); 
+
+                // Color Logic (Blue <-> Purple mixing)
+                float baseMix = smoothstep(-0.6, 0.6, flow1 + normal.y * 0.3);
+                vec3 baseColor = mix(uColorBlue, uColorPurple, baseMix);
+
+                float energyMask = pow(1.0 - NdotV, 2.0); 
+                float energyFlow = smoothstep(0.1, 0.9, flow2 * 0.5 + 0.5);
+                baseColor = mix(baseColor, uColorMint, energyFlow * energyMask * 0.4);
+
+                // Lighting
+                float fresnel = pow(1.0 - max(0.0, NdotV), mix(3.0, 1.2, uRoughness));
+                vec3 rimLightDir = normalize(vec3(-1.0, -1.0, 0.5)); 
+                float directionalMask = smoothstep(-0.2, 1.0, dot(normal, rimLightDir));
+
+                float finalRim = fresnel * (0.4 + 0.6 * directionalMask) * uRimBoost;
+
+                vec3 lightDir = normalize(vec3(-0.5, 1.0, 1.0));
+                vec3 halfVector = normalize(lightDir + viewDir);
+                float specular = pow(max(0.0, dot(normal, halfVector)), 120.0);
+
+                vec3 color = baseColor;
+                color += uColorMint * finalRim * 0.8; 
+                color += vec3(1.0) * specular * uSpecularIntensity;
+                color += baseColor * energyMask * 0.2;
+
+                gl_FragColor = vec4(color, 1.0);
+            }
+        `;
+
+        // [수정] Theme 2 미디어 사이즈 확대 (반지름 1.1)
+        const heroGeometry = new THREE.SphereGeometry(1.1, 512, 512);
+        const heroMaterial = new THREE.ShaderMaterial({
+            vertexShader: heroVertexShader,
+            fragmentShader: heroFragmentShader,
+            uniforms: {
+                uTime: { value: 0 }, // Changed from uTimeObject to uTime for consistency
+                uTrail: { value: trailData },
+                uRippleStrength: { value: heroParams.rippleStrength },
+                uRippleRadius: { value: heroParams.rippleRadius },
+                uSpreadSpeed: { value: heroParams.rippleSpeed },
+                uRippleFrequency: { value: heroParams.rippleFrequency }, 
+                uRoughness: { value: heroParams.roughness },
+                uSpecularIntensity: { value: heroParams.specularIntensity },
+                uColorBlue: { value: new THREE.Color(heroParams.colorBlue) },
+                uColorPurple: { value: new THREE.Color(heroParams.colorPurple) },
+                uColorMint: { value: new THREE.Color(heroParams.colorMint) },
+                uRimBoost: { value: heroParams.rimBoost }
+            }
+        });
+
+        const heroSphere = new THREE.Mesh(heroGeometry, heroMaterial);
+        heroScene.add(heroSphere);
+
+        const heroRaycaster = new THREE.Raycaster();
+        const heroMouse = new THREE.Vector2();
+        let heroTrailIndex = 0;
+
+        let heroTimeObjectAccumulated = 0;
+
+        /* ============================
+           테마 토글 + 부드러운 전환
+           ============================ */
+        let currentTheme = 1;
+        const overlay = document.getElementById('theme-transition-overlay');
+        const canvasContainer = document.getElementById('canvas-container');
+
+        function setContainersForTheme(theme) {
+            // Theme 1: 기존 3D
+            const showTheme1 = (theme === 1);
+
+            canvasContainer.style.display = showTheme1 ? 'block' : 'none';
+            heroContainer.style.display = showTheme1 ? 'none' : 'block';
+
+            // 기존 오브젝트 가시성
+            if (character) character.visible = showTheme1;
+            if (plane) plane.visible = showTheme1;
+            if (particleGroup) particleGroup.visible = showTheme1;
+
+            // 커서 상태 리셋
+            if (!showTheme1) {
+                isHoveringBall = false;
+                updateCursorState();
+            }
+        }
+
+        function applyTheme(theme) {
+            currentTheme = theme;
+
+            // Dots UI
+            const dot1 = document.getElementById('theme-dot-1');
+            const dot2 = document.getElementById('theme-dot-2');
+            if (dot1 && dot2) {
+                dot1.classList.toggle('active', theme === 1);
+                dot2.classList.toggle('active', theme === 2);
+            }
+
+            // Body theme class (text color via CSS)
+            document.body.classList.toggle('theme-dark', theme === 2);
+
+            // Three.js background (theme1 씬은 유지하되, 표시 컨테이너로 on/off)
+            scene.background = new THREE.Color(theme === 2 ? 0x000000 : 0xF5F5F7);
+
+            setContainersForTheme(theme);
+        }
+
+        // [NEW] Click handler exposed (event stop to prevent WORKS navigation)
+        window.setTheme = function(theme, ev) {
+            if (ev) ev.stopPropagation();
+
+            if (theme === currentTheme) return;
+
+            // overlay로 자연스럽게 전환
+            gsap.killTweensOf(overlay);
+            gsap.to(overlay, {
+                opacity: 1,
+                duration: 0.22,
+                ease: 'power2.out',
+                onComplete: () => {
+                    applyTheme(theme);
+                    gsap.to(overlay, { opacity: 0, duration: 0.45, ease: 'power3.out' });
+                }
+            });
+        };
+
+        /* ============================
+           기존 이벤트/커서/채팅 (원본 유지)
+           ============================ */
         window.addEventListener('pointerdown', (event) => {
+            // theme-toggle 클릭은 inline onclick에서 stopPropagation 처리됨
+
             pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
             pointer.y = - (event.clientY / window.innerHeight) * 2 + 1;
             raycaster.setFromCamera(pointer, camera);
 
             let clickedBall = false;
-            if (character) {
+            if (character && currentTheme === 1) {
                 const intersects = raycaster.intersectObject(character, true);
                 if (intersects.length > 0) { clickedBall = true; }
             }
@@ -582,10 +988,10 @@
             if (clickedBall) {
                 const chatUI = document.getElementById('chat-interface');
                 const minIcon = document.getElementById('chat-minimized-icon');
-                if (chatUI.style.display === 'none' && minIcon.style.display === 'none') { toggleChat(true); } 
+                if (chatUI.style.display === 'none' && minIcon.style.display === 'none') { toggleChat(true); }
                 else { restoreChat(); }
             } else {
-                if (!isJumping && !isSquashing && !isLanding) { isSquashing = true; }
+                if (!isJumping && !isSquashing && !isLanding && currentTheme === 1) { isSquashing = true; }
             }
         });
 
@@ -594,6 +1000,24 @@
             mouseY = -(event.clientY / window.innerHeight) * 2 + 1;
             pixelMouseX = event.clientX;
             pixelMouseY = event.clientY;
+
+            // Theme2: Hero Sphere 인터랙션 (제공한 코드의 로직을 그대로 적용)
+            if (currentTheme === 2) {
+                heroMouse.x = (pixelMouseX / window.innerWidth) * 2 - 1;
+                heroMouse.y = -(pixelMouseY / window.innerHeight) * 2 + 1;
+                heroRaycaster.setFromCamera(heroMouse, heroCamera);
+                const intersects = heroRaycaster.intersectObject(heroSphere);
+
+                if (intersects.length > 0) {
+                    const p = intersects[0].point;
+                    const i = heroTrailIndex * 4;
+                    trailData[i] = p.x;
+                    trailData[i + 1] = p.y;
+                    trailData[i + 2] = p.z;
+                    trailData[i + 3] = 1.0;
+                    heroTrailIndex = (heroTrailIndex + 1) % TRAIL_SIZE;
+                }
+            }
         });
 
         const linkItems = document.querySelectorAll('.link-item');
@@ -606,20 +1030,27 @@
         chatIcon.addEventListener('mouseenter', () => { isHoveringButton = true; updateCursorState(); });
         chatIcon.addEventListener('mouseleave', () => { isHoveringButton = false; updateCursorState(); });
 
+        // [NEW] Add event listeners for theme toggle buttons for cursor interaction
+        const themeDots = document.querySelectorAll('.theme-dot');
+        themeDots.forEach(dot => {
+            dot.addEventListener('mouseenter', () => { isHoveringButton = true; updateCursorState(); });
+            dot.addEventListener('mouseleave', () => { isHoveringButton = false; updateCursorState(); });
+        });
+
         function updateCursorState() {
             cursorFollower.classList.remove('active-enter', 'active-chat');
             cursorText.innerText = "";
-            
+
             if (isHoveringBall) {
                 cursorFollower.classList.add('active-chat');
                 cursorText.innerText = "CHAT";
-            } 
+            }
             else if (isHoveringLink || isHoveringButton) {
                 cursorFollower.classList.add('active-enter');
-                cursorText.innerText = ""; 
+                cursorText.innerText = "";
             }
         }
-        
+
         window.setCursorDefault = function() { }
         window.setCursorActive = function() { }
 
@@ -632,7 +1063,7 @@
             const input = document.getElementById('chat-input');
             const body = document.getElementById('chat-body');
             const text = input.value.trim();
-            
+
             if (!text) return;
 
             body.innerHTML += `<div class="message user">${text}</div>`;
@@ -640,8 +1071,8 @@
             body.scrollTop = body.scrollHeight;
 
             const loadingMessage = document.getElementById('loading-message');
-            loadingMessage.style.display = 'block'; 
-            body.appendChild(loadingMessage); 
+            loadingMessage.style.display = 'block';
+            body.appendChild(loadingMessage);
             body.scrollTop = body.scrollHeight;
 
             try {
@@ -659,11 +1090,11 @@
 
         async function callGeminiAPI(prompt) {
             try {
-                const apiUrl = 'https://us-central1-hnkl-49a5f.cloudfunctions.net/chat'; 
+                const apiUrl = 'https://us-central1-hnkl-49a5f.cloudfunctions.net/chat';
                 const response = await fetch(apiUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ prompt: prompt }) 
+                    body: JSON.stringify({ prompt: prompt })
                 });
                 if (!response.ok) { throw new Error(`HTTP error! status: ${response.status}`); }
                 const data = await response.json();
@@ -678,130 +1109,171 @@
             }
         }
 
+        /* ============================
+           애니메이션 루프 (Theme 1 + Theme 2)
+           ============================ */
         const clock = new THREE.Clock();
-        const lookRange = 45; 
+        const lookRange = 45;
         const lerp = (start, end, amt) => (1 - amt) * start + amt * end;
 
         function animate() {
             requestAnimationFrame(animate);
             const delta = clock.getDelta();
-            
-            const ease = 0.2; 
+
+            // 커서 팔로워(원본 유지)
+            const ease = 0.2;
             const nextX = cursorX + (pixelMouseX - cursorX) * ease;
             const nextY = cursorY + (pixelMouseY - cursorY) * ease;
-            
+
             const velX = nextX - cursorX;
             const velY = nextY - cursorY;
             cursorX = nextX;
             cursorY = nextY;
-            
+
             const dist = Math.sqrt(velX * velX + velY * velY);
             const angle = Math.atan2(velY, velX);
             const stretch = Math.min(dist * 0.1, 0.5);
-            
+
             const scaleX = 1 + stretch;
             const scaleY = 1 - stretch * 0.4;
-            
+
             cursorFollower.style.transform = `translate3d(${cursorX}px, ${cursorY}px, 0)`;
             cursorCircle.style.transform = `rotate(${angle}rad) scale(${scaleX}, ${scaleY})`;
 
-            if (character) {
-                pointer.x = mouseX; pointer.y = mouseY; 
-                raycaster.setFromCamera(pointer, camera);
-                const intersects = raycaster.intersectObject(character, true);
-                const isIntersecting = intersects.length > 0;
-                if (isIntersecting !== isHoveringBall) {
-                    isHoveringBall = isIntersecting;
-                    updateCursorState();
+            // Theme 1 렌더
+            if (currentTheme === 1) {
+                // hover ball
+                if (character) {
+                    pointer.x = mouseX; pointer.y = mouseY;
+                    raycaster.setFromCamera(pointer, camera);
+                    const intersects = raycaster.intersectObject(character, true);
+                    const isIntersecting = intersects.length > 0;
+                    if (isIntersecting !== isHoveringBall) {
+                        isHoveringBall = isIntersecting;
+                        updateCursorState();
+                    }
                 }
-            }
 
-            const currentTime = depthMaterial.uniforms.uTime.value += delta * params.speed;
-            
-            const targetRotY = mouseX * lookRange; 
-            const targetRotX = params.baseRotX + (-mouseY * lookRange); 
-            currentRotX += (targetRotX - currentRotX) * 0.03;
-            currentRotY += (targetRotY - currentRotY) * 0.03;
-            depthMaterial.uniforms.uRotX.value = currentRotX;
-            depthMaterial.uniforms.uRotY.value = currentRotY;
+                // shader time
+                depthMaterial.uniforms.uTime.value += delta * params.speed;
 
-            if (character) {
-                if (isSquashing) {
-                    character.scale.y = lerp(character.scale.y, baseScale * 0.5, 0.4);
-                    character.scale.x = lerp(character.scale.x, baseScale * 1.5, 0.4);
-                    character.scale.z = lerp(character.scale.z, baseScale * 1.5, 0.4);
-                    if (character.scale.y <= baseScale * 0.6) { isSquashing = false; isJumping = true; velocityY = jumpPower; }
-                } 
-                else if (isJumping) {
-                    velocityY += gravity; 
-                    character.position.y += velocityY;
-                    
-                    const stretchAmount = 1 + Math.abs(velocityY) * 0.8; 
-                    const squashAmount = 1 / Math.sqrt(stretchAmount);
-                    character.scale.y = lerp(character.scale.y, baseScale * stretchAmount, 0.3);
-                    character.scale.x = lerp(character.scale.x, baseScale * squashAmount, 0.3);
-                    character.scale.z = lerp(character.scale.z, baseScale * squashAmount, 0.3);
-                    
-                    if (!ignoreFloor && character.position.y <= groundY) {
-                        character.position.y = groundY;
-                        if (Math.abs(velocityY) > 0.1) { 
-                            velocityY = -velocityY * bounceDamping; 
-                            character.scale.y = baseScale * 0.8; 
-                            character.scale.x = baseScale * 1.2; 
-                            character.scale.z = baseScale * 1.2; 
-                        } 
-                        else {
-                            isJumping = false; velocityY = 0; character.scale.set(baseScale * 1.3, baseScale * 0.7, baseScale * 1.3);
-                            isLanding = true; tension = baseTension * 1.5; 
-                            if (landingTimer) clearTimeout(landingTimer);
-                            landingTimer = setTimeout(() => { isLanding = false; tension = baseTension; }, 500);
+                // look
+                const targetRotY = mouseX * lookRange;
+                const targetRotX = params.baseRotX + (-mouseY * lookRange);
+                currentRotX += (targetRotX - currentRotX) * 0.03;
+                currentRotY += (targetRotY - currentRotY) * 0.03;
+                depthMaterial.uniforms.uRotX.value = currentRotX;
+                depthMaterial.uniforms.uRotY.value = currentRotY;
+
+                // character motion
+                if (character) {
+                    if (isSquashing) {
+                        character.scale.y = lerp(character.scale.y, baseScale * 0.5, 0.4);
+                        character.scale.x = lerp(character.scale.x, baseScale * 1.5, 0.4);
+                        character.scale.z = lerp(character.scale.z, baseScale * 1.5, 0.4);
+                        if (character.scale.y <= baseScale * 0.6) { isSquashing = false; isJumping = true; velocityY = jumpPower; }
+                    }
+                    else if (isJumping) {
+                        velocityY += gravity;
+                        character.position.y += velocityY;
+
+                        const stretchAmount = 1 + Math.abs(velocityY) * 0.8;
+                        const squashAmount = 1 / Math.sqrt(stretchAmount);
+                        character.scale.y = lerp(character.scale.y, baseScale * stretchAmount, 0.3);
+                        character.scale.x = lerp(character.scale.x, baseScale * squashAmount, 0.3);
+                        character.scale.z = lerp(character.scale.z, baseScale * squashAmount, 0.3);
+
+                        if (!ignoreFloor && character.position.y <= groundY) {
+                            character.position.y = groundY;
+                            if (Math.abs(velocityY) > 0.1) {
+                                velocityY = -velocityY * bounceDamping;
+                                character.scale.y = baseScale * 0.8;
+                                character.scale.x = baseScale * 1.2;
+                                character.scale.z = baseScale * 1.2;
+                            }
+                            else {
+                                isJumping = false; velocityY = 0;
+                                character.scale.set(baseScale * 1.3, baseScale * 0.7, baseScale * 1.3);
+                                isLanding = true; tension = baseTension * 1.5;
+                                if (landingTimer) clearTimeout(landingTimer);
+                                landingTimer = setTimeout(() => { isLanding = false; tension = baseTension; }, 500);
+                            }
                         }
                     }
-                } 
-                else {
-                    character.scale.y = lerp(character.scale.y, baseScale, 0.3);
-                    character.scale.x = lerp(character.scale.x, baseScale, 0.3);
-                    character.scale.z = lerp(character.scale.z, baseScale, 0.3);
-                }
+                    else {
+                        character.scale.y = lerp(character.scale.y, baseScale, 0.3);
+                        character.scale.x = lerp(character.scale.x, baseScale, 0.3);
+                        character.scale.z = lerp(character.scale.z, baseScale, 0.3);
+                    }
 
-                if (!isJumping || isLanding) {
-                    const targetX = mouseX;
-                    const acceleration = (targetX - currentX) * tension;
-                    velocityX += acceleration;
-                }
-                
-                velocityX *= (isJumping && !isLanding) ? 0.99 : friction;
-                currentX += velocityX;
-                character.position.x = currentX * 10.0;
-                
-                if (!isJumping) { character.rotation.z = -currentX * Math.PI * 4; }
+                    if (!isJumping || isLanding) {
+                        const targetX = mouseX;
+                        const acceleration = (targetX - currentX) * tension;
+                        velocityX += acceleration;
+                    }
 
-                if (Math.abs(velocityX) > 0.005 && !isJumping) {
-                    if (Math.random() > 0.9) {
-                        spawnParticle(character.position, velocityX, currentTime);
+                    velocityX *= (isJumping && !isLanding) ? 0.99 : friction;
+                    currentX += velocityX;
+                    character.position.x = currentX * 10.0;
+
+                    if (!isJumping) { character.rotation.z = -currentX * Math.PI * 4; }
+
+                    if (Math.abs(velocityX) > 0.005 && !isJumping) {
+                        if (Math.random() > 0.9) spawnParticle(character.position, velocityX);
                     }
                 }
+
+                // particles
+                for (let i = particles.length - 1; i >= 0; i--) {
+                    const p = particles[i];
+                    p.sprite.position.add(p.velocity);
+                    p.sprite.scale.multiplyScalar(0.96);
+                    p.life -= 0.02;
+                    if (p.sprite.scale.x < 0.05 || p.life <= 0) {
+                        particleGroup.remove(p.sprite);
+                        p.material.dispose();
+                        particles.splice(i, 1);
+                    }
+                }
+
+                renderer.render(scene, camera);
             }
 
-            for (let i = particles.length - 1; i >= 0; i--) {
-                const p = particles[i];
-                p.sprite.position.add(p.velocity); 
-                p.sprite.scale.multiplyScalar(0.96); 
-                p.life -= 0.02;
-                if (p.sprite.scale.x < 0.05 || p.life <= 0) {
-                    particleGroup.remove(p.sprite);
-                    p.material.dispose();
-                    particles.splice(i, 1);
+            // Theme 2 렌더 (Hero Sphere)
+            if (currentTheme === 2) {
+                // Constant Speed 1.35
+                heroTimeObjectAccumulated += delta * heroParams.objectSpeed;
+
+                // trail decay
+                for (let i = 0; i < TRAIL_SIZE; i++) {
+                    const aIndex = i * 4 + 3;
+                    if (trailData[aIndex] > 0) {
+                        trailData[aIndex] *= heroParams.trailDecay;
+                        if (trailData[aIndex] < 0.001) trailData[aIndex] = 0;
+                    }
                 }
+
+                heroMaterial.uniforms.uTime.value = heroTimeObjectAccumulated;
+                heroSphere.rotation.y += 0.003 * heroParams.objectSpeed; // Increased rotation speed
+                heroSphere.rotation.z = Math.sin(heroTimeObjectAccumulated * 0.1) * 0.05;
+
+                heroRenderer.render(heroScene, heroCamera);
             }
-            renderer.render(scene, camera);
         }
         animate();
 
+        // 초기 테마 확정
+        applyTheme(1);
+
+        // resize
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
+
+            heroCamera.aspect = window.innerWidth / window.innerHeight;
+            heroCamera.updateProjectionMatrix();
+            heroRenderer.setSize(window.innerWidth, window.innerHeight);
         });
     </script>
 </body>
