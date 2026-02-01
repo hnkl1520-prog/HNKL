@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>AI Generative Art - Density Control</title>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Courier New', Courier, monospace; }
+        #canvas-container { width: 100vw; height: 100vh; }
+        
+        /* UI 패널 스타일 */
+        #ui-container {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 300px;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            border: 1px solid #00ff00;
+            border-radius: 10px;
+            color: #00ff00;
+            z-index: 100;
+            box-shadow: 0 0 15px rgba(0, 255, 0, 0.2);
+        }
+        h2 { margin: 0 0 15px 0; font-size: 18px; text-transform: uppercase; letter-spacing: 2px; border-bottom: 1px solid #00ff00; padding-bottom: 5px;}
+        
+        .file-upload {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 20px;
+            background: transparent;
+            border: 1px solid #00ff00;
+            color: #00ff00;
+            text-align: center;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.3s;
+        }
+        .file-upload:hover { background: #00ff00; color: #000; }
+        input[type="file"] { display: none; }
+
+        #loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #00ff00;
+            font-size: 24px;
+            pointer-events: none;
+            display: none;
+        }
+    </style>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.7.7/dat.gui.min.js"></script>
+</head>
+<body>
+
+    <div id="ui-container">
+        <h2>Parameter Control</h2>
+        <label class="file-upload">
+            [ + ] 이미지 업로드
+            <input type="file" id="imageInput" accept="image/*">
+        </label>
+        <div id="gui-container"></div>
+        <div style="margin-top:10px; font-size:12px; opacity:0.7;">
+            * Particle Gap: 낮을수록 촘촘함<br>
+            * 마우스 왼쪽: 회전 / 휠: 줌<br>
+        </div>
+    </div>
+
+    <div id="loading">Processing...</div>
+    <div id="canvas-container"></div>
+
+    <script>
+        // 1. 기본 장면 설정
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 10000);
+        camera.position.set(0, 100, 600);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+
+        // 2. 셰이더 설정
+        const vertexShader = `
+            uniform float uSize;
+            uniform float uTime;
+            uniform float uDepth;
+            uniform float uNoiseSpeed;
+            uniform float uNoiseFreq;
+            uniform float uNoiseAmp;
+            
+            attribute float brightness;
+            attribute vec3 color;
+            
+            varying vec3 vColor;
+
+            void main() {
+                vColor = color;
+                vec3 pos = position;
+                
+                pos.z += brightness * uDepth;
+
+                float noise = sin(pos.x * uNoiseFreq + uTime * uNoiseSpeed) + cos(pos.y * uNoiseFreq + uTime * uNoiseSpeed);
+                pos.z += noise * uNoiseAmp;
+
+                vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
+                gl_PointSize = uSize * (300.0 / -mvPosition.z);
+                gl_Position = projectionMatrix * mvPosition;
+            }
+        `;
+
+        const fragmentShader = `
+            varying vec3 vColor;
+            void main() {
+                if (length(gl_PointCoord - vec2(0.5, 0.5)) > 0.5) discard;
+                gl_FragColor = vec4(vColor, 1.0);
+            }
+        `;
+
+        // 3. 변수 및 데이터 캐싱 (새로고침 없이 파티클 재생성을 위해)
+        let particles;
+        let cachedImgData = null; // 이미지 데이터를 저장해둠
+        let cachedWidth = 0;
+        let cachedHeight = 0;
+
+        const params = {
+            particleSize: 4.0,
+            particleGap: 2,       // ★ 추가된 기능: 파티클 간격 (기본 2칸)
+            zDisplacement: 100.0,
+            noiseSpeed: 2.0,
+            noiseFreq: 0.02,
+            noiseAmp: 20.0
+        };
+
+        const gui = new dat.GUI({ autoPlace: false });
+        document.getElementById('gui-container').appendChild(gui.domElement);
+        gui.domElement.style.width = '100%';
+        
+        const uniforms = {
+            uTime: { value: 0 },
+            uSize: { value: params.particleSize },
+            uDepth: { value: params.zDisplacement },
+            uNoiseSpeed: { value: params.noiseSpeed },
+            uNoiseFreq: { value: params.noiseFreq },
+            uNoiseAmp: { value: params.noiseAmp }
+        };
+
+        // GUI 설정
+        gui.add(params, 'particleSize', 1, 20).onChange(v => uniforms.uSize.value = v);
+        
+        // ★ 간격 조절 슬라이더 (변경 시 rebuildParticles 호출)
+        gui.add(params, 'particleGap', 1, 10).step(1).name('Particle Gap').onChange(() => {
+            if (cachedImgData) rebuildParticles();
+        });
+
+        gui.add(params, 'zDisplacement', 0, 500).onChange(v => uniforms.uDepth.value = v);
+        gui.add(params, 'noiseSpeed', 0, 10).onChange(v => uniforms.uNoiseSpeed.value = v);
+        gui.add(params, 'noiseFreq', 0.001, 0.1).onChange(v => uniforms.uNoiseFreq.value = v);
+        gui.add(params, 'noiseAmp', 0, 100).onChange(v => uniforms.uNoiseAmp.value = v);
+
+
+        // 4. 파티클 생성 로직 (분리됨)
+        function rebuildParticles() {
+            if (!cachedImgData) return;
+
+            // 기존 파티클 삭제
+            if (particles) {
+                scene.remove(particles);
+                particles.geometry.dispose();
+                particles.material.dispose();
+            }
+
+            const positions = [];
+            const colors = [];
+            const brightnesses = [];
+            const gap = params.particleGap; // 현재 설정된 간격 값
+
+            // ★ 간격(Gap)만큼 건너뛰면서 루프 돌기
+            for (let y = 0; y < cachedHeight; y += gap) {
+                for (let x = 0; x < cachedWidth; x += gap) {
+                    const i = (y * cachedWidth + x) * 4;
+                    const r = cachedImgData[i] / 255;
+                    const g = cachedImgData[i + 1] / 255;
+                    const b = cachedImgData[i + 2] / 255;
+                    const a = cachedImgData[i + 3];
+
+                    if (a > 50) { 
+                        positions.push(x - cachedWidth / 2, -(y - cachedHeight / 2), 0);
+                        colors.push(r, g, b);
+                        const bright = (r + g + b) / 3;
+                        brightnesses.push(bright);
+                    }
+                }
+            }
+
+            const geometry = new THREE.BufferGeometry();
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+            geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+            geometry.setAttribute('brightness', new THREE.Float32BufferAttribute(brightnesses, 1));
+
+            const material = new THREE.ShaderMaterial({
+                uniforms: uniforms,
+                vertexShader: vertexShader,
+                fragmentShader: fragmentShader,
+                transparent: true,
+                depthTest: false,
+                blending: THREE.AdditiveBlending
+            });
+
+            particles = new THREE.Points(geometry, material);
+            scene.add(particles);
+        }
+
+        // 5. 이미지 로드 함수
+        function processImage(imageSrc) {
+            const img = new Image();
+            img.src = imageSrc;
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                const width = 500; // 해상도를 조금 높였습니다
+                const scale = width / img.width;
+                const height = Math.floor(img.height * scale);
+                
+                canvas.width = width;
+                canvas.height = height;
+                ctx.drawImage(img, 0, 0, width, height);
+                
+                // 이미지 데이터 저장 (캐싱)
+                const imgData = ctx.getImageData(0, 0, width, height);
+                cachedImgData = imgData.data;
+                cachedWidth = width;
+                cachedHeight = height;
+
+                // 파티클 생성 실행
+                rebuildParticles();
+                
+                controls.reset();
+                camera.position.set(0, 0, 600);
+                document.getElementById('loading').style.display = 'none';
+            };
+        }
+
+        // 파일 업로드 리스너
+        document.getElementById('imageInput').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                document.getElementById('loading').style.display = 'block';
+                const reader = new FileReader();
+                reader.onload = (event) => processImage(event.target.result);
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // 애니메이션 루프
+        function animate() {
+            requestAnimationFrame(animate);
+            uniforms.uTime.value += 0.01;
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>

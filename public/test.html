@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Public Assets Test Page</title>
+
+    <!-- CSS 연결 -->
+    <link rel="stylesheet" href="common.css">
+
+    <style>
+        /* 테스트 페이지 전용 스타일 */
+        .test-section-title {
+            margin-top: 50px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            color: var(--dim-color);
+            border-bottom: 1px solid rgba(0,0,0,0.1);
+            padding-bottom: 10px;
+        }
+        .dark-mode-toggle {
+            margin: 20px 0;
+            padding: 10px 20px;
+            background: var(--text-color);
+            color: var(--bg-color);
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+        }
+        /* 이미지가 깨졌을 때 대체 텍스트를 예쁘게 보여주기 위한 스타일 */
+        .header-logo img {
+            min-width: 50px;
+            min-height: 20px;
+            background: #eee; /* 이미지가 없으면 회색 배경이라도 보이게 */
+        }
+    </style>
+</head>
+<body>
+
+    <!-- [필수] 커서 이펙트 레이어 -->
+    <div id="cursor-bg-layer">
+        <div id="cursor-circle"></div>
+    </div>
+    <div id="cursor-text-layer">
+        <div id="cursor-text"></div>
+    </div>
+
+    <!-- [필수] 헤더 영역 -->
+    <header id="global-header">
+        <div class="header-inner">
+            <div class="header-left">
+                <a href="#" class="header-logo hover-trigger">
+                    <!-- 
+                        [수정 완료]
+                        현재 파일(index.html)이 public 폴더 안에 있으므로,
+                        같은 public 폴더 내의 assets 폴더를 가리킬 때는 "assets/..." 로 시작합니다.
+                        파일명: logo.svg
+                    -->
+                    <img src="assets/logo.svg" alt="LOGO" style="display: block;"> 
+                </a>
+                
+                <nav class="header-nav">
+                    <a href="#" class="nav-link active hover-trigger">About</a>
+                    <a href="#" class="nav-link hover-trigger">Work</a>
+                </nav>
+            </div>
+            <div class="header-right">
+                <button class="lang-btn active hover-trigger">KR</button>
+                <button class="lang-btn hover-trigger">EN</button>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            
+            <!-- 1. 다크모드 테스트 -->
+            <div class="test-section-title">01. Theme Test</div>
+            <button onclick="document.body.classList.toggle('dark-mode')" class="dark-mode-toggle hover-trigger">
+                다크모드 토글 (Click Me)
+            </button>
+            <p>위 버튼을 눌러 배경색과 글자색이 바뀌는지 확인하세요.</p>
+
+
+            <!-- 2. 갤러리 리스트 테스트 -->
+            <div class="test-section-title">02. Work List & Hover Effect (이미지에 마우스를 올려보세요)</div>
+            
+            <div class="works-grid">
+                <article class="work-item">
+                    <div class="thumb-wrapper">
+                        <img src="https://via.placeholder.com/600x600/333/fff?text=Work+1" alt="Work 1" class="thumb-img">
+                    </div>
+                    <div class="work-meta">
+                        <div class="work-cat">UI/UX Design</div>
+                        <h3 class="work-title">Project Alpha</h3>
+                    </div>
+                </article>
+
+                <article class="work-item">
+                    <div class="thumb-wrapper">
+                        <img src="https://via.placeholder.com/600x600/555/fff?text=Work+2" alt="Work 2" class="thumb-img">
+                    </div>
+                    <div class="work-meta">
+                        <div class="work-cat">Branding</div>
+                        <h3 class="work-title">Brand Identity B</h3>
+                    </div>
+                </article>
+            </div>
+
+
+            <!-- 3. 플로팅 독 테스트 -->
+            <div class="floating-dock">
+                <div class="dock-pill"></div>
+                <button class="dock-btn active hover-trigger">
+                    Home
+                </button>
+                <button class="dock-btn hover-trigger">
+                    Menu
+                </button>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- JS 연결 -->
+    <script src="common.js"></script>
+
+</body>
+</html>

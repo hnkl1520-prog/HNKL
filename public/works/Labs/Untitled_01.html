@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>Fixed Elastic Particles</title>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #000; font-family: sans-serif; }
+        canvas { display: block; position: absolute; top: 0; left: 0; z-index: 1; }
+        
+        /* UI 패널 */
+        #gui {
+            position: absolute; top: 20px; right: 20px;
+            background: rgba(10, 10, 10, 0.9);
+            padding: 20px; border-radius: 8px; color: #eee;
+            z-index: 10; width: 260px;
+            border: 1px solid #333;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+        }
+        #gui h3 { margin: 0 0 15px 0; font-size: 14px; border-bottom: 1px solid #444; padding-bottom: 10px; color: #fff;}
+        .control-group { margin-bottom: 15px; }
+        label { display: flex; justify-content: space-between; font-size: 11px; color: #aaa; margin-bottom: 5px; }
+        input[type=range] { width: 100%; display: block; cursor: pointer; }
+        .val-display { color: #00f0ff; font-weight: bold; }
+        
+        #loading {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            color: white; font-size: 20px; pointer-events: none; z-index: 20;
+        }
+    </style>
+</head>
+<body>
+    <div id="loading">카메라 연결 중...</div>
+    <video id="video" autoplay muted playsinline style="display:none;"></video>
+    <canvas id="canvas1"></canvas>
+    
+    <div id="gui">
+        <h3>Parameters</h3>
+        
+        <div class="control-group">
+            <label>EXPLOSION FORCE <span id="val-force">15.0</span></label>
+            <input type="range" id="in-force" min="1" max="50" value="15" step="1">
+        </div>
+
+        <div class="control-group">
+            <label>RETURN SPEED <span id="val-speed">0.20</span></label>
+            <input type="range" id="in-speed" min="0.01" max="0.5" value="0.20" step="0.01">
+        </div>
+
+        <div class="control-group">
+            <label>FRICTION <span id="val-friction">0.90</span></label>
+            <input type="range" id="in-friction" min="0.50" max="0.99" value="0.90" step="0.01">
+        </div>
+
+        <div class="control-group">
+            <label>MOTION THRESHOLD <span id="val-thresh">15</span></label>
+            <input type="range" id="in-thresh" min="5" max="100" value="15" step="1">
+        </div>
+
+        <div style="border-top:1px solid #333; margin: 15px 0;"></div>
+
+        <div class="control-group">
+            <label>GRID DENSITY (SPACING) <span id="val-gap">10</span></label>
+            <input type="range" id="in-gap" min="4" max="40" value="10" step="1">
+        </div>
+
+        <div class="control-group">
+            <label>PARTICLE SIZE <span id="val-size">1.5</span></label>
+            <input type="range" id="in-size" min="0.5" max="10" value="1.5" step="0.1">
+        </div>
+        
+        <div style="font-size:10px; color:#555; text-align:center;">MODE: CONFIG_OBJECT_FIXED</div>
+    </div>
+
+    <script>
+        // [핵심 수정] 모든 설정을 이 객체 안에 담아서 관리합니다.
+        const config = {
+            force: 15.0,
+            speed: 0.20,
+            friction: 0.90,
+            thresh: 15,
+            gap: 10,
+            size: 1.5
+        };
+
+        const canvas = document.getElementById('canvas1');
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        const video = document.getElementById('video');
+        const loading = document.getElementById('loading');
+        
+        // 성능 최적화를 위한 임시 캔버스 (반복문 밖으로 뺌)
+        const tempCanvas = document.createElement('canvas');
+        const tempCtx = tempCanvas.getContext('2d');
+
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        let particles = [];
+        let isReady = false;
+
+        // UI 이벤트 리스너 (값이 바뀌면 config 객체를 즉시 업데이트)
+        document.getElementById('in-force').oninput = function(e) {
+            config.force = parseFloat(e.target.value);
+            document.getElementById('val-force').innerText = config.force.toFixed(1);
+        };
+        document.getElementById('in-speed').oninput = function(e) {
+            config.speed = parseFloat(e.target.value);
+            document.getElementById('val-speed').innerText = config.speed.toFixed(2);
+        };
+        document.getElementById('in-friction').oninput = function(e) {
+            config.friction = parseFloat(e.target.value);
+            document.getElementById('val-friction').innerText = config.friction.toFixed(2);
+        };
+        document.getElementById('in-thresh').oninput = function(e) {
+            config.thresh = parseInt(e.target.value);
+            document.getElementById('val-thresh').innerText = config.thresh;
+        };
+        document.getElementById('in-gap').oninput = function(e) {
+            config.gap = parseInt(e.target.value);
+            document.getElementById('val-gap').innerText = config.gap;
+            if(isReady) initParticles(); // 간격이 바뀌면 파티클을 다시 배치해야 함
+        };
+        document.getElementById('in-size').oninput = function(e) {
+            config.size = parseFloat(e.target.value);
+            document.getElementById('val-size').innerText = config.size;
+        };
+
+        // 카메라 켜기
+        navigator.mediaDevices.getUserMedia({ video: true })
+        .then(stream => {
+            video.srcObject = stream;
+            video.play();
+        })
+        .catch(e => {
+            console.error(e);
+            loading.innerText = "카메라 권한을 허용해주세요.";
+        });
+
+        video.addEventListener('loadeddata', () => {
+            if(!isReady) {
+                isReady = true;
+                loading.style.display = 'none';
+                initParticles();
+                animate();
+            }
+        });
+
+        class Particle {
+            constructor(x, y) {
+                this.x = x; this.y = y;
+                this.baseX = x; this.baseY = y;
+                this.vx = 0; this.vy = 0;
+                this.color = 'rgba(0,0,0,0)';
+                this.prevBright = 0;
+            }
+
+            draw() {
+                ctx.fillStyle = this.color;
+                // config.size를 직접 참조하므로 슬라이더 움직이면 바로 커짐
+                ctx.fillRect(this.x, this.y, config.size, config.size);
+            }
+
+            update(pixelData, width, scale) {
+                const vx = Math.floor(this.baseX / scale);
+                const vy = Math.floor(this.baseY / scale);
+                const index = (vy * width + vx) * 4;
+
+                let r = pixelData[index];
+                let g = pixelData[index+1];
+                let b = pixelData[index+2];
+
+                let bright = (r + g + b) / 3;
+                
+                // 배경 제거 (어두우면 투명)
+                if (bright < 30) this.color = 'rgba(0,0,0,0)';
+                else this.color = `rgb(${r},${g},${b})`;
+
+                // 모션 감지
+                let diff = Math.abs(bright - this.prevBright);
+                this.prevBright = bright;
+
+                // config.thresh 사용
+                if (diff > config.thresh) {
+                    const angle = Math.random() * 6.28;
+                    // config.force 사용
+                    this.vx += Math.cos(angle) * config.force;
+                    this.vy += Math.sin(angle) * config.force;
+                }
+
+                // 복귀 물리 공식
+                this.vx += (this.baseX - this.x) * config.speed; // config.speed
+                this.vy += (this.baseY - this.y) * config.speed;
+
+                this.vx *= config.friction; // config.friction
+                this.vy *= config.friction;
+
+                this.x += this.vx;
+                this.y += this.vy;
+            }
+        }
+
+        function initParticles() {
+            particles = [];
+            const w = canvas.width;
+            const h = canvas.height;
+            // config.gap 사용
+            for (let y = 0; y < h; y += config.gap) {
+                for (let x = 0; x < w; x += config.gap) {
+                    particles.push(new Particle(x, y));
+                }
+            }
+        }
+
+        const procRes = 320; // 내부 처리 해상도
+
+        function animate() {
+            ctx.fillStyle = 'black';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // 비디오 데이터 추출
+            tempCanvas.width = procRes;
+            tempCanvas.height = procRes * (video.videoHeight / video.videoWidth);
+            tempCtx.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
+            const pData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height).data;
+            const scale = canvas.width / procRes;
+
+            for(let i=0; i<particles.length; i++){
+                particles[i].update(pData, tempCanvas.width, scale);
+                particles[i].draw();
+            }
+            requestAnimationFrame(animate);
+        }
+
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            initParticles();
+        });
+    </script>
+</body>
+</html>

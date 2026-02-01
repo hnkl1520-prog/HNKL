@@ -132,17 +132,17 @@
         .reveal-container {
             position: relative;
             display: table;
-            margin-bottom: 12px;
+            margin-bottom: 0px; /* [수정됨] 마진값을 0으로 설정하여 항목 간 간격을 없앰 */
             cursor: pointer;
         }
 
         .menu-text {
             font-size: clamp(2rem, 3vw, 3rem);
             font-weight: 700;
-            line-height: 1.1;
+            line-height: 1.1; /* [복구됨] 편안한 줄 간격 */
             letter-spacing: -0.02em;
             display: block;
-            padding: 10px 15px 10px 0;
+            padding: 10px 15px 10px 0; /* [복구됨] 원래의 넉넉한 패딩 */
             transition: opacity 0.3s, color 0.35s ease;
         }
 
@@ -184,34 +184,118 @@
             display: none;
         }
 
-        /* 챗봇 UI */
+        /* [수정됨] 챗봇 UI - Enhanced Glassmorphism */
         #chat-interface {
             display: none;
             position: absolute;
             bottom: 40px; right: 40px;
             width: 360px; height: 500px;
-            background: rgba(255, 255, 255, 0.95); border-radius: 24px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.15);
-            z-index: 100; flex-direction: column; overflow: hidden; border: 1px solid rgba(0,0,0,0.05);
+            
+            /* Glassmorphism Background (Light Theme Default) */
+            background: rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            
+            border-radius: 24px;
+            box-shadow: 0 16px 48px rgba(0, 0, 0, 0.1);
+            z-index: 100; flex-direction: column; overflow: hidden;
             animation: popUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            color: #1a1a1a; /* Default text color for light theme */
         }
         @keyframes popUp { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 
-        .chat-header { background: linear-gradient(90deg, #2b50f1, #9c6dff); padding: 15px 20px; color: white; font-weight: 700; display: flex; justify-content: space-between; align-items: center; }
-        .chat-controls { display: flex; gap: 10px; align-items: center; }
-        .win-btn { cursor: pointer; opacity: 0.7; font-size: 1.2rem; transition: opacity 0.2s; }
-        .win-btn:hover { opacity: 1; }
-        .chat-body { flex: 1; padding: 20px; overflow-y: auto; font-size: 0.9rem; }
-        .message { margin-bottom: 12px; padding: 10px 14px; border-radius: 14px; max-width: 80%; line-height: 1.4; width: fit-content;}
-        .bot { background: #F0F0F5; color: #333; align-self: flex-start; border-bottom-left-radius: 2px; }
-        .user { background: #2b50f1; color: white; align-self: flex-end; margin-left: auto; border-bottom-right-radius: 2px; }
-        .chat-input-area { padding: 15px; border-top: 1px solid #eee; display: flex; gap: 10px; }
-        .chat-input { flex: 1; border: 1px solid #ddd; border-radius: 20px; padding: 10px 15px; outline: none; font-family: 'Pretendard'; }
-        .send-btn { background: #2b50f1; color: white; border: none; border-radius: 50%; width: 36px; height: 36px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .chat-header { 
+            /* 헤더: 투명하고 경계선만 살짝 */
+            background: rgba(255, 255, 255, 0.2);
+            padding: 18px 24px; 
+            font-weight: 700;
+            display: flex; justify-content: space-between; align-items: center; 
+            border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+            color: #2b50f1; /* Brand color text in light mode */
+        }
+        
+        .chat-controls { display: flex; gap: 8px; align-items: center; }
+        
+        /* [RESTORED] Window Buttons for Image Assets */
+        .win-btn { 
+            width: 28px; height: 28px;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; opacity: 0.7; 
+            transition: opacity 0.2s, transform 0.2s;
+            border-radius: 50%;
+            /* [수정] 라이트 모드에서 흰색 아이콘을 검정색으로 반전시켜 가시성 확보 */
+            filter: invert(1);
+        }
+        .win-btn:hover { opacity: 1; background: rgba(0,0,0,0.05); transform: scale(1.05); }
+
+        .svg-icon {
+            width: 20px; height: 20px; display: block;
+        }
+        
+        .chat-body { 
+            flex: 1; padding: 20px; overflow-y: auto; font-size: 0.9rem;
+            /* 스크롤바 커스텀 */
+            scrollbar-width: thin;
+            scrollbar-color: rgba(0,0,0,0.1) transparent;
+        }
+        
+        /* 메시지 말풍선 스타일 */
+        .message { 
+            margin-bottom: 12px; padding: 10px 14px; 
+            border-radius: 14px; max-width: 80%; line-height: 1.4; width: fit-content;
+        }
+        
+        .bot { 
+            /* 봇 메시지: 유리 느낌 */
+            background: rgba(255, 255, 255, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            color: #333; align-self: flex-start; border-bottom-left-radius: 2px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.03); 
+        }
+        
+        .user { 
+            /* 유저 메시지: 그라데이션 */
+            background: linear-gradient(135deg, #2b50f1, #9c6dff);
+            color: white; align-self: flex-end; margin-left: auto; border-bottom-right-radius: 2px;
+            box-shadow: 0 4px 15px rgba(43, 80, 241, 0.3);
+        }
+        
+        .chat-input-area { 
+            padding: 15px; 
+            border-top: 1px solid rgba(255, 255, 255, 0.3);
+            display: flex; gap: 10px; 
+            background: transparent;
+        }
+        
+        .chat-input { 
+            flex: 1; 
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            background: rgba(255, 255, 255, 0.4);
+            border-radius: 20px; padding: 10px 15px; outline: none; font-family: 'Pretendard'; 
+            transition: all 0.2s;
+            color: #1a1a1a;
+        }
+        .chat-input::placeholder { color: rgba(0,0,0,0.5); }
+        
+        .chat-input:focus {
+            background: rgba(255, 255, 255, 0.7);
+            box-shadow: 0 0 0 2px rgba(43, 80, 241, 0.2);
+        }
+
+        .send-btn { 
+            background: linear-gradient(135deg, #2b50f1, #9c6dff);
+            color: white; border: none; border-radius: 50%; width: 36px; height: 36px; 
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 4px 10px rgba(43, 80, 241, 0.3);
+            transition: transform 0.1s;
+        }
+        .send-btn:active { transform: scale(0.95); }
 
         #chat-minimized-icon {
             display: none; position: absolute; bottom: 40px; right: 40px; width: 60px; height: 60px;
-            background: #2b50f1; border-radius: 50%; box-shadow: 0 5px 20px rgba(43, 80, 241, 0.4);
+            background: linear-gradient(135deg, #2b50f1, #9c6dff); /* 그라데이션 적용 */
+            border-radius: 50%; box-shadow: 0 5px 20px rgba(43, 80, 241, 0.4);
             z-index: 100; cursor: pointer; align-items: center; justify-content: center; font-size: 1.8rem; color: white;
             transition: transform 0.2s; animation: bounceIn 0.3s;
         }
@@ -271,6 +355,7 @@
             z-index: 15000;
             display: flex;
             flex-direction: column;
+            align-items: center; /* Center align arrows and dots */
             gap: 14px;
             pointer-events: auto;
         }
@@ -291,6 +376,29 @@
             border-color: rgba(0,0,0,0.85);
         }
 
+        /* Arrows for Toggle */
+        .arrow-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0.4;
+            transition: opacity 0.3s, transform 0.2s;
+        }
+        .arrow-btn:hover {
+            opacity: 1;
+            transform: scale(1.15);
+        }
+        .arrow-icon {
+            width: 32px; /* Increased Size */
+            height: 32px; /* Increased Size */
+            fill: #1a1a1a;
+            transition: fill 0.3s ease;
+        }
+
         /* Theme 2: full black background + text to white */
         body.theme-dark {
             background-color: #000000;
@@ -300,19 +408,20 @@
             color: #ffffff;
         }
 
+        body.theme-dark .arrow-icon {
+            fill: #ffffff; /* 화살표 색상 반전 */
+        }
+
         /* [CRITICAL FIX] Dark theme cursor Color Inversion */
-        /* Apply mix-blend-mode to the CONTAINER so everything inside creates a difference effect */
         body.theme-dark #cursor-follower {
             mix-blend-mode: difference;
         }
 
-        /* The circle itself must be WHITE to create the inversion effect (White - Black = White, White - White = Black) */
         body.theme-dark #cursor-circle {
             background-color: #ffffff; 
             border-color: transparent;
         }
         
-        /* Ensure active states also keep the white fill for consistent inversion */
         body.theme-dark #cursor-follower.active-enter #cursor-circle,
         body.theme-dark #cursor-follower.active-chat #cursor-circle {
             background-color: #ffffff;
@@ -320,8 +429,56 @@
         }
 
         body.theme-dark #cursor-text {
-            color: #ffffff; /* Inverts to black over white background inside the diff context */
+            color: #ffffff; 
         }
+
+        /* [NEW] Dark Glassmorphism Styles for Chat (Theme 2) */
+        body.theme-dark #chat-interface {
+            background: rgba(20, 20, 20, 0.4); /* 어두운 투명 배경 */
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
+            color: #fff;
+        }
+        
+        body.theme-dark .chat-header {
+            background: rgba(0, 0, 0, 0.2);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            color: #fff;
+        }
+        
+        /* [FIXED] Dark Theme Window Icons */
+        body.theme-dark .win-icon {
+            fill: #ffffff;
+        }
+
+        body.theme-dark .chat-controls .win-btn {
+             /* [수정] 다크 모드에서는 필터를 해제하여 원본 흰색 아이콘 사용 */
+             filter: none;
+        }
+        body.theme-dark .chat-controls .win-btn:hover {
+             background: rgba(255,255,255,0.1);
+        }
+
+        body.theme-dark .chat-body .message.bot {
+            background: rgba(255, 255, 255, 0.1); /* 어두운 모드에서 봇 메시지 */
+            color: #eee;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        body.theme-dark .chat-input-area {
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            background: transparent;
+        }
+
+        body.theme-dark .chat-input {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+        body.theme-dark .chat-input:focus {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        body.theme-dark .chat-input::placeholder { color: rgba(255,255,255,0.4); }
 
         body.theme-dark .reveal-container:hover .base-layer {
             opacity: 0.85;
@@ -385,16 +542,31 @@
         </div>
     </div>
 
-    <!-- [NEW] THEME TOGGLE (Fixed Left Middle) -->
+    <!-- [NEW] THEME TOGGLE (Fixed Left Middle) with Arrows -->
     <div id="theme-toggle" aria-label="Theme toggle">
+        <!-- Up Arrow -->
+        <button class="arrow-btn" onclick="setTheme(1, event)" aria-label="Previous Theme">
+            <svg class="arrow-icon" viewBox="0 0 24 24">
+                <path d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"/>
+            </svg>
+        </button>
+        
         <button class="theme-dot active" id="theme-dot-1" onclick="setTheme(1, event)" aria-label="Theme 1"></button>
         <button class="theme-dot" id="theme-dot-2" onclick="setTheme(2, event)" aria-label="Theme 2"></button>
+        
+        <!-- Down Arrow -->
+        <button class="arrow-btn" onclick="setTheme(2, event)" aria-label="Next Theme">
+            <svg class="arrow-icon" viewBox="0 0 24 24">
+                <path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z"/>
+            </svg>
+        </button>
     </div>
 
     <div id="chat-interface" onmouseenter="setCursorDefault()" onmouseleave="setCursorActive()">
         <div class="chat-header">
             <span>HNKL AI</span>
             <div class="chat-controls">
+                <!-- [RESTORED] Replaced inline SVG with original img tags -->
                 <span class="win-btn" onclick="minimizeChat()" title="최소화">
                     <img src="assets/Min_2.svg" alt="최소화" class="svg-icon">
                 </span>
@@ -433,8 +605,8 @@
         import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
         /* ============================
-           기존 씬 (Theme 1)
-           ============================ */
+            기존 씬 (Theme 1)
+            ============================ */
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0xF5F5F7);
 
@@ -661,8 +833,8 @@
         };
 
         /* ============================
-           Theme 2: 제공한 인터랙티브 오브젝트 (Hero Sphere)
-           ============================ */
+            Theme 2: 제공한 인터랙티브 오브젝트 (Hero Sphere)
+            ============================ */
         const heroContainer = document.getElementById('hero-sphere-container');
 
         const heroScene = new THREE.Scene();
@@ -677,7 +849,7 @@
         // [Updated] 사용자 요청 파라미터 적용
         const heroParams = {
             objectSpeed: 1.35,    
-            rippleStrength: 0.07,  
+            rippleStrength: 0.07,   
             rippleSpeed: 15.0,    
             rippleFrequency: 17.0, 
             rippleRadius: 1.0,    
@@ -905,8 +1077,8 @@
         let heroTimeObjectAccumulated = 0;
 
         /* ============================
-           테마 토글 + 부드러운 전환
-           ============================ */
+            테마 토글 + 부드러운 전환
+            ============================ */
         let currentTheme = 1;
         const overlay = document.getElementById('theme-transition-overlay');
         const canvasContainer = document.getElementById('canvas-container');
@@ -970,8 +1142,47 @@
         };
 
         /* ============================
-           기존 이벤트/커서/채팅 (원본 유지)
+           [NEW] SCROLL INTERACTION (Wheel Event)
            ============================ */
+        let scrollAccumulator = 0;
+        const scrollThreshold = 350; // Increased from 80
+        let isThemeTransitioning = false; // 연속 스크롤 방지 쿨다운
+
+        window.addEventListener('wheel', (e) => {
+            if (isThemeTransitioning) return;
+
+            // e.deltaY > 0 : Scroll Down, e.deltaY < 0 : Scroll Up
+            scrollAccumulator += e.deltaY;
+
+            // Threshold Check
+            if (Math.abs(scrollAccumulator) > scrollThreshold) {
+                if (scrollAccumulator > 0 && currentTheme === 1) {
+                    // Scroll Down -> Go to Theme 2
+                    triggerThemeScroll(2);
+                } else if (scrollAccumulator < 0 && currentTheme === 2) {
+                    // Scroll Up -> Go to Theme 1
+                    triggerThemeScroll(1);
+                }
+                // Reset accumulator after trigger attempt
+                scrollAccumulator = 0;
+            }
+        });
+
+        function triggerThemeScroll(targetTheme) {
+            isThemeTransitioning = true;
+            window.setTheme(targetTheme);
+            
+            // Cool-down time
+            setTimeout(() => {
+                isThemeTransitioning = false;
+                scrollAccumulator = 0; // reset again just in case
+            }, 800);
+        }
+
+
+        /* ============================
+            기존 이벤트/커서/채팅 (수정 포함)
+            ============================ */
         window.addEventListener('pointerdown', (event) => {
             // theme-toggle 클릭은 inline onclick에서 stopPropagation 처리됨
 
@@ -979,18 +1190,37 @@
             pointer.y = - (event.clientY / window.innerHeight) * 2 + 1;
             raycaster.setFromCamera(pointer, camera);
 
-            let clickedBall = false;
+            let clickedObject = false;
+
+            // 1. Theme 1 Character Click Check
             if (character && currentTheme === 1) {
                 const intersects = raycaster.intersectObject(character, true);
-                if (intersects.length > 0) { clickedBall = true; }
+                if (intersects.length > 0) { clickedObject = true; }
             }
 
-            if (clickedBall) {
+            // 2. [NEW] Theme 2 Sphere Click Check
+            else if (currentTheme === 2) {
+                // Pointer for Theme 2 (Needs specific calculation if needed, but standard pointer works here)
+                heroRaycaster.setFromCamera(pointer, heroCamera);
+                const intersects = heroRaycaster.intersectObject(heroSphere);
+                if (intersects.length > 0) { clickedObject = true; }
+            }
+
+            // Common Click Logic
+            if (clickedObject) {
                 const chatUI = document.getElementById('chat-interface');
                 const minIcon = document.getElementById('chat-minimized-icon');
                 if (chatUI.style.display === 'none' && minIcon.style.display === 'none') { toggleChat(true); }
-                else { restoreChat(); }
+                else { 
+                    // 이미 열려있거나 최소화된 상태라면 토글/복구
+                    if(chatUI.style.display === 'flex') {
+                         minimizeChat(); // 클릭 시 최소화 (또는 닫기 원하면 closeChat)
+                    } else {
+                         restoreChat();
+                    }
+                }
             } else {
+                // Clicked Empty Space
                 if (!isJumping && !isSquashing && !isLanding && currentTheme === 1) { isSquashing = true; }
             }
         });
@@ -1009,6 +1239,7 @@
                 const intersects = heroRaycaster.intersectObject(heroSphere);
 
                 if (intersects.length > 0) {
+                    // Update Ripple Trail
                     const p = intersects[0].point;
                     const i = heroTrailIndex * 4;
                     trailData[i] = p.x;
@@ -1016,6 +1247,17 @@
                     trailData[i + 2] = p.z;
                     trailData[i + 3] = 1.0;
                     heroTrailIndex = (heroTrailIndex + 1) % TRAIL_SIZE;
+
+                    // [NEW] Hover State for Cursor
+                    if (!isHoveringBall) {
+                        isHoveringBall = true;
+                        updateCursorState();
+                    }
+                } else {
+                    if (isHoveringBall) {
+                        isHoveringBall = false;
+                        updateCursorState();
+                    }
                 }
             }
         });
@@ -1032,9 +1274,11 @@
 
         // [NEW] Add event listeners for theme toggle buttons for cursor interaction
         const themeDots = document.querySelectorAll('.theme-dot');
-        themeDots.forEach(dot => {
-            dot.addEventListener('mouseenter', () => { isHoveringButton = true; updateCursorState(); });
-            dot.addEventListener('mouseleave', () => { isHoveringButton = false; updateCursorState(); });
+        const arrowBtns = document.querySelectorAll('.arrow-btn'); // 화살표도 커서 반응 추가
+        
+        [...themeDots, ...arrowBtns].forEach(btn => {
+            btn.addEventListener('mouseenter', () => { isHoveringButton = true; updateCursorState(); });
+            btn.addEventListener('mouseleave', () => { isHoveringButton = false; updateCursorState(); });
         });
 
         function updateCursorState() {
@@ -1110,8 +1354,8 @@
         }
 
         /* ============================
-           애니메이션 루프 (Theme 1 + Theme 2)
-           ============================ */
+            애니메이션 루프 (Theme 1 + Theme 2)
+            ============================ */
         const clock = new THREE.Clock();
         const lookRange = 45;
         const lerp = (start, end, amt) => (1 - amt) * start + amt * end;

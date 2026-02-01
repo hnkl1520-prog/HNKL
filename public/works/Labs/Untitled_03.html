@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>Magic Webcam Window</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden; /* 스크롤바 제거 */
+            background-color: #000; /* 배경 검정 */
+        }
+        
+        #video-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            pointer-events: none; /* 비디오가 클릭을 방해하지 않게 */
+        }
+
+        video {
+            position: absolute;
+            /* 비디오 크기는 창 크기가 아니라 모니터 전체 크기로 설정될 예정 */
+            object-fit: cover; 
+        }
+
+        /* UI 컨트롤 (새 창 열기 버튼 등) */
+        .controls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+            display: flex;
+            gap: 10px;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 1px solid white;
+            border-radius: 30px;
+            cursor: pointer;
+            backdrop-filter: blur(5px);
+            transition: 0.3s;
+        }
+
+        button:hover {
+            background: rgba(255, 255, 255, 0.5);
+        }
+    </style>
+</head>
+<body>
+
+    <div id="video-container">
+        <video id="webcam" autoplay playsinline muted></video>
+    </div>
+
+    <div class="controls">
+        <button onclick="openNewWindow()">새 창 열기 (+)</button>
+    </div>
+
+    <script>
+        const video = document.getElementById('webcam');
+        
+        // 1. 웹캠 권한 요청 및 스트림 연결
+        async function initWebcam() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                video.srcObject = stream;
+            } catch (err) {
+                alert("웹캠 권한이 필요합니다! (또는 로컬 서버에서 실행해주세요)");
+                console.error("Webcam error:", err);
+            }
+        }
+
+        // 2. 화면 위치 동기화 (핵심 로직)
+        function updateVideoPosition() {
+            // 현재 브라우저 창이 모니터에서 어디에 있는지 좌표 구하기
+            // window.screenX: 모니터 왼쪽 끝에서 창까지 거리
+            // window.screenY: 모니터 위쪽 끝에서 창까지 거리
+            const windowX = window.screenX;
+            const windowY = window.screenY;
+
+            // 비디오의 크기를 모니터 전체 해상도와 맞춤
+            // 이렇게 해야 모든 창에서 영상 크기가 동일하게 느껴짐
+            video.style.width = window.screen.availWidth + 'px';
+            video.style.height = window.screen.availHeight + 'px';
+
+            // 비디오 위치를 창의 위치만큼 '반대로' 이동
+            // 창이 오른쪽으로 100px 가면, 비디오를 왼쪽으로 100px 밀어서
+            // 시각적으로 제자리에 있는 것처럼 보이게 함
+            video.style.transform = `translate(${-windowX}px, ${-windowY}px)`;
+
+            // 매 프레임마다 반복 (창을 드래그할 때 부드럽게 하기 위함)
+            requestAnimationFrame(updateVideoPosition);
+        }
+
+        // 3. 새 창 열기 기능
+        function openNewWindow() {
+            // 현재 페이지와 같은 URL로 새 팝업창을 염
+            window.open(window.location.href, '_blank', 'width=400,height=400,menubar=no,toolbar=no');
+        }
+
+        // 실행
+        initWebcam();
+        updateVideoPosition();
+
+    </script>
+</body>
+</html>

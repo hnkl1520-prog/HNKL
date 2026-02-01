@@ -1,0 +1,264 @@
+/* 1. 폰트 불러오기 (Pretendard) */
+@import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.8/dist/web/static/pretendard.css");
+
+/* 2. 공통 변수 (Color Theme) */
+:root {
+    /* Light Mode */
+    --bg-color: #F5F5F7;
+    --text-color: #1D1D1F;
+    --accent-color: #2997ff;
+    --sub-color-1: #9c6dff;
+    --sub-color-2: #4fd1c5;
+    --dim-color: #86868b;
+    --text-sub: #6e6e73;
+    --card-bg: #FFFFFF;
+}
+
+/* 다크모드 변수 재정의 */
+body.dark-mode {
+    --bg-color: #050505;
+    --text-color: #f5f5f7;
+    --text-sub: #a1a1a6;
+    --card-bg: #1c1c1e;
+    --dim-color: #636366;
+}
+
+/* 3. 기본 설정 (Reset & Base) */
+body, html {
+    margin: 0; padding: 0;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    font-family: 'Pretendard', sans-serif;
+    width: 100%;
+    cursor: default; /* 시스템 커서 보임 (커스텀 커서는 별도 레이어) */
+    transition: background-color 0.6s cubic-bezier(0.16, 1, 0.3, 1), color 0.6s ease;
+}
+
+/* 링크 등에 마우스 올렸을 때 포인터 설정 */
+a, button, .hover-trigger {
+    cursor: pointer;
+}
+
+/* =========================================
+   HEADER SECTION
+   ========================================= */
+#global-header {
+    position: fixed; top: 0; left: 0; width: 100%; height: 60px; z-index: 900; 
+    display: flex; align-items: center; justify-content: center;
+    background-color: rgba(245, 245, 247, 0.7); 
+    backdrop-filter: blur(10px); 
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+    transition: transform 0.3s ease, background-color 0.3s ease, height 0.3s ease, border-bottom 0.3s ease;
+}
+
+body.dark-mode #global-header {
+    background-color: rgba(5, 5, 5, 0.7);
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+#global-header.at-top {
+    height: 90px; 
+    background-color: transparent; 
+    border-bottom: 1px solid transparent; 
+}
+
+#global-header.header-hidden { transform: translateY(-100%); }
+
+.header-inner {
+    width: 100%; max-width: 1200px; padding: 0 20px;
+    display: flex; justify-content: space-between; align-items: center;
+    box-sizing: border-box; height: 100%; 
+}
+
+.header-left { display: flex; align-items: center; gap: 40px; }
+.header-logo { display: flex; align-items: center; text-decoration: none; }
+
+.header-logo img {
+    height: 24px; width: auto; display: block;
+    transition: height 0.3s cubic-bezier(0.25, 0.1, 0.25, 1), filter 0.3s ease;
+}
+body.dark-mode .header-logo img { filter: invert(1) brightness(2); }
+
+#global-header.at-top .header-logo img { height: 31px; }
+
+.header-nav { display: flex; gap: 24px; }
+
+.nav-link {
+    font-size: 1.1rem; color: var(--text-sub); text-decoration: none;
+    font-weight: 500; position: relative; transition: color 0.2s;
+}
+.nav-link:hover { color: var(--text-color); }
+.nav-link.active { color: var(--text-color); font-weight: 600; }
+.nav-link.active::after {
+    content: ''; position: absolute; left: 0; bottom: -4px;
+    width: 100%; height: 2px; background-color: var(--text-color); border-radius: 2px;
+}
+
+.header-right { display: flex; align-items: center; gap: 8px; font-size: 0.95rem; font-weight: 500; }
+.lang-btn {
+    background: none; border: none; padding: 4px; cursor: pointer;
+    color: var(--text-sub); font-family: 'Pretendard', sans-serif;
+    font-size: inherit; transition: color 0.2s;
+}
+.lang-btn.active { color: var(--text-color); font-weight: 700; }
+.lang-btn:hover { color: var(--accent-color); }
+
+/* =========================================
+   CURSOR & TRANSITION
+   ========================================= */
+#page-entry-curtain {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background-color: #000; z-index: 9998; 
+}
+
+/* 커서 배경 레이어 (원) */
+#cursor-bg-layer {
+    position: fixed; top: 0; left: 0; width: 0; height: 0; 
+    z-index: 9990; pointer-events: none;
+    mix-blend-mode: normal; 
+    display: flex; align-items: center; justify-content: center;
+}
+#cursor-bg-layer.active-enter { mix-blend-mode: difference; }
+
+#cursor-circle {
+    position: absolute; width: 40px; height: 40px; border-radius: 50%;
+    background: linear-gradient(120deg, var(--accent-color), var(--sub-color-1), var(--sub-color-2), var(--accent-color));
+    background-size: 300% 300%;
+    animation: gradientCursor 4s ease infinite; 
+    opacity: 0.6; 
+    transition: width 0.3s cubic-bezier(0.19, 1, 0.22, 1),
+                height 0.3s cubic-bezier(0.19, 1, 0.22, 1),
+                background-color 0.3s, opacity 0.3s;
+}
+
+#cursor-bg-layer.active-enter #cursor-circle {
+    width: 80px; height: 80px; background: #ffffff; opacity: 1; animation: none;
+}
+
+/* 커서 텍스트 레이어 */
+#cursor-text-layer {
+    position: fixed; top: 0; left: 0; width: 0; height: 0; 
+    z-index: 9995; pointer-events: none;
+    display: flex; align-items: center; justify-content: center;
+    mix-blend-mode: normal; 
+}
+#cursor-text {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); 
+    font-size: 14px; font-weight: 500; color: #ffffff; opacity: 0; 
+    white-space: nowrap; transition: opacity 0.2s; letter-spacing: 0.05em;
+}
+#cursor-text-layer.active-enter #cursor-text { opacity: 1; }
+
+@keyframes gradientCursor {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+/* =========================================
+   WORKS GALLERY STYLES
+   ========================================= */
+main {
+    padding-top: 160px; padding-bottom: 200px;
+    min-height: 100vh;
+}
+
+.container {
+    max-width: 1200px; margin: 0 auto; padding: 0 20px;
+}
+
+.works-grid {
+    display: grid;
+    grid-template-columns: repeat(1, 1fr);
+    gap: 60px 24px; 
+}
+@media (min-width: 768px) {
+    .works-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (min-width: 1024px) {
+    .works-grid { grid-template-columns: repeat(3, 1fr); }
+}
+
+.work-item { opacity: 0; cursor: pointer; }
+
+.thumb-wrapper {
+    position: relative; width: 100%;
+    padding-bottom: 100%; /* 1:1 Aspect Ratio */
+    overflow: hidden; border-radius: 12px;
+    background-color: var(--card-bg); margin-bottom: 20px;
+}
+
+.thumb-img {
+    position: absolute; top: 0; left: 0;
+    width: 100%; height: 100%; object-fit: cover;
+    transition: transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+    will-change: transform;
+}
+
+.work-item:hover .thumb-img { transform: scale(1.05); }
+
+.reveal-curtain {
+    position: absolute;
+    background-color: var(--text-color); 
+    z-index: 10;
+}
+
+.work-meta { text-align: left; }
+.work-cat {
+    font-size: 13px; font-weight: 500; color: var(--text-sub);
+    margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.02em;
+}
+.work-title {
+    font-size: 1.25rem; font-weight: 600; color: var(--text-color);
+    margin: 0; line-height: 1.3;
+}
+
+/* =========================================
+   FLOATING DOCK
+   ========================================= */
+.floating-dock {
+    position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%);
+    display: flex; align-items: center; justify-content: center;
+    padding: 8px; gap: 0px;
+    background: rgba(255, 255, 255, 0.6);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+    border-radius: 999px;
+    z-index: 100;
+    transition: background 0.5s ease, border-color 0.5s ease;
+}
+
+body.dark-mode .floating-dock {
+    background: rgba(20, 20, 20, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+}
+
+.dock-pill {
+    position: absolute; top: 6px; bottom: 6px; left: 6px; width: 0;
+    background-color: #000; border-radius: 999px; z-index: 1;
+}
+body.dark-mode .dock-pill { background-color: #fff; }
+
+.dock-btn {
+    position: relative; z-index: 2;
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 24px; border-radius: 999px; border: none; background: none;
+    font-size: 0.95rem; font-weight: 600; color: var(--text-sub);
+    cursor: pointer;
+    transition: color 0.3s ease; white-space: nowrap;
+}
+
+.dock-btn.active { color: #fff; }
+body.dark-mode .dock-btn.active { color: #000; }
+
+.dock-icon {
+    width: 18px; height: 18px; display: block;
+    transition: filter 0.3s ease, opacity 0.3s ease; opacity: 0.6;
+}
+
+.dock-btn.active .dock-icon { filter: invert(1); opacity: 1; }
+body.dark-mode .dock-icon { filter: invert(1); }
+body.dark-mode .dock-btn.active .dock-icon { filter: invert(0); opacity: 1; }

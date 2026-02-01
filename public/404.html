@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>404 - Project HNKL</title>
+    
+    <!-- GSAP for Transition -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+
+    <style>
+        /* * Project HNKL Design System - 404 Page Styles */
+        :root {
+            --color-main-blue: #2b50f1;
+            --color-purple: #9c6dff;
+            --color-white: #ffffff;
+            --color-mint: #4fd1c5;
+            --color-bg: #f2f4f6;
+            --font-family: 'Helvetica Neue', Arial, sans-serif;
+            
+            --accent-color: var(--color-main-blue);
+            --sub-color-1: var(--color-purple);
+            --sub-color-2: var(--color-mint);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            width: 100vw;
+            height: 100vh;
+            background-color: var(--color-bg);
+            font-family: var(--font-family);
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        #page-entry-curtain {
+            position: fixed;
+            top: 0; 
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #000;
+            z-index: 99998;
+        }
+
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+
+        .ui-container {
+            position: absolute;
+            bottom: 10%; 
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+            text-align: center;
+            pointer-events: none;
+            width: 100%;
+        }
+
+        .status-text {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 2rem;
+            letter-spacing: -0.02em;
+            opacity: 0;
+            animation: fadeIn 1s ease-out 0.5s forwards;
+        }
+
+        /* [수정됨] Glassmorphism Button Style with Outline & Text Effect */
+        .back-btn {
+            pointer-events: auto;
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            padding: 0.9rem 2.8rem;
+            
+            /* [수정] Glass Background - Default: Lighter/Brighter Gray */
+            background: rgba(255, 255, 255, 0.65); 
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            
+            /* Outline Stroke */
+            border: 1.5px solid rgba(255, 255, 255, 0.6);
+            box-shadow: 
+                0 0 0 1px rgba(0, 0, 0, 0.05),
+                0 8px 32px 0 rgba(31, 38, 135, 0.05);
+            
+            text-decoration: none;
+            border-radius: 50px;
+            
+            /* Transitions */
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+
+        /* [NEW] Text Style with Overlay Effect */
+        .back-btn span {
+            font-weight: 700;
+            font-size: 1rem;
+            color: #555555; /* Default: Dark color */
+            mix-blend-mode: overlay; 
+            opacity: 0.85; 
+            /* 텍스트 색상 변화도 부드럽게 */
+            transition: color 0.3s ease, opacity 0.3s ease; 
+        }
+
+        .back-btn:hover {
+            /* [수정] Hover Background - 유지하되 불투명도만 살짝 높임 (색상 변경 X) */
+            background: rgba(255, 255, 255, 0.85); 
+            transform: translateY(-3px) scale(1.02);
+            
+            /* 호버 시 테두리와 그림자 */
+            border-color: rgba(255, 255, 255, 0.9);
+            box-shadow: 
+                0 0 0 1px rgba(43, 80, 241, 0.1),
+                0 12px 40px 0 rgba(43, 80, 241, 0.15);
+        }
+
+        /* [추가] Hover 시 텍스트 색상만 짙은 회색으로 변경 */
+        .back-btn:hover span {
+            /* Overlay 모드 해제 및 확실한 짙은 회색 적용 */
+            color: #333333; 
+            mix-blend-mode: normal;
+            opacity: 1;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* 반응형 미디어 쿼리 */
+        @media screen and (max-width: 1440px) {
+            .status-text {
+                font-size: 1.25rem;
+                margin-bottom: 1.5rem;
+            }
+            .back-btn {
+                padding: 0.8rem 2.2rem;
+            }
+            .back-btn span {
+                font-size: 0.95rem;
+            }
+        }
+
+        @media screen and (max-width: 768px) {
+            .status-text {
+                font-size: 1.1rem;
+                margin-bottom: 1.2rem;
+            }
+            .back-btn {
+                padding: 0.7rem 1.8rem;
+            }
+            .back-btn span {
+                font-size: 0.9rem;
+            }
+            #cursor-circle {
+                width: 30px !important;
+                height: 30px !important;
+            }
+        }
+
+        /* Custom Jelly Cursor */
+        #cursor-follower {
+            position: fixed; top: 0; left: 0;
+            width: 0; height: 0;
+            z-index: 99999;
+            pointer-events: none;
+            will-change: transform;
+            display: flex; align-items: center; justify-content: center;
+            mix-blend-mode: normal;
+        }
+
+        #cursor-circle {
+            position: absolute;
+            width: 40px; height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(120deg, var(--accent-color), var(--sub-color-1), var(--sub-color-2), var(--accent-color));
+            background-size: 300% 300%;
+            animation: gradientCursor 4s ease infinite; 
+            opacity: 0.6; 
+            transform-origin: center center;
+            transition: width 0.3s cubic-bezier(0.19, 1, 0.22, 1),
+                        height 0.3s cubic-bezier(0.19, 1, 0.22, 1),
+                        background-color 0.3s, margin 0.3s, opacity 0.3s;
+        }
+
+        @keyframes gradientCursor {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        #cursor-text { 
+            position: absolute; 
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 12px; font-weight: 500; color: white; 
+            opacity: 0; white-space: nowrap; 
+            transition: opacity 0.2s; letter-spacing: 0.05em; 
+            z-index: 10001; 
+        }
+
+        #cursor-follower.active-enter {
+            mix-blend-mode: difference;
+        }
+
+        #cursor-follower.active-enter #cursor-circle {
+            width: 80px; height: 80px;
+            background: #ffffff;
+            opacity: 1;
+            animation: none;
+        }
+        
+        #cursor-follower.active-enter #cursor-text {
+            opacity: 1;
+            color: black; 
+        }
+
+    </style>
+</head>
+<body>
+
+    <div id="page-entry-curtain"></div>
+
+    <div id="cursor-follower">
+        <div id="cursor-circle"></div>
+        <span id="cursor-text"></span>
+    </div>
+
+    <canvas id="canvas1"></canvas>
+
+    <div class="ui-container">
+        <h2 class="status-text">Under Construction!</h2>
+        <a href="index.html" class="back-btn" onclick="/* history.back(); return false; */" data-hover-text="Go Back">
+            <span>Go Back</span>
+        </a>
+    </div>
+
+    <script>
+        /**
+         * Project HNKL - 404 Particle Interaction
+         * Size adjusted for laptop resolutions (Small Scale)
+         */
+
+        const canvas = document.getElementById('canvas1');
+        const ctx = canvas.getContext('2d');
+        
+        let particlesArray = [];
+        const colors = ['#2b50f1', '#9c6dff', '#4fd1c5', '#333333'];
+
+        const mouse = { 
+            x: null, 
+            y: null, 
+            radius: 120,
+            speed: 0,
+            lastX: null,
+            lastY: null
+        };
+
+        window.addEventListener('mousemove', function(event){
+            if (mouse.lastX === null) {
+                mouse.lastX = event.clientX;
+                mouse.lastY = event.clientY;
+            }
+
+            const dx = event.clientX - mouse.lastX;
+            const dy = event.clientY - mouse.lastY;
+            const distance = Math.sqrt(dx*dx + dy*dy);
+
+            mouse.speed = distance;
+            
+            mouse.x = event.clientX;
+            mouse.y = event.clientY;
+            mouse.lastX = event.clientX;
+            mouse.lastY = event.clientY;
+        });
+
+        class Particle {
+            constructor(x, y){
+                this.x = x; 
+                this.y = y;
+                
+                // [Modified] 입자 크기도 해상도 비율에 맞춰 자동 조절
+                // 1920px 기준 1.0(100%), 1536px(노트북) 기준 약 0.8(80%)로 설정하여 비율 유지
+                let sizeFactor = window.innerWidth / 1920; 
+
+                // 너무 작아서 안 보이거나 너무 커지지 않도록 안전 범위 설정 (0.4 ~ 1.0)
+                if (sizeFactor < 0.4) sizeFactor = 0.4;
+                if (sizeFactor > 1.0) sizeFactor = 1.0;
+
+                this.size = ((Math.random() * 13) + 2) * sizeFactor; 
+                this.baseX = x; 
+                this.baseY = y;
+                
+                this.density = (Math.random() * 30) + 1;
+                this.color = colors[Math.floor(Math.random() * colors.length)];
+                this.lineWidth = (Math.random() * 1.5) + 1; 
+                
+                // 사용자가 요청했던 복귀 속도
+                this.returnSpeed = Math.random() * 0.04 + 0.01; 
+            }
+
+            draw() {
+                ctx.strokeStyle = this.color;
+                ctx.lineWidth = this.lineWidth;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.closePath();
+                ctx.stroke(); 
+            }
+
+            update() {
+                let dx = mouse.x - this.x;
+                let dy = mouse.y - this.y;
+                let distance = Math.sqrt(dx * dx + dy * dy);
+                
+                let forceDirectionX = dx / distance;
+                let forceDirectionY = dy / distance;
+                
+                let maxDistance = mouse.radius;
+                
+                let velocityFactor = Math.min(mouse.speed * 0.8, 10); 
+                if (velocityFactor < 1) velocityFactor = 1;
+
+                let force = (maxDistance - distance) / maxDistance;
+                
+                let directionX = forceDirectionX * force * this.density * velocityFactor;
+                let directionY = forceDirectionY * force * this.density * velocityFactor;
+
+                if (distance < mouse.radius) {
+                    this.x -= directionX;
+                    this.y -= directionY;
+                } else {
+                    if (this.x !== this.baseX) {
+                        let dx = this.x - this.baseX;
+                        this.x -= dx * this.returnSpeed; 
+                    }
+                    if (this.y !== this.baseY) {
+                        let dy = this.y - this.baseY;
+                        this.y -= dy * this.returnSpeed;
+                    }
+                }
+            }
+        }
+
+        function init() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+
+            if (canvas.width <= 0 || canvas.height <= 0) {
+                setTimeout(init, 100);
+                return;
+            }
+
+            ctx.fillStyle = 'white';
+            
+            /* * [수정됨] 폰트 사이즈 계산
+             * 기존 0.25 -> 0.18 -> 0.12 (67% 축소 효과 반영)
+             * 최대 크기(Max Cap)도 450 -> 300으로 축소
+             */
+            let fontSize = Math.min(window.innerWidth * 0.12, 300);
+            
+            if (window.innerWidth < 768) {
+                fontSize = window.innerWidth * 0.2; 
+            }
+
+            ctx.font = 'bold ' + fontSize + 'px Verdana'; 
+            
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            
+            const textX = canvas.width / 2;
+            const textY = canvas.height / 2 - 50; 
+            ctx.fillText('404', textX, textY);
+            
+            const textCoordinates = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+            particlesArray = [];
+            
+            /* * [수정됨] Gap 조정
+             * 글자가 작아지면 입자가 부족해 보일 수 있으므로 
+             * 기본 간격을 9 -> 7로 줄여서 밀도를 높임
+             */
+            let gap = window.innerWidth < 768 ? 5 : 7; 
+
+            for (let y = 0, y2 = textCoordinates.height; y < y2; y += gap) {
+                for (let x = 0, x2 = textCoordinates.width; x < x2; x += gap) {
+                    if (textCoordinates.data[(y * 4 * textCoordinates.width) + (x * 4) + 3] > 128) {
+                        let positionX = x;
+                        let positionY = y;
+                        particlesArray.push(new Particle(positionX, positionY));
+                    }
+                }
+            }
+        }
+
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            for (let i = 0; i < particlesArray.length; i++){
+                particlesArray[i].draw();
+                particlesArray[i].update();
+            }
+            
+            mouse.speed *= 0.9;
+            if (mouse.speed < 0.1) mouse.speed = 0;
+
+            requestAnimationFrame(animate);
+        }
+
+        init();
+        animate();
+
+        window.addEventListener('resize', () => {
+            clearTimeout(window.resizeTimeout);
+            window.resizeTimeout = setTimeout(init, 100);
+        });
+        
+        window.addEventListener('mouseout', function(){
+            mouse.x = undefined;
+            mouse.y = undefined;
+            mouse.speed = 0;
+        });
+
+        // Jelly Cursor
+        (function() {
+            const cursorFollower = document.getElementById('cursor-follower');
+            const cursorCircle = document.getElementById('cursor-circle'); 
+            const cursorText = document.getElementById('cursor-text');      
+
+            let cMouseX = window.innerWidth / 2;
+            let cMouseY = window.innerHeight / 2;
+            let cursorX = cMouseX;
+            let cursorY = cMouseY;
+            let velX = 0;
+            let velY = 0;
+
+            document.addEventListener('mousemove', (e) => {
+                cMouseX = e.clientX;
+                cMouseY = e.clientY;
+            });
+
+            function animateCursor() {
+                const ease = 0.1; 
+                
+                const nextX = cursorX + (cMouseX - cursorX) * ease;
+                const nextY = cursorY + (cMouseY - cursorY) * ease;
+                
+                velX = nextX - cursorX;
+                velY = nextY - cursorY;
+                cursorX = nextX;
+                cursorY = nextY;
+                
+                const dist = Math.sqrt(velX * velX + velY * velY);
+                const angle = Math.atan2(velY, velX);
+                
+                const stretch = Math.min(dist * 0.1, 0.5); 
+                const scaleX = 1 + stretch;        
+                const scaleY = 1 - stretch * 0.4; 
+                
+                cursorFollower.style.transform = `translate3d(${cursorX}px, ${cursorY}px, 0)`;
+                cursorCircle.style.transform = `rotate(${angle}rad) scale(${scaleX}, ${scaleY})`;
+
+                requestAnimationFrame(animateCursor);
+            }
+            animateCursor();
+
+            const backBtn = document.querySelector('.back-btn');
+            backBtn.addEventListener('mouseenter', () => {
+                cursorFollower.classList.add('active-enter');
+                cursorText.innerText = ""; 
+            });
+            backBtn.addEventListener('mouseleave', () => {
+                cursorFollower.classList.remove('active-enter');
+                cursorText.innerText = "";
+            });
+        })();
+
+        // Page Entry Transition
+        window.addEventListener('load', () => {
+            const entryCurtain = document.getElementById('page-entry-curtain');
+            gsap.to(entryCurtain, {
+                top: "100%",
+                duration: 0.8,
+                ease: "power3.inOut",
+                onComplete: () => {
+                    entryCurtain.style.display = 'none';
+                }
+            });
+        });
+
+    </script>
+</body>
+</html>
