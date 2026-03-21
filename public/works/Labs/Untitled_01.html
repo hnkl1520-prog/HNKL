@@ -7,19 +7,40 @@
         body { margin: 0; overflow: hidden; background-color: #000; font-family: sans-serif; }
         canvas { display: block; position: absolute; top: 0; left: 0; z-index: 1; }
         
-        /* UI 패널 */
+        /* UI 패널 - 글래스모피즘 효과 적용 */
         #gui {
-            position: absolute; top: 20px; right: 20px;
-            background: rgba(10, 10, 10, 0.9);
-            padding: 20px; border-radius: 8px; color: #eee;
-            z-index: 10; width: 260px;
-            border: 1px solid #333;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+            position: absolute; 
+            bottom: 30px; /* 중앙 하단 배치 */
+            left: 50%;
+            transform: translateX(-50%);
+            
+            /* 글래스모피즘 핵심 속성 */
+            background: rgba(255, 255, 255, 0.05); /* 매우 옅은 반투명 배경 */
+            backdrop-filter: blur(12px); /* 배경 블러 처리 (유리 효과) */
+            -webkit-backdrop-filter: blur(12px); /* 사파리 호환성 */
+            border: 1px solid rgba(255, 255, 255, 0.1); /* 미세한 흰색 테두리 */
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5); /* 입체감을 위한 그림자 */
+            
+            padding: 20px; 
+            border-radius: 12px; /* 유리 느낌을 살리는 둥근 모서리 */
+            color: #eee;
+            z-index: 10; 
+            width: 260px;
         }
-        #gui h3 { margin: 0 0 15px 0; font-size: 14px; border-bottom: 1px solid #444; padding-bottom: 10px; color: #fff;}
+        
+        #gui h3 { margin: 0 0 15px 0; font-size: 14px; border-bottom: 1px solid rgba(255, 255, 255, 0.15); padding-bottom: 10px; color: #fff;}
         .control-group { margin-bottom: 15px; }
-        label { display: flex; justify-content: space-between; font-size: 11px; color: #aaa; margin-bottom: 5px; }
-        input[type=range] { width: 100%; display: block; cursor: pointer; }
+        .control-group:last-child { margin-bottom: 0; }
+        label { display: flex; justify-content: space-between; font-size: 11px; color: #ccc; margin-bottom: 5px; }
+        
+        /* 슬라이더(range) 바 색상을 파란색(#2b50f1)으로 변경 */
+        input[type=range] { 
+            width: 100%; 
+            display: block; 
+            cursor: pointer; 
+            accent-color: #2b50f1; 
+        }
+        
         .val-display { color: #00f0ff; font-weight: bold; }
         
         #loading {
@@ -37,49 +58,25 @@
         <h3>Parameters</h3>
         
         <div class="control-group">
-            <label>EXPLOSION FORCE <span id="val-force">15.0</span></label>
-            <input type="range" id="in-force" min="1" max="50" value="15" step="1">
-        </div>
-
-        <div class="control-group">
-            <label>RETURN SPEED <span id="val-speed">0.20</span></label>
-            <input type="range" id="in-speed" min="0.01" max="0.5" value="0.20" step="0.01">
-        </div>
-
-        <div class="control-group">
-            <label>FRICTION <span id="val-friction">0.90</span></label>
-            <input type="range" id="in-friction" min="0.50" max="0.99" value="0.90" step="0.01">
-        </div>
-
-        <div class="control-group">
-            <label>MOTION THRESHOLD <span id="val-thresh">15</span></label>
-            <input type="range" id="in-thresh" min="5" max="100" value="15" step="1">
-        </div>
-
-        <div style="border-top:1px solid #333; margin: 15px 0;"></div>
-
-        <div class="control-group">
             <label>GRID DENSITY (SPACING) <span id="val-gap">10</span></label>
             <input type="range" id="in-gap" min="4" max="40" value="10" step="1">
         </div>
 
         <div class="control-group">
-            <label>PARTICLE SIZE <span id="val-size">1.5</span></label>
-            <input type="range" id="in-size" min="0.5" max="10" value="1.5" step="0.1">
+            <label>PARTICLE SIZE <span id="val-size">6.1</span></label>
+            <input type="range" id="in-size" min="0.5" max="10" value="6.1" step="0.1">
         </div>
-        
-        <div style="font-size:10px; color:#555; text-align:center;">MODE: CONFIG_OBJECT_FIXED</div>
     </div>
 
     <script>
-        // [핵심 수정] 모든 설정을 이 객체 안에 담아서 관리합니다.
+        // 요청하신 초기 파라미터 값 설정
         const config = {
-            force: 15.0,
-            speed: 0.20,
-            friction: 0.90,
+            force: 20.0,
+            speed: 0.15,
+            friction: 0.81,
             thresh: 15,
             gap: 10,
-            size: 1.5
+            size: 6.1
         };
 
         const canvas = document.getElementById('canvas1');
@@ -87,7 +84,6 @@
         const video = document.getElementById('video');
         const loading = document.getElementById('loading');
         
-        // 성능 최적화를 위한 임시 캔버스 (반복문 밖으로 뺌)
         const tempCanvas = document.createElement('canvas');
         const tempCtx = tempCanvas.getContext('2d');
 
@@ -97,31 +93,15 @@
         let particles = [];
         let isReady = false;
 
-        // UI 이벤트 리스너 (값이 바뀌면 config 객체를 즉시 업데이트)
-        document.getElementById('in-force').oninput = function(e) {
-            config.force = parseFloat(e.target.value);
-            document.getElementById('val-force').innerText = config.force.toFixed(1);
-        };
-        document.getElementById('in-speed').oninput = function(e) {
-            config.speed = parseFloat(e.target.value);
-            document.getElementById('val-speed').innerText = config.speed.toFixed(2);
-        };
-        document.getElementById('in-friction').oninput = function(e) {
-            config.friction = parseFloat(e.target.value);
-            document.getElementById('val-friction').innerText = config.friction.toFixed(2);
-        };
-        document.getElementById('in-thresh').oninput = function(e) {
-            config.thresh = parseInt(e.target.value);
-            document.getElementById('val-thresh').innerText = config.thresh;
-        };
+        // UI 이벤트 리스너
         document.getElementById('in-gap').oninput = function(e) {
             config.gap = parseInt(e.target.value);
             document.getElementById('val-gap').innerText = config.gap;
-            if(isReady) initParticles(); // 간격이 바뀌면 파티클을 다시 배치해야 함
+            if(isReady) initParticles(); 
         };
         document.getElementById('in-size').oninput = function(e) {
             config.size = parseFloat(e.target.value);
-            document.getElementById('val-size').innerText = config.size;
+            document.getElementById('val-size').innerText = config.size.toFixed(1);
         };
 
         // 카메라 켜기
@@ -155,7 +135,6 @@
 
             draw() {
                 ctx.fillStyle = this.color;
-                // config.size를 직접 참조하므로 슬라이더 움직이면 바로 커짐
                 ctx.fillRect(this.x, this.y, config.size, config.size);
             }
 
@@ -170,27 +149,22 @@
 
                 let bright = (r + g + b) / 3;
                 
-                // 배경 제거 (어두우면 투명)
                 if (bright < 30) this.color = 'rgba(0,0,0,0)';
                 else this.color = `rgb(${r},${g},${b})`;
 
-                // 모션 감지
                 let diff = Math.abs(bright - this.prevBright);
                 this.prevBright = bright;
 
-                // config.thresh 사용
                 if (diff > config.thresh) {
                     const angle = Math.random() * 6.28;
-                    // config.force 사용
                     this.vx += Math.cos(angle) * config.force;
                     this.vy += Math.sin(angle) * config.force;
                 }
 
-                // 복귀 물리 공식
-                this.vx += (this.baseX - this.x) * config.speed; // config.speed
+                this.vx += (this.baseX - this.x) * config.speed; 
                 this.vy += (this.baseY - this.y) * config.speed;
 
-                this.vx *= config.friction; // config.friction
+                this.vx *= config.friction; 
                 this.vy *= config.friction;
 
                 this.x += this.vx;
@@ -202,7 +176,6 @@
             particles = [];
             const w = canvas.width;
             const h = canvas.height;
-            // config.gap 사용
             for (let y = 0; y < h; y += config.gap) {
                 for (let x = 0; x < w; x += config.gap) {
                     particles.push(new Particle(x, y));
@@ -210,13 +183,12 @@
             }
         }
 
-        const procRes = 320; // 내부 처리 해상도
+        const procRes = 320; 
 
         function animate() {
             ctx.fillStyle = 'black';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // 비디오 데이터 추출
             tempCanvas.width = procRes;
             tempCanvas.height = procRes * (video.videoHeight / video.videoWidth);
             tempCtx.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);

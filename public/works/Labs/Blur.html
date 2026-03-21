@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>No Flicker Hand Tracking Blur Box</title>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+  
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden; /* 스크롤바 숨김 */
+      background-color: black;
+      color: white;
+      font-family: sans-serif;
+    }
+    canvas {
+      position: absolute; /* 전체 화면을 덮도록 설정 */
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      transform: scaleX(-1); /* 거울처럼 좌우 반전 */
+      z-index: 1;
+    }
+    video {
+      display: none; /* 비디오 요소는 숨깁니다 */
+    }
+    .instructions {
+      position: absolute; /* 캔버스 위에 겹쳐서 표시 */
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      text-align: center;
+      background-color: rgba(0, 0, 0, 0.7); /* 반투명 검은 배경 */
+      padding: 10px 20px;
+      border-radius: 10px;
+      z-index: 10; /* 캔버스보다 위에 표시 */
+      pointer-events: none; /* 클릭 방지 */
+    }
+    .instructions h3, .instructions p {
+      margin: 5px 0;
+    }
+  </style>
+</head>
+<body>
+
+  <video id="video" autoplay playsinline></video>
+  <canvas id="canvas"></canvas>
+  
+  <div class="instructions">
+    <h3>양손의 엄지와 검지를 맞대보세요 (Pinch)</h3>
+    <p></p>
+  </div>
+
+  <script>
+    const videoElement = document.getElementById('video');
+    const canvasElement = document.getElementById('canvas');
+    const canvasCtx = canvasElement.getContext('2d');
+
+    // 두 점 사이의 거리를 구하는 함수
+    function MathHypot(p1, p2) {
+      return Math.hypot(p1.x - p2.x, p1.y - p2.y);
+    }
+
+    // 캔버스 해상도를 브라우저 창 크기에 맞추는 함수
+    function resizeCanvas() {
+      canvasElement.width = window.innerWidth;
+      canvasElement.height = window.innerHeight;
+    }
+
+    // 초기 실행 및 창 크기 변경 시 호출
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+
+    // 카메라의 원본 비율을 유지하며 캔버스에 그리기 위해 필요한 변수들
+    let sx, sy, sw, sh; // 소스 크롭 영역
+    let destWidth, destHeight; // 대상 영역
+
+    // --- [새로 추가한 변수들: 깜빡임 해결 핵심] ---
+    let lastValidRect = null; // 마지막으로 성공한 사각형 위치 기억
+    let missingFrames = 0;    // 손을 놓친 프레임 수 카운트
+    const MAX_MISSING_FRAMES = 15; // 약 0.5초 동안은 손을 놓쳐도 박스 유지!
+    // ----------------------------------------
+
+    // MediaPipe Hands 결과 처리 콜백
+    function onResults(results) {
+      // 카메라 원본 해상도와 캔버스 해상도 가져오기
+      const inputWidth = results.image.width;
+      const inputHeight = results.image.height;
+      const canvasWidth = canvasElement.width;
+      const canvasHeight = canvasElement.height;
+
+      // 화면 및 비디오 비율 계산
+      const windowAR = canvasWidth / canvasHeight;
+      const videoAR = inputWidth / inputHeight;
+
+      // 비율 유지 & 채우기 (Cropping) 로직 계산
+      if (windowAR > videoAR) {
+        // 창이 비디오보다 넓은 경우: 비디오의 위아래를 자름
+        sw = inputWidth;
+        sh = inputWidth / windowAR;
+        sx = 0;
+        sy = (inputHeight - sh) / 2;
+      } else {
+        // 창이 비디오보다 좁은 경우: 비디오의 좌우를 자름
+        sh = inputHeight;
+        sw = inputHeight * windowAR;
+        sy = 0;
+        sx = (inputWidth - sw) / 2;
+      }
+
+      destWidth = canvasWidth;
+      destHeight = canvasHeight;
+
+      canvasCtx.save();
+      
+      // 1. 캔버스 초기화 및 비율을 유지하며 크롭된 웹캠 화면 그리기
+      canvasCtx.clearRect(0, 0, canvasWidth, canvasHeight);
+      canvasCtx.drawImage(results.image, sx, sy, sw, sh, 0, 0, destWidth, destHeight);
+
+      let pinchPoints = [];
+
+      // 손이 인식되었을 때
+      if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+        for (const landmarks of results.multiHandLandmarks) {
+          
+          // (선택사항) 손 뼈대 그리기 - 은은하게
+          drawConnectors(canvasCtx, landmarks, HAND_CONNECTIONS, {color: '#ffffff11', lineWidth: 1});
+          drawLandmarks(canvasCtx, landmarks, {color: '#ffffff22', lineWidth: 1, radius: 1});
+
+          // 4번: 엄지 끝, 8번: 검지 끝
+          const thumb = landmarks[4];
+          const index = landmarks[8];
+
+          // 🛠️ 1. 깜빡임 해결 핵심: 너그러움 추가 
+          // 거리를 0.05 -> 0.08로 늘려서 화면 가장자리에서 살짝 떨어져도 핀치로 인정!
+          const distance = MathHypot(thumb, index);
+
+          if (distance < 0.08) {
+            // 핀치된 지점의 중심점(비디오 원본 좌표계) 계산
+            const rawMidX = ((thumb.x + index.x) / 2) * inputWidth;
+            const rawMidY = ((thumb.y + index.y) / 2) * inputHeight;
+
+            // 크롭 및 스케일링된 캔버스 좌표계로 손가락 중심 좌표 변환
+            const canvasMidX = (rawMidX - sx) * (canvasWidth / sw);
+            const canvasMidY = (rawMidY - sy) * (canvasHeight / sh);
+            
+            pinchPoints.push({ x: canvasMidX, y: canvasMidY });
+          }
+        }
+      }
+
+      // 양손 핀치가 성공적으로 인식되었을 때 -> 새로운 사각형 정보 업데이트
+      if (pinchPoints.length >= 2) {
+        const p1 = pinchPoints[0];
+        const p2 = pinchPoints[1];
+
+        // 대각선 꼭짓점을 이용해 사각형 영역 계산
+        lastValidRect = {
+          x: Math.min(p1.x, p2.x),
+          y: Math.min(p1.y, p2.y),
+          w: Math.abs(p1.x - p2.x),
+          h: Math.abs(p1.y - p2.y)
+        };
+        missingFrames = 0; // 제대로 인식했으니 놓친 카운트 초기화
+      } else {
+        // 인식이 안 되었을 때 카운트 증가
+        missingFrames++;
+      }
+
+      // 🛠️ 2. 깜빡임 해결 핵심: 기억력 발동
+      // 현재 사각형 정보가 있고, 놓친 지 15프레임 이내라면 계속 그리기!
+      if (lastValidRect && missingFrames < MAX_MISSING_FRAMES) {
+        const { x, y, w, h } = lastValidRect;
+
+        // 사각형 영역 클리핑
+        canvasCtx.save();
+        canvasCtx.beginPath();
+        canvasCtx.rect(x, y, w, h);
+        canvasCtx.clip(); 
+
+        // 비율을 유지한 원본 화면에 블러 필터 적용 후 덮어쓰기
+        canvasCtx.filter = 'blur(30px)'; 
+        canvasCtx.drawImage(results.image, sx, sy, sw, sh, 0, 0, destWidth, destHeight);
+        canvasCtx.restore(); 
+
+        // 사각형 가이드 그리기 (연한 회색, 얇은 선, 반투명 실선)
+        canvasCtx.save();
+        canvasCtx.strokeStyle = 'rgba(200, 200, 200, 0.4)'; // 반투명 연한 회색
+        canvasCtx.lineWidth = 1; 
+        canvasCtx.setLineDash([]); // 실선
+        canvasCtx.strokeRect(x, y, w, h);
+        canvasCtx.restore();
+      } else if (missingFrames >= MAX_MISSING_FRAMES) {
+        // 너무 오래 놓치면(약 0.5초) 박스 초기화 (없앰)
+        lastValidRect = null;
+      }
+      
+      canvasCtx.restore();
+    }
+
+    // MediaPipe Hands 설정
+    const hands = new Hands({locateFile: (file) => {
+      return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
+    }});
+    hands.setOptions({
+      maxNumHands: 2, // 양손 인식
+      modelComplexity: 1,
+      // ⚠️ 안정적인 작동을 위해 민감도는 다시 0.6으로 돌려놓습니다.
+      minDetectionConfidence: 0.6,
+      minTrackingConfidence: 0.6
+    });
+    hands.onResults(onResults);
+
+    // 카메라 설정 및 시작
+    const camera = new Camera(videoElement, {
+      onFrame: async () => {
+        await hands.send({image: videoElement});
+      },
+      // 카메라 캡처 해상도 설정 (전체화면 성능을 위해 FHD 사용)
+      width: 1920,
+      height: 1080
+    });
+    camera.start();
+  </script>
+</body>
+</html>

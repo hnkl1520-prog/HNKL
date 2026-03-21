@@ -4,413 +4,153 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Portfolio - About Hanuk</title>
-    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.8/dist/web/static/pretendard.css" />
     
-    <!-- [필수] GSAP 추가 -->
+    <!-- 1. [필수] Common CSS 연결 -->
+    <link rel="stylesheet" href="common.css">
+
+    <!-- 2. [필수] GSAP 추가 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
 
+    <!-- 3. 페이지 전용 스타일 -->
     <style>
-        :root {
-            /* [Color Theme] Light Mode */
-            --bg-color: #F5F5F7;
-            --text-color: #1D1D1F;
-            --accent-color: #2997ff; /* Blue */
-            --sub-color-1: #9c6dff;  /* Purple */
-            --sub-color-2: #4fd1c5;  /* Mint */
-            --dim-color: #86868b;
-            --text-sub: #6e6e73;
-            --card-bg: #FFFFFF;
-        }
-
-        body, html {
-            margin: 0; padding: 0;
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            font-family: 'Pretendard', sans-serif;
-            width: 100%;
-            cursor: default;
-            
-            /* 텍스트 렌더링 품질 개선 */
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
-            text-rendering: optimizeLegibility;
-        }
-
         /* =========================================
-            HEADER SECTION
-            ========================================= */
+           PAGE SPECIFIC STYLES
+           ========================================= */
+
+        /* [추가] 헤더 숨김 애니메이션 보장용 CSS */
         #global-header {
+            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.3s ease, height 0.3s ease, border-bottom 0.3s ease;
+        }
+        #global-header.header-hidden {
+            transform: translateY(-100%) !important;
+        }
+
+        /* [수정] Loading Screen - 검정 배경 & 원형 로더 */
+        #loading-screen {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
-            height: 60px;
-            z-index: 900; 
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background-color: rgba(245, 245, 247, 0.7); 
-            backdrop-filter: blur(10px); 
-            border-bottom: 1px solid rgba(0,0,0,0.05);
-            transition: transform 0.3s ease, background-color 0.3s ease, height 0.3s ease, border-bottom 0.3s ease;
-        }
-
-        #global-header.at-top {
-            height: 90px; 
-            background-color: rgba(245, 245, 247, 0); 
-            border-bottom: 1px solid rgba(0,0,0,0); 
-        }
-
-        #global-header.header-hidden {
-            transform: translateY(-100%);
-        }
-
-        .header-inner {
-            width: 100%;
-            max-width: 1200px;
-            padding: 0 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-sizing: border-box;
-            height: 100%; 
-        }
-
-        .header-left {
-            display: flex;
-            align-items: center;
-            gap: 40px; 
-        }
-
-        .header-logo {
-            display: flex;
-            align-items: center;
-            text-decoration: none;
-        }
-        
-        .header-logo img {
-            height: 24px; 
-            width: auto;
-            display: block;
-            transition: height 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
-            will-change: height; 
-        }
-
-        #global-header.at-top .header-logo img {
-            height: 31px; 
-        }
-
-        .header-nav {
-            display: flex;
-            gap: 24px;
-            transition: transform 0.3s ease;
-        }
-
-        .nav-link {
-            font-size: 1.1rem; 
-            color: var(--text-sub);
-            text-decoration: none;
-            font-weight: 500;
-            position: relative;
-            transition: color 0.2s;
-        }
-
-        .nav-link:hover {
-            color: var(--text-color);
-        }
-
-        .nav-link.active {
-            color: var(--text-color);
-            font-weight: 600;
-        }
-        .nav-link.active::after {
-            content: '';
-            position: absolute;
-            left: 0;
-            bottom: -4px;
-            width: 100%;
-            height: 2px;
-            background-color: var(--text-color);
-            border-radius: 2px;
-        }
-
-        .header-right {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 0.95rem;
-            font-weight: 500;
-        }
-
-        .lang-btn {
-            background: none;
-            border: none;
-            padding: 4px;
-            cursor: pointer;
-            color: var(--text-sub);
-            font-family: 'Pretendard', sans-serif;
-            font-size: inherit;
-            transition: color 0.2s;
-        }
-        
-        .lang-btn.active {
-            color: var(--text-color);
-            font-weight: 700;
-        }
-        
-        .lang-btn:hover {
-            color: var(--accent-color);
-        }
-
-        .lang-divider {
-            color: var(--dim-color);
-            opacity: 0.5;
-        }
-
-        #page-entry-curtain {
-            position: fixed;
-            top: 0; 
-            left: 0;
-            width: 100%;
             height: 100%;
-            background-color: #000;
-            z-index: 99998; 
-        }
-
-        #loading-screen {
-            position: fixed;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            background-color: transparent; 
-            z-index: 99999; 
+            background-color: #000000; /* 검정 배경 */
+            z-index: 99999;
             display: flex;
-            flex-direction: column;
-            align-items: center;
             justify-content: center;
-            transition: opacity 0.6s ease, visibility 0.6s ease;
-        }
-        
-        #loading-screen.hidden {
-            opacity: 0;
-            visibility: hidden;
-            pointer-events: none;
+            align-items: center;
+            /* transition 제거 (GSAP로 제어) */
         }
 
-        .loading-text {
-            font-size: 1.2rem;
-            font-weight: 500;
-            color: #ffffff; 
-            margin-bottom: 10px;
+        /* 로더 래퍼 */
+        .loader-wrapper {
+            position: relative;
+            width: 120px;
+            height: 120px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* SVG 원형 그래프 */
+        .progress-ring {
+            transform: rotate(-90deg); /* 12시 방향부터 시작하도록 회전 */
+            transform-origin: 50% 50%;
+        }
+
+        .progress-ring__circle-bg {
+            stroke: #333333; /* 어두운 회색 트랙 (검정 배경용) */
+        }
+
+        .progress-ring__circle {
+            stroke: url(#loader-gradient); /* 그라데이션 적용 */
+            transition: stroke-dashoffset 0.1s linear;
+        }
+
+        /* 가운데 숫자 텍스트 */
+        .loader-text {
+            position: absolute;
+            font-family: 'Pretendard', sans-serif;
+            font-size: 1.25rem; /* 24px */
+            font-weight: 400;
+            color: #ffffff; /* 흰색 텍스트 */
+            text-align: center;
             letter-spacing: -0.01em;
         }
 
-        .loading-bar-bg {
-            width: 200px;
-            height: 2px;
-            background-color: #333; 
-            border-radius: 2px;
-            overflow: hidden;
-            position: relative;
-        }
-
-        .loading-bar-fill {
-            width: 0%;
-            height: 100%;
-            background-color: var(--accent-color);
-            transition: width 0.2s linear;
-        }
-
-        .menu-item, .win-btn, #chat-minimized-icon, button, .send-btn, a, .skill-item, .bento-card, .circle-btn, .profile-card, .marquee-item, .lang-btn, .nav-link, .header-logo { cursor: pointer; }
-
-        /* [최종 해결] 커서 레이어 분리 및 블렌딩 모드 제어 */
-        
-        /* 레이어 1: 원 (배경 반전용) */
-        #cursor-bg-layer {
-            position: fixed; top: 0; left: 0;
-            width: 0; height: 0; 
-            z-index: 9990; /* 텍스트 레이어보다 아래 */
-            pointer-events: none;
-            will-change: transform;
-            display: flex; align-items: center; justify-content: center;
-            
-            /* [수정] 평소에는 반전 효과 끔 (그라데이션 색상 유지) */
-            mix-blend-mode: normal; 
-        }
-
-        /* [수정] 호버 시에만 반전 효과 적용 */
-        #cursor-bg-layer.active-enter {
-            mix-blend-mode: difference; 
-        }
-
-        #cursor-circle {
-            position: absolute;
-            width: 40px; height: 40px;
-            border-radius: 50%;
-            
-            /* 기본 상태: 그라데이션 */
-            background: linear-gradient(120deg, var(--accent-color), var(--sub-color-1), var(--sub-color-2), var(--accent-color));
-            background-size: 300% 300%;
-            animation: gradientCursor 4s ease infinite; 
-            opacity: 0.6; 
-            
-            transform-origin: center center;
-            transition: width 0.3s cubic-bezier(0.19, 1, 0.22, 1),
-                        height 0.3s cubic-bezier(0.19, 1, 0.22, 1),
-                        background-color 0.3s, margin 0.3s, opacity 0.3s;
-        }
-
-        /* 호버 시: 원을 흰색으로 변경 (흰색 + difference = 반전 효과) */
-        #cursor-bg-layer.active-enter #cursor-circle {
-            width: 120px; height: 120px;
-            background: #ffffff; /* 흰색이어야 반전이 확실하게 일어남 */
-            opacity: 1;
-            animation: none;
-        }
-
-        /* 레이어 2: 텍스트 (그냥 위에 얹음, 블렌딩 없음) */
-        #cursor-text-layer {
-            position: fixed; top: 0; left: 0;
-            width: 0; height: 0; 
-            z-index: 9995; /* 원보다 위에 있어야 함 */
-            pointer-events: none;
-            will-change: transform;
-            display: flex; align-items: center; justify-content: center;
-            
-            /* 블렌딩 모드 없음 (Normal) */
-            mix-blend-mode: normal; 
-        }
-
-        #cursor-text {
-            position: absolute; 
-            /* 중앙 정렬 */
-            top: 50%; left: 50%;
-            transform: translate(-50%, -50%); 
-            
-            font-size: 24px; font-weight: 500; 
-            color: #ffffff; /* 깔끔한 흰색 텍스트 */
-            opacity: 0; 
-            white-space: nowrap; 
-            transition: opacity 0.2s; 
-            letter-spacing: 0.05em; 
-            -webkit-font-smoothing: antialiased;
-        }
-
-        #cursor-text-layer.active-enter #cursor-text {
-            opacity: 1;
-        }
-
-        @keyframes gradientCursor {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
-        }
-
-        .container {
-            max-width: 1200px; margin: 0 auto; padding: 0 20px; box-sizing: border-box;
-        }
-
+        /* Hero Section */
         #hero-section {
-            position: relative; 
-            width: 100%; 
-            min-height: 100vh; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center;
-            background-color: var(--bg-color);
-            overflow: hidden; 
-            padding-bottom: 160px; 
-            box-sizing: border-box;
+            position: relative; width: 100%; min-height: 100vh;
+            display: flex; align-items: center; justify-content: center;
+            background-color: var(--bg-color); overflow: hidden;
+            padding-bottom: 160px; box-sizing: border-box;
         }
-
         .hero-layout-new {
-            display: flex;
-            flex-direction: column; 
-            width: 100%;
-            height: 100%;
-            justify-content: center; 
-            align-items: flex-start; 
-            padding-left: 0;
-            padding-top: 100px; 
+            display: flex; flex-direction: column; width: 100%; height: 100%;
+            justify-content: center; align-items: flex-start;
+            padding-left: 0; padding-top: 100px;
         }
-
         .hero-text-block {
-            text-align: left;
-            color: var(--text-color);
-            font-size: 3rem;
-            line-height: 1.6;
-            letter-spacing: -0.01em; 
-            font-weight: 300; 
-            word-break: keep-all;
-            margin-bottom: 0px; 
-            width: 100%; 
-            z-index: 10; 
-            position: relative;
-            transform: translateZ(0);
+            text-align: left; color: var(--text-color);
+            font-size: 3rem; line-height: 1.6; letter-spacing: -0.01em;
+            font-weight: 300; word-break: keep-all; margin-bottom: 0px;
+            width: 100%; z-index: 10; position: relative; transform: translateZ(0);
         }
 
+        /* Peek Animation (Horizontal) */
+        @keyframes peek-horizontal {
+            0%, 85% { transform: rotateY(0deg); }
+            88% { transform: rotateY(15deg); }
+            92% { transform: rotateY(-5deg); }
+            96% { transform: rotateY(2deg); }
+            100% { transform: rotateY(0deg); }
+        }
+
+        /* Profile Card */
         .profile-card {
-            width: 300px;
-            height: 400px;
-            perspective: 1000px;
-            cursor: pointer;
-            position: relative;
-            transition: transform 0.3s ease;
-            z-index: 20;
-            align-self: flex-end; 
-            margin-top: -55px; 
+            width: 300px; height: 400px; perspective: 1000px;
+            cursor: pointer; position: relative; transition: transform 0.3s ease;
+            z-index: 20; align-self: flex-end; margin-top: -55px;
             -webkit-font-smoothing: subpixel-antialiased;
-            backface-visibility: hidden;
-            transform-style: preserve-3d;
+            backface-visibility: hidden; transform-style: preserve-3d;
+            animation: peek-horizontal 6s cubic-bezier(0.34, 1.56, 0.64, 1) infinite;
+            transform-origin: center center;
         }
-        .profile-card:hover { transform: translate(2px, -4px); }
-
+        .profile-card:hover, .profile-card.flipped { 
+            animation: none; 
+            transform: translate(2px, -4px); 
+        }
+        .profile-card.flipped {
+            transform: none; 
+        }
+        
         .profile-inner {
-            position: relative;
-            width: 100%;
-            height: 100%;
-            text-align: center;
+            position: relative; width: 100%; height: 100%; text-align: center;
             transition: transform 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.5s ease-out;
-            transform-style: preserve-3d;
-            border-radius: 24px;
+            transform-style: preserve-3d; border-radius: 24px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.05);
         }
         .profile-card:hover .profile-inner { box-shadow: 0 25px 50px rgba(0,0,0,0.1); }
         .profile-card.flipped .profile-inner { transform: rotateY(180deg); }
-
         .profile-front, .profile-back {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            -webkit-backface-visibility: hidden;
-            backface-visibility: hidden;
-            border-radius: 24px;
-            overflow: hidden;
-            background-color: var(--card-bg);
+            position: absolute; width: 100%; height: 100%;
+            -webkit-backface-visibility: hidden; backface-visibility: hidden;
+            border-radius: 24px; overflow: hidden; background-color: var(--card-bg);
         }
-
         .profile-front img { width: 100%; height: 100%; object-fit: cover; display: block; }
         .profile-back { transform: rotateY(180deg); background-color: #000; }
         .profile-video { width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none; }
 
         .scroll-indicator {
-            position: relative; 
-            width: 100%;
-            text-align: center;
-            font-size: 0.8rem; 
-            opacity: 0.5; 
-            animation: bounce 2s infinite; 
-            z-index: 30;
-            color: var(--text-color);
-            margin-top: 40px; 
-            margin-bottom: 60px; 
+            position: relative; width: 100%; text-align: center;
+            font-size: 0.8rem; opacity: 0.5; animation: bounce 2s infinite;
+            z-index: 30; color: var(--text-color); margin-top: 40px; margin-bottom: 60px;
         }
-
         @keyframes bounce {
             0%, 20%, 50%, 80%, 100% {transform: translateY(0);}
             40% {transform: translateY(-10px);}
             60% {transform: translateY(-5px);}
         }
 
+        /* Responsive Hero */
         @media (max-width: 1024px) {
             .hero-layout-new { align-items: center; }
             .hero-text-block { text-align: center; font-size: 2.5rem; margin-bottom: 40px; }
@@ -421,215 +161,266 @@
             .profile-card { width: 280px; height: 373px; }
         }
 
+        /* 3D ROLODEX SECTION */
         #image-marquee-section {
-            width: 100%;
-            height: 70vh; 
-            min-height: 600px; 
-            background-color: var(--bg-color);
-            position: relative; 
-            overflow: hidden;
-            padding: 100px 0; 
-            box-sizing: border-box;
-            touch-action: none; 
-        }
-
-        .marquee-track-wrapper {
-            position: absolute; 
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            display: flex; align-items: flex-start; 
-            overflow: hidden;
-            pointer-events: none; 
-            padding-top: 0; 
-            transition: z-index 0.3s; 
-        }
-
-        .marquee-track {
-            display: flex; align-items: flex-start; 
-            width: max-content;
-            animation: marquee-scroll 60s linear infinite; 
-            will-change: transform;
-        }
-
-        .track-1 { animation-duration: 300s; z-index: 1; }
-        .track-2 { animation-duration: 340s; z-index: 2; margin-left: -15vw;} 
-        .track-3 { animation-duration: 320s; z-index: 3; margin-left: -5vw;} 
-
-        @keyframes marquee-scroll {
-            0% { transform: translateX(0); }
-            100% { transform: translateX(-50%); } 
-        }
-
-        .marquee-item-wrapper {
-            flex-shrink: 0;
-            position: relative; 
-            pointer-events: auto;
-            user-select: none;
-            -webkit-user-drag: none;
-            will-change: transform;
-            transition: z-index 0.2s;
-        }
-
-        .marquee-item {
-            width: 100%; height: 100%;
-            border-radius: 24px;
-            overflow: hidden;
-            background-color: #e0e0e0; 
+            width: 100%; 
+            height: 80vh; 
+            background-color: var(--bg-color); 
             position: relative;
-            transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease;
-            transform-origin: center center;
-            -webkit-backface-visibility: hidden;
-            backface-visibility: hidden;
-        }
-        
-        .marquee-item img {
-            width: auto; height: 100%;
-            object-fit: cover; display: block;
-            min-width: 100px; 
-            pointer-events: none; 
+            overflow: visible; 
+            padding: 0;
+            box-sizing: border-box;
+            perspective: 2000px; 
+            z-index: 1; 
+            margin-top: -100px;
         }
 
-        .marquee-item-wrapper:hover .marquee-item {
-            transform: scale(1.15); 
-            box-shadow: 0 25px 50px rgba(0,0,0,0.25);
-        }
-        
-        .marquee-item-wrapper.dragging .marquee-item {
-            cursor: grabbing;
-            box-shadow: 0 30px 60px rgba(0,0,0,0.3);
-            transform: scale(1.05); 
+        .cylinder-container {
+            position: absolute;
+            top: 35%;
+            left: -5%; 
+            width: 0; height: 0;
+            transform-style: preserve-3d;
+            transform: rotateZ(10deg) rotateX(-10deg) rotateY(15deg);
         }
 
-        @media (max-width: 768px) {
-            #image-marquee-section { height: 60vh; min-height: 500px; }
+        .cylinder-ring {
+            position: absolute;
+            transform-style: preserve-3d;
+            animation: spinCylinder 80s linear infinite; 
         }
 
-        #philosophy-section { 
-            position: relative; 
-            width: 100%; 
-            height: 400vh; 
-            background-color: var(--bg-color);
+        @keyframes spinCylinder {
+            0% { transform: rotateY(0deg); }
+            100% { transform: rotateY(-360deg); }
         }
-        
-        .philo-container { 
-            position: sticky; 
-            top: 0;
-            width: 100%; 
-            max-width: 1200px; 
-            margin: 0 auto;
-            height: 100vh; 
-            display: flex;
+
+        .cylinder-item {
+            position: absolute;
+            top: 50%; left: 50%;
+            width: 240px; height: 160px; 
+            margin-left: -80px; margin-top: -120px; 
+            border-radius: 8px;
+            background-color: #fff;
+            backface-visibility: visible;
+            -webkit-backface-visibility: visible;
+            box-shadow: -2px 0 15px rgba(0,0,0,0.1); 
+            transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94), filter 0.3s;
             overflow: hidden; 
         }
 
-        .text-col { 
-            width: 35%; 
-            margin-left: 15%; 
-            padding-right: 50px; 
-            box-sizing: border-box; 
-            z-index: 10; 
-            position: relative; 
-            display: flex;
-            align-items: center; 
+        .cylinder-item img {
+            width: 100%; height: 100%;
+            object-fit: cover; display: block;
+            pointer-events: none;
         }
 
-        .text-block {
-            position: absolute;
-            top: 50%;
-            left: 0;
-            width: 100%;
-            transform: translateY(-50%);
-            background-color: transparent; 
-            padding: 0; 
-            opacity: 0; 
-            pointer-events: none; 
-            transition: opacity 0.5s ease, transform 0.5s ease;
+        .cylinder-item:hover {
+            filter: brightness(1.1);
+            z-index: 1000;
+            cursor: pointer;
+            box-shadow: -5px 0 30px rgba(41, 151, 255, 0.5);
         }
 
-        .philo-intro-title {
-            font-size: 4rem; 
-            font-weight: 300; 
-            line-height: 1;    
-            color: var(--text-color); margin-bottom: 20px;
-            letter-spacing: -0.02em;
+        @media (max-width: 768px) {
+            #image-marquee-section { height: 60vh; overflow: hidden; margin-top: 0; }
+            .cylinder-container { 
+                top: 50%; left: 50%; 
+                transform: rotateZ(0deg) rotateX(20deg);
+            }
+            .cylinder-item {
+                width: 100px; height: 150px;
+                margin-left: -50px; margin-top: -75px;
+            }
         }
-        .philo-intro-sub {
-            font-size: 2rem; color: var(--accent-color);
-            font-weight: 300;
-        }
-        
-        .philo-label {
-            color: var(--accent-color); font-size: 3.0rem; font-weight: 600;
-            text-transform: uppercase; letter-spacing: 2px; margin-bottom: 0px; display: block;
-        }
+
+        /* Philosophy Section */
+        #philosophy-section { position: relative; width: 100%; height: 400vh; background-color: var(--bg-color); }
+        .philo-container { position: sticky; top: 0; width: 100%; max-width: 1200px; margin: 0 auto; height: 100vh; display: flex; overflow: hidden; }
+        .text-col { width: 35%; margin-left: 15%; padding-right: 50px; box-sizing: border-box; z-index: 10; position: relative; display: flex; align-items: center; }
+        .text-block { position: absolute; top: 50%; left: 0; width: 100%; transform: translateY(-50%); background-color: transparent; padding: 0; opacity: 0; pointer-events: none; transition: opacity 0.5s ease, transform 0.5s ease; }
+        .philo-intro-title { font-size: 4rem; font-weight: 300; line-height: 1; color: var(--text-color); margin-bottom: 20px; letter-spacing: -0.02em; }
+        .philo-intro-sub { font-size: 2rem; color: var(--accent-color); font-weight: 300; }
+        .philo-label { color: var(--accent-color); font-size: 3.0rem; font-weight: 600; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 0px; display: block; }
         .philo-desc { font-size: 1.5rem; line-height: 1.5; font-weight: 400; word-break: keep-all; color: var(--text-color); margin-top: 12px; }
-
-        .visual-col {
-            width: 50%; 
-            height: 100vh; 
-            display: flex; align-items: center; justify-content: center;
-        }
+        .visual-col { width: 50%; height: 100vh; display: flex; align-items: center; justify-content: center; }
         #three-canvas { width: 100%; height: 100%; outline: none; }
 
+        /* =========================================================
+           Key Detail Section
+           ========================================================= */
         #key-detail-section {
-            padding: 100px 0 200px 0;
-            background-color: var(--bg-color);
-            position: relative;
-            z-index: 10;
+            padding: 100px 0 200px 0; background-color: var(--bg-color);
+            position: relative; z-index: 10;
         }
-
         .key-detail-title {
-            font-size: 5rem; 
-            font-weight: 300; 
-            margin-bottom: 60px;
-            color: var(--text-color); 
-            line-height: 1; 
-            text-align: left; 
+            font-size: 5rem; font-weight: 300; margin-bottom: 60px;
+            color: var(--text-color); line-height: 1; text-align: left; 
         }
-
+        
         .bento-grid {
-            display: grid; grid-template-columns: repeat(4, 290px);
-            gap: 10px; justify-content: center; align-items: start;
+            display: flex;
+            gap: 10px;
+            justify-content: center; 
+            align-items: flex-start;
+            
+            width: 100%;
+            max-width: 1190px;  
+            margin: 0 auto;        
+            
+            height: 360px;
         }
 
-        .col-stack { display: flex; flex-direction: column; gap: 10px; }
+        .bento-grid > div {
+            flex: 1; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 10px; 
+            transition: flex 0.6s cubic-bezier(0.25, 1, 0.5, 1);
+            min-width: 0; 
+            overflow: visible; 
+        }
 
+        @media (min-width: 768px) {
+            .bento-grid[data-state="education"] > div.expanded { flex: 1; }
+            .bento-grid[data-state="education"] > div:not(.expanded) { flex: 0 0 150px; }
+
+            .bento-grid[data-state="medium"] > div.expanded { flex: 1; }
+            .bento-grid[data-state="medium"] > div:not(.expanded) { flex: 0 0 200px; }
+        }
+
+        /* Common Card Styles */
         .bento-card {
-            background-color: transparent; perspective: 1000px; width: 290px;
+            background-color: transparent; perspective: 1000px; width: 100%;
             position: relative; transition: transform 0.3s ease; cursor: pointer;
-            transform: translateZ(0); 
-            -webkit-font-smoothing: subpixel-antialiased; 
+            transform: translateZ(0); -webkit-font-smoothing: subpixel-antialiased; 
         }
-        .bento-card:hover { transform: translateY(-5px); }
+        
         .bento-card.card-language { cursor: default; }
         .bento-card.card-language:hover { transform: none; }
-
+        
         .card-inner {
             position: relative; width: 100%; height: 100%; text-align: left;
-            transition: transform 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            transform-style: preserve-3d; border-radius: 24px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.02);
-            will-change: transform;
+            border-radius: 24px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.02); will-change: transform;
+            background-color: var(--card-bg);
+            overflow: hidden; 
+            transform-style: preserve-3d;
+            transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1), box-shadow 0.3s ease, background 0.3s ease;
         }
-        .bento-card:hover .card-inner { box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
+
+        /* HOVER EFFECT */
+        .bento-card:not(.card-language):not(.expanded):hover {
+            transform: scale(1.02); 
+            z-index: 10;
+        }
+        .bento-card:not(.card-language):not(.expanded):hover .card-inner {
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1); 
+        }
+        .bento-card:not(.card-language):not(.expanded):hover .capa-tag:hover {
+            border-color: var(--accent-color);
+            color: var(--accent-color);
+        }
+
+        .bento-card.card-connect .card-inner { overflow: visible; }
+        
         .bento-card.flipped .card-inner { transform: rotateY(180deg); }
 
         .card-front, .card-back {
             position: absolute; width: 100%; height: 100%;
-            -webkit-backface-visibility: hidden; backface-visibility: hidden;
-            background-color: var(--card-bg); border-radius: 24px;
+            background-color: transparent; 
+            border-radius: 24px; 
             padding: 30px; box-sizing: border-box; display: flex; flex-direction: column;
-            transform: translateZ(0);
-            text-shadow: 0 0 0 transparent; 
+            transform: translateZ(0); text-shadow: 0 0 0 transparent; 
+            transition: opacity 0s ease-out; 
+            
+            /* [중요] 겹침 방지를 위해 Backface 숨김 필수 */
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
         }
-        .card-back { transform: rotateY(180deg); overflow: hidden; }
 
-        .card-title { font-size: 2rem; font-weight: 600; margin: 0 0 30px 0; color: var(--text-color); letter-spacing: -0.02em; }
-        .sub-card-title { font-size: 1.5rem; font-weight: 600; margin: 0 0 20px 0; color: var(--text-color); }
+        /* [수정] Connect 카드의 앞뒷면은 불투명 배경(흰색)을 명시적으로 가져야 겹쳐 보이지 않음 */
+        .card-connect .card-front,
+        .card-connect .card-back {
+            background-color: #ffffff; /* 흰색 배경 강제 적용 */
+        }
+
+        .card-back { 
+            transform: rotateY(180deg); opacity: 0; pointer-events: none; z-index: 1; 
+            min-width: 480px; 
+        }
+        .card-front { opacity: 1; z-index: 2; transform: rotateY(0deg); }
+        
+        /* [수정] Connect 카드 뒤집힘 겹침 문제 해결 */
+        .bento-card.flipped .card-front {
+            opacity: 0; 
+            pointer-events: none;
+            transition: opacity 0.2s ease-out;
+        }
+
+        .expanded .card-front { 
+            opacity: 0; pointer-events: none; 
+            transition: opacity 0.2s ease-out 0s;
+        }
+        .expanded.card-language .card-front,
+        .col-stack.expanded .card-language .card-front { opacity: 1 !important; }
+        
+        /* [수정] Expanded 상태일 때 뒷면을 앞쪽으로 회전시켜 보이게 함 */
+        .expanded .card-back { 
+            transform: rotateY(0deg); /* 180도에서 0도로 변경하여 보이게 함 */
+            opacity: 1; 
+            pointer-events: auto; 
+            z-index: 3; 
+            transition: opacity 0.5s ease-out 0.6s; 
+        }
+        
+        .col-stack.expanded .card-experience .card-front { 
+            opacity: 0; pointer-events: none; 
+            transition: opacity 0.2s ease-out 0s;
+        }
+        
+        /* [수정] Experience 카드도 확장 시 뒷면 회전 초기화 */
+        .col-stack.expanded .card-experience .card-back { 
+            transform: rotateY(0deg); /* 180도에서 0도로 변경 */
+            opacity: 1; 
+            pointer-events: auto; 
+            z-index: 3; 
+            transition: opacity 0.5s ease-out 0.6s; 
+        }
+
+        /* [수정] Connect 카드 뒷면 클릭 활성화 */
+        .card-connect .card-back {
+            transform: rotateY(180deg); opacity: 1; z-index: auto; min-width: auto; 
+            pointer-events: auto; /* [중요] 링크 클릭을 위해 auto로 설정 */
+        }
+
+        /* 텍스트 Fade out */
+        .bento-grid:has(.expanded) > div:not(.expanded) .edu-content,
+        .bento-grid:has(.expanded) > div:not(.expanded) .exp-content,
+        .bento-grid:has(.expanded) > div:not(.expanded) .capa-list, 
+        .bento-grid:has(.expanded) > div:not(.expanded) .lang-list,
+        .bento-grid:has(.expanded) > div:not(.expanded) .connect-front-list {
+            opacity: 0; filter: blur(2px);
+            white-space: nowrap !important; overflow: hidden;
+            transition: opacity 0.2s ease-out; 
+        }
+
+        .card-title { font-size: 2rem; font-weight: 600; margin: 0 0 30px 0; color: var(--text-color); letter-spacing: -0.02em; white-space: nowrap;}
+        .sub-card-title { font-size: 1.5rem; font-weight: 600; margin: 0 0 20px 0; color: var(--text-color); white-space: nowrap; }
+        
+        .bento-grid:has(.expanded) > div:not(.expanded) .card-title,
+        .bento-grid:has(.expanded) > div:not(.expanded) .sub-card-title {
+            white-space: normal !important; 
+            word-break: break-all !important; 
+            overflow-wrap: anywhere !important;
+            line-height: 1.2;
+        }
+
+        /* Typography Utility */
         .item-main-text { font-size: 1rem; font-weight: 600; color: var(--text-color); margin-bottom: 12px; }
         .item-sub-text { font-size: 12px; font-weight: 400; color: var(--text-sub); margin-bottom: 0px; line-height: 1.2; }
         .date-text { font-size: 12px; font-weight: 400; color: var(--text-color); margin-top: 10px; display: block; }
-
+        
         .f-600-12 { font-weight: 600; font-size: 12px; color: var(--text-color); }
         .f-400-12 { font-weight: 400; font-size: 12px; color: var(--text-sub); }
         .f-600-10 { font-weight: 600; font-size: 10px; color: var(--text-color); }
@@ -637,12 +428,153 @@
         .mb-4 { margin-bottom: 4px; }
         .mb-8 { margin-bottom: 8px; }
 
+        /* [수정] Education Card Expanded - 3번째 아이템(Industry) Full Width 처리 */
+        .card-education.expanded .edu-back-list {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            column-gap: 30px; 
+            row-gap: 20px; /* 섹션 간 간격 */
+            height: auto;
+            align-items: start;
+        }
+        
+        /* 1번째, 2번째 div는 1칸씩 차지 (기본값) */
+        
+        /* [추가] 3번째 div (Industry)는 2칸 차지 */
+        .card-education.expanded .edu-back-list > div:nth-child(3) {
+            grid-column: span 2; /* 2열 병합 */
+            
+            /* 내부도 2열 그리드로 나눠서 가로 배치 */
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            column-gap: 30px;
+        }
+        
+        /* 3번째 div 안의 타이틀은 전체 너비 차지 */
+        .card-education.expanded .edu-back-list > div:nth-child(3) .edu-section-title {
+            grid-column: span 2;
+        }
+
+
+        .card-education.expanded .card-back {
+            padding: 24px !important;
+        }
+
+        /* [수정] Education 타이틀 색상 변경 (Blue -> Black) */
+        .card-education.expanded .edu-section-title {
+            font-size: 15px; 
+            font-weight: 700;
+            color: var(--text-color); 
+            margin-bottom: 12px;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 6px;
+            word-break: keep-all; 
+        }
+        
+        /* [수정] Education 정렬 및 설명 스타일 */
+        .edu-item-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            margin-bottom: 20px; 
+        }
+
+        .edu-year {
+            width: 35px; /* 연도 영역 고정 너비 */
+            flex-shrink: 0;
+            font-size: 13.5px;
+            font-weight: 600;
+            color: var(--text-color);
+            line-height: 1.4;
+        }
+
+        .edu-info {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        /* 제목/내용 텍스트 스타일 */
+        .edu-main-text {
+            font-size: 13.5px;
+            font-weight: 600;
+            color: var(--text-color);
+            line-height: 1.4;
+        }
+        
+        .edu-sub-text {
+            font-size: 13.5px;
+            font-weight: 400;
+            color: var(--text-sub); /* [수정] 회색(var(--text-sub))으로 변경 */
+            line-height: 1.4;
+        }
+
+        /* [수정] Experience Card Expanded */
+        .col-stack.expanded .card-experience .exp-back-content {
+            display: flex !important; 
+            flex-direction: row !important; 
+            gap: 30px;
+            margin-top: auto;
+            width: 100%;
+        }
+        
+        .col-stack.expanded .card-experience .exp-block {
+            flex: 1; 
+            min-width: 0; 
+        }
+        
+        .col-stack.expanded .card-experience .f-600-12 {
+            font-size: 16px !important; 
+            font-weight: 700;
+            margin-bottom: 6px;
+            word-break: keep-all;
+            line-height: 1.3;
+        }
+        .col-stack.expanded .card-experience .f-400-12 {
+            font-size: 16px !important; 
+            font-weight: 700; 
+            color: var(--text-color);
+            margin-bottom: 8px;
+            word-break: keep-all;
+            line-height: 1.3;
+        }
+        .col-stack.expanded .card-experience .f-400-10 {
+            font-size: 14px !important; 
+            font-weight: 300; 
+            color: var(--text-sub);
+            word-break: keep-all;
+            line-height: 1.5;
+        }
+
+        /* [수정] Capabilities Card Expanded (3단) */
+        .card-capabilities.expanded .tools-vertical-list {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr; /* 3단 분리 */
+            gap: 20px;
+            margin-top: auto;
+        }
+        .card-capabilities.expanded .tool-cat-v {
+            font-size: 16px; 
+            font-weight: 700;
+            display: block;
+            margin-bottom: 6px;
+        }
+        .card-capabilities.expanded .tool-items-v {
+            font-size: 14px;
+            font-weight: 400;
+            line-height: 1.4;
+            display: block;
+        }
+
+
+        /* Card Specifics */
         .card-education { height: 360px; }
         .edu-content { margin-top: auto; }
         .edu-back-list { display: flex; flex-direction: column; gap: 15px; height: 100%; }
-        .edu-section-title { font-weight: 600; font-size: 12px; color: var(--accent-color); margin-bottom: 6px; padding-bottom: 4px; border-bottom: 1px solid #eee; }
+
         .edu-row { display: flex; gap: 10px; align-items: flex-start; }
-        .edu-year-col { width: 30px; flex-shrink: 0; display: flex; flex-direction: column; gap: 4px; }
+        .edu-year-col { width: 40px; flex-shrink: 0; display: flex; flex-direction: column; gap: 4px; }
         .edu-desc-col { flex: 1; display: flex; flex-direction: column; gap: 4px; }
 
         .card-language { height: 100px; }
@@ -658,8 +590,8 @@
 
         .card-capabilities { height: 360px; }
         .capa-list { display: flex; flex-direction: column; gap: 5px; margin-top: auto; align-items: flex-start; }
-        .capa-row { display: flex; gap: 5px; }
-        .capa-tag { font-size: 1rem; font-weight: 400; color: var(--text-color); border: 1px solid var(--text-color); padding: 6px 10px; border-radius: 999px; transition: all 0.2s; }
+        .capa-row { display: flex; gap: 5px; flex-wrap: wrap; }
+        .capa-tag { font-size: 1rem; font-weight: 400; color: var(--text-color); border: 1px solid var(--text-color); padding: 6px 10px; border-radius: 999px; transition: all 0.2s; white-space: nowrap; }
         .capa-tag:hover { border-color: var(--accent-color); color: var(--accent-color); }
         .tools-vertical-list { display: flex; flex-direction: column; gap: 16px; margin-top: auto; }
         .tool-row-v { display: flex; flex-direction: column; gap: 4px; }
@@ -673,7 +605,9 @@
         .contact-link { text-decoration: none; color: var(--accent-color); transition: opacity 0.2s; }
         .contact-link:hover { opacity: 0.7; }
 
-        .circle-wrapper { width: 290px; height: 150px; display: flex; justify-content: flex-end; }
+        .circle-wrapper { width: 100%; height: 150px; display: flex; justify-content: flex-end; }
+        .bento-grid:has(.expanded) .circle-wrapper { opacity: 1 !important; filter: none !important; }
+
         .circle-btn { 
             width: 150px; height: 150px; border-radius: 50%; 
             background-color: var(--card-bg); 
@@ -702,9 +636,19 @@
 
         .footer { text-align: center; padding: 50px 20px; border-top: 1px solid #eee; background-color: #fff; margin-top: 100px; }
         .contact-simple { font-size: 0.9rem; color: var(--dim-color); }
+
+        body[data-lang="kr"] .lang-en { display: none !important; }
+        body[data-lang="en"] .lang-kr { display: none !important; }
+        
+        .header-right .lang-btn { opacity: 0.5; font-weight: 400; cursor: pointer; transition: opacity 0.2s; }
+        .header-right .lang-btn:hover { opacity: 1; }
+        
+        body[data-lang="kr"] .lang-btn:nth-child(1) { opacity: 1; font-weight: 700; }
+        body[data-lang="en"] .lang-btn:nth-child(3) { opacity: 1; font-weight: 700; }
+
     </style>
 </head>
-<body>
+<body data-lang="kr">
 
     <!-- GLOBAL HEADER -->
     <header id="global-header" class="at-top">
@@ -723,29 +667,56 @@
             </div>
             
             <div class="header-right">
-                <!-- Language Toggle -->
-                <button class="lang-btn active">KR</button>
+                <!-- Language Toggle Scripts -->
+                <button class="lang-btn" onclick="setLanguage('kr')">KR</button>
                 <span class="lang-divider">/</span>
-                <button class="lang-btn">EN</button>
+                <button class="lang-btn" onclick="setLanguage('en')">EN</button>
             </div>
         </div>
     </header>
 
-    <div id="page-entry-curtain"></div>
+    <!-- PAGE CURTAIN (Initially hidden, as loader handles entry) -->
+    <div id="page-entry-curtain" style="display:none;"></div>
 
+    <!-- [수정] 원형 프리로더 (검정 배경 + 키 컬러 그라데이션) -->
     <div id="loading-screen">
-        <div class="loading-text"><span id="loading-percent">0</span>%</div>
-        <div class="loading-bar-bg">
-            <div class="loading-bar-fill" id="loading-bar"></div>
+        <div class="loader-wrapper">
+            <!-- SVG Circle -->
+            <svg class="progress-ring" width="120" height="120">
+                <defs>
+                    <linearGradient id="loader-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stop-color="#2997ff" />
+                        <stop offset="100%" stop-color="#9c6dff" />
+                    </linearGradient>
+                </defs>
+                <!-- 배경 원 (어두운 회색) -->
+                <circle 
+                    class="progress-ring__circle-bg"
+                    stroke-width="4"
+                    fill="transparent"
+                    r="52"
+                    cx="60"
+                    cy="60"
+                />
+                <!-- 진행 원 (그라데이션) -->
+                <circle 
+                    class="progress-ring__circle"
+                    stroke-width="4"
+                    fill="transparent"
+                    r="52"
+                    cx="60"
+                    cy="60"
+                />
+            </svg>
+            <!-- 가운데 숫자 (흰색) -->
+            <div class="loader-text" id="loader-percent">0%</div>
         </div>
     </div>
 
-    <!-- [수정] 레이어 분리: 1. 배경용 원 (Difference) -->
+    <!-- CURSOR LAYERS -->
     <div id="cursor-bg-layer">
         <div id="cursor-circle"></div>
     </div>
-
-    <!-- [수정] 레이어 분리: 2. 텍스트 (Normal, 상위 레이어) -->
     <div id="cursor-text-layer">
         <span id="cursor-text"></span>
     </div>
@@ -754,13 +725,23 @@
     <section id="hero-section">
         <div class="container hero-layout-new">
             <div class="hero-text-block">
-                안녕하세요,<br>
-                사람과 기술. 사용자와 서비스.<br>
-                그 사이를 잇고, 밀도높은 경험을 만드는<br>
-                UX·인터랙션 디자이너 이한욱입니다.
+                <!-- KR -->
+                <span class="lang-kr">
+                    안녕하세요,<br>
+                    사람과 기술,<br>
+                    그 사이를 잇고 밀도높은 경험을 만드는<br>
+                    UX·인터랙션 디자이너 이한욱입니다.
+                </span>
+                <!-- EN (수정: 직함 포함하여 문맥 보강) -->
+                <span class="lang-en">
+                    Hello,<br>
+                    I am Hanuk Lee, a UX·Interaction Designer<br>
+                    bridging people and technology<br>
+                    to craft experiences with depth.
+                </span>
             </div>
             <!-- Profile Card -->
-            <div class="profile-card" onclick="toggleProfile(this)">
+            <div class="profile-card hover-trigger" onclick="toggleProfile(this)">
                 <div class="profile-inner">
                     <div class="profile-front">
                         <img src="assets/Profile_Photo.png" alt="Hanuk Profile" onerror="this.style.display='none'; this.parentNode.style.backgroundColor='#e0e0e0'">
@@ -775,14 +756,20 @@
         </div>
     </section>
 
-    <!-- NEW: IMAGE MARQUEE SECTION -->
+    <!-- 3D ROLODEX SECTION (비활성화 처리) -->
+    <!--
     <section id="image-marquee-section">
-        <!-- JS가 트랙을 생성합니다 -->
+        <div class="cylinder-container">
+            <div class="cylinder-ring" id="cylinder-ring">
+                
+            </div>
+        </div>
     </section>
+    -->
 
     <div class="scroll-indicator">SCROLL DOWN</div>
 
-    <!-- PHILOSOPHY SECTION -->
+    <!-- PHILOSOPHY SECTION (3D) -->
     <section id="philosophy-section">
         <div class="philo-container">
             <div class="text-col">
@@ -793,28 +780,44 @@
                 
                 <div class="text-block" id="philo-text-1">
                     <span class="philo-label">01.</span>
-                    <p class="philo-desc">
+                    <p class="philo-desc lang-kr">
                         일상과 데이터 이면의 진짜 니즈를<br>
                         파악하여 문제를 정의합니다. <br>
                         심미성 이전에 <strong>논리적 타당성</strong>을<br>
                         먼저 고민합니다.
                     </p>
+                    <p class="philo-desc lang-en">
+                        I define problems by identifying <br>
+                        the real needs behind daily life and data.<br>
+                        I prioritize <strong>logical validity</strong><br>
+                        before aesthetics.
+                    </p>
                 </div>
                 <div class="text-block" id="philo-text-2">
                     <span class="philo-label">02.</span>
-                    <p class="philo-desc">
+                    <p class="philo-desc lang-kr">
                         이를 바탕으로 도출한<br>
                         인사이트와 아이디어를<br>
                         감각적이고 <strong>완성도 높은 비주얼</strong>로<br>
                         표현해냅니다.
                     </p>
+                    <p class="philo-desc lang-en">
+                        Based on this, I express<br>
+                        insights and ideas into<br>
+                        sensuous and <strong>high-quality visuals.</strong>
+                    </p>
                 </div>
                 <div class="text-block" id="philo-text-3">
                     <span class="philo-label">03.</span>
-                    <p class="philo-desc">
+                    <p class="philo-desc lang-kr">
                         정적인 화면에 머무르지 않고,<br>
                         <strong>입체적인 인터랙션</strong>으로 구현하여<br>
                         즐거운 경험으로 완성합니다.
+                    </p>
+                    <p class="philo-desc lang-en">
+                        Not staying on static screens,<br>
+                        I complete enjoyable experiences<br>
+                        by implementing <strong>three-dimensional interactions.</strong>
                     </p>
                 </div>
             </div>
@@ -829,117 +832,238 @@
         <div class="container">
             <h2 class="key-detail-title">Key Info</h2>
             <div class="bento-grid">
-                <!-- COL 1 -->
-                <div class="bento-card card-education" onclick="toggleFlip(this)">
+                <!-- COL 1: Education -->
+                <div class="bento-card card-education hover-trigger view-details" onclick="toggleExpand(this)">
                     <div class="card-inner">
                         <div class="card-front" style="padding-top: 15px; padding-left:20px; padding-bottom:20px">
                             <h3 class="card-title">Education</h3>
                             <div class="edu-content">
-                                <div class="item-main-text">Hongik University</div>
-                                <div class="item-sub-text">Industrial Design Major</div>
-                                <div class="item-sub-text">Product & Interaction</div>
+                                <div class="item-main-text">
+                                    <span class="lang-en">Hongik University</span>
+                                    <span class="lang-kr">홍익대학교</span>
+                                </div>
+                                <div class="item-sub-text">
+                                    <span class="lang-en">Industrial Design Major</span>
+                                    <span class="lang-kr">미술대학 디자인학부 산업디자인전공</span>
+                                </div>
+                                <div class="item-sub-text">
+                                    <span class="lang-en">Product & Interaction</span>
+                                    <span class="lang-kr">제품 & 인터랙션</span>
+                                </div>
                                 <span class="date-text">2021.03 - 2025.02</span>
                             </div>
                         </div>
-                        <div class="card-back" style="padding: 20px;">
+                        <div class="card-back" style="padding: 30px;">
                             <div class="edu-back-list">
+                                <!-- 1. Exhibitions (Left Top) -->
                                 <div>
-                                    <div class="edu-section-title">Exhibitions & Research</div>
-                                    <div class="edu-row">
-                                        <div class="edu-year-col">
-                                            <div class="f-600-10">2024</div>
-                                            <div class="f-600-10">2024</div>
-                                            <div class="f-600-10">2024</div>
-                                        </div>
-                                        <div class="edu-desc-col">
-                                            <div class="f-400-10">Hongik Industrial Design Degree Show</div>
-                                            <div class="f-400-10">AutomotiveUI’24 International Conference</div>
-                                            <div class="f-400-10">Zurich Design Week 2024</div>
-                                        </div>
+                                    <div class="edu-section-title">
+                                        <span class="lang-en">Exhibitions & Research</span>
+                                        <span class="lang-kr">Exhibitions & Research</span>
                                     </div>
-                                </div>
-                                <div>
-                                    <div class="edu-section-title">Industry Collaborations</div>
-                                    <div class="edu-row">
-                                        <div class="edu-year-col">
-                                            <div class="f-600-10">2023</div>
-                                            <div class="f-600-10" style="margin-top:12px">2023</div>
-                                            <div class="f-600-10" style="margin-top:12px">2023</div>
-                                        </div>
-                                        <div class="edu-desc-col">
-                                            <div>
-                                                <div class="f-600-10">Hyundai Motor Group</div>
-                                                <div class="f-400-10">Future Mobility UX & Air Conditioning System</div>
+                                    
+                                    <!-- [수정] Item 1 -->
+                                    <div class="edu-item-row">
+                                        <div class="edu-year">2024</div>
+                                        <div class="edu-info">
+                                            <div class="edu-main-text">
+                                                <span class="lang-en">Hongik Industrial Design Degree Show</span>
+                                                <span class="lang-kr">홍익대학교 산업디자인전공 졸업전시</span>
                                             </div>
-                                            <div>
-                                                <div class="f-600-10">University of Zurich (Veterinary Dept.)</div>
-                                                <div class="f-400-10">Product for Small Animal</div>
-                                            </div>
-                                            <div>
-                                                <div class="f-600-10">Kolon Glotech</div>
-                                                <div class="f-400-10">Autonomous Mobility Lifestyle & CMF</div>
+                                            <!-- [통일] 기존 설명 텍스트를 Sub text로 이동 -->
+                                            <div class="edu-sub-text">
+                                                <span class="lang-kr">[VIBRA] XR 축구 중계 서비스</span>
+                                                <span class="lang-en">[VIBRA] XR Football Broadcasting Sevice</span>
                                             </div>
                                         </div>
                                     </div>
-                                </div>
-                                <div>
-                                    <div class="edu-section-title">Honors & Activities</div>
-                                    <div class="edu-row">
-                                        <div class="edu-year-col">
-                                            <div class="f-600-10">2024</div>
-                                            <div class="f-600-10" style="margin-top:12px">2022<br>-24</div>
-                                            <div class="f-600-10" style="margin-top:12px">2022<br>-24</div>
+                                    
+                                    <!-- [수정] Item 2 -->
+                                    <div class="edu-item-row">
+                                        <div class="edu-year">2024</div>
+                                        <div class="edu-info">
+                                            <div class="edu-main-text">
+                                                <span class="lang-en">AutomotiveUI’24 International Conference</span>
+                                                <span class="lang-kr">AutomotiveUI’24 국제 학회</span>
+                                            </div>
+                                            <!-- [통일] 기존 설명 텍스트를 Sub text로 이동 -->
+                                            <div class="edu-sub-text">
+                                                <span class="lang-kr">Video Session 참여</span>
+                                                <span class="lang-en">Participated in Video Session.</span>
+                                            </div>
                                         </div>
-                                        <div class="edu-desc-col">
-                                            <div>
-                                                <div class="f-600-10">Patent Application</div>
-                                                <div class="f-400-10">Vehicle Air Conditioning & Control System</div>
+                                    </div>
+
+                                    <!-- [수정] Item 3 -->
+                                    <div class="edu-item-row">
+                                        <div class="edu-year">2024</div>
+                                        <div class="edu-info">
+                                            <div class="edu-main-text">
+                                                <span class="lang-en">Zurich Design Week 2024</span>
+                                                <span class="lang-kr">취리히 디자인 위크 2024</span>
                                             </div>
-                                            <div>
-                                                <div class="f-600-10">Industrial Design Student Council</div>
-                                                <div class="f-400-10">Head of Graphic Design ('24)</div>
+                                            <!-- [통일] 기존 설명 텍스트를 Sub text로 이동 -->
+                                            <div class="edu-sub-text">
+                                                <span class="lang-kr">[Design for All Species]</span>
+                                                <span class="lang-en">[Design for All Species]</span>
                                             </div>
-                                            <div>
-                                                <div class="f-600-10">Hongik Central Library</div>
-                                                <div class="f-400-10">Institutional Branding & Promotional Visuals</div>
+                                        </div>
+                                    </div>
+
+                                </div>
+                                
+                                <!-- 2. Honors (Right Top) -->
+                                <div>
+                                    <div class="edu-section-title">
+                                        <span class="lang-en">Honors & Activities</span>
+                                        <span class="lang-kr">Honors & Activities</span>
+                                    </div>
+                                    
+                                    <!-- Item 1 (기존 구조 유지 - 동일함) -->
+                                    <div class="edu-item-row">
+                                        <div class="edu-year">2026</div>
+                                        <div class="edu-info">
+                                            <div class="edu-main-text">
+                                                <span class="lang-en">Patent Application</span>
+                                                <span class="lang-kr">특허 등록</span>
+                                            </div>
+                                            <div class="edu-sub-text">
+                                                <span class="lang-en">Vehicle Air Conditioning & Control System</span>
+                                                <span class="lang-kr">차량 공조 장치 및 이를 포함하는 시스템</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Item 2 -->
+                                    <div class="edu-item-row">
+                                        <div class="edu-year">2022<br>-24</div>
+                                        <div class="edu-info">
+                                            <div class="edu-main-text">
+                                                <span class="lang-en">Industrial Design Student Council</span>
+                                                <span class="lang-kr">산업디자인과 학생회</span>
+                                            </div>
+                                            <div class="edu-sub-text">
+                                                <span class="lang-en">Head of Graphic Design ('24)</span>
+                                                <span class="lang-kr">그래픽부 부장('24)</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Item 3 -->
+                                    <div class="edu-item-row">
+                                        <div class="edu-year">2022<br>-24</div>
+                                        <div class="edu-info">
+                                            <div class="edu-main-text">
+                                                <span class="lang-en">Hongik Central Library</span>
+                                                <span class="lang-kr">홍익대학교 중앙도서관</span>
+                                            </div>
+                                            <div class="edu-sub-text">
+                                                <span class="lang-en">Institutional Branding & Promotional Visuals</span>
+                                                <span class="lang-kr">도서관 브랜딩 및 홍보물, 굿즈 제작</span>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
+                                
+                                <!-- 3. Industry (Full Width at Bottom) -->
+                                <div class="industry-full-width">
+                                    <div class="edu-section-title">
+                                        <span class="lang-en">Industry Collaborations</span>
+                                        <span class="lang-kr">Industry Collaborations</span>
+                                    </div>
+                                    
+                                    <!-- Item 1 (Left) -->
+                                    <div class="edu-item-row">
+                                        <div class="edu-year">2023</div>
+                                        <div class="edu-info">
+                                            <div class="edu-main-text">
+                                                <span class="lang-en">Hyundai Motor Group</span>
+                                                <span class="lang-kr">현대자동차그룹</span>
+                                            </div>
+                                            <div class="edu-sub-text">
+                                                <span class="lang-en">Future Mobility UX & Air Conditioning System</span>
+                                                <span class="lang-kr">미래 모빌리티 UX 및 공조 시스템</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Item 2 (Right) -->
+                                    <div class="edu-item-row">
+                                        <div class="edu-year">2023</div>
+                                        <div class="edu-info">
+                                            <div class="edu-main-text">
+                                                <span class="lang-en">University of Zurich (Veterinary Dept.)</span>
+                                                <span class="lang-kr">취리히 대학교 (수의학과)</span>
+                                            </div>
+                                            <div class="edu-sub-text">
+                                                <span class="lang-en">Product for Small Animals</span>
+                                                <span class="lang-kr">소동물을 위한 제품 디자인</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- COL 2 -->
+                <!-- COL 2: Language & Experience -->
                 <div class="col-stack">
                     <div class="bento-card card-language">
                         <div class="card-inner">
                             <div class="card-front" style="padding-top: 15px; padding-left:20px; padding-bottom:0px; justify-content:center;">
-                                <h4 class="sub-card-title" style="margin-bottom: 0; margin-right: 20px;">Language</h4>
+                                <h4 class="sub-card-title" style="margin-bottom: 0; margin-right: 20px;">
+                                    <span class="lang-en">Language</span>
+                                    <span class="lang-kr">Language</span>
+                                </h4>
                                 <div class="lang-list" style="flex:1; justify-content:center;">
                                     <div class="lang-item">
-                                        <span class="lang-name">Korean</span>
-                                        <span class="lang-level">Native</span>
+                                        <span class="lang-name">
+                                            <span class="lang-en">Korean</span>
+                                            <span class="lang-kr">한국어</span>
+                                        </span>
+                                        <span class="lang-level">
+                                            <span class="lang-en">Native</span>
+                                            <span class="lang-kr">모국어</span>
+                                        </span>
                                     </div>
                                     <div class="lang-item">
-                                        <span class="lang-name">English</span>
-                                        <span class="lang-level">Fluent</span>
+                                        <span class="lang-name">
+                                            <span class="lang-en">English</span>
+                                            <span class="lang-kr">영어</span>
+                                        </span>
+                                        <span class="lang-level">
+                                            <span class="lang-en">Working Proficiency</span>
+                                            <span class="lang-kr">영어 협업 가능</span>
+                                        </span>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <div class="bento-card card-experience" onclick="toggleFlip(this)">
+                    <div class="bento-card card-experience hover-trigger view-details" onclick="toggleExpand(this)">
                         <div class="card-inner">
                             <div class="card-front" style="padding-top: 15px; padding-left:20px; padding-bottom:20px">
                                 <h3 class="card-title">Experience</h3>
                                 <div class="exp-content">
-                                    <div class="item-main-text">Cheil Worldwide</div>
-                                    <div class="item-sub-text">Global Samsung Retail Store</div>
-                                    <div class="item-sub-text">Device Experience App Content Planning</div>
-                                    <div class="item-sub-text">Freelance</div>
+                                    <div class="item-main-text">
+                                        <span class="lang-en">Cheil Worldwide</span>
+                                        <span class="lang-kr">제일기획</span>
+                                    </div>
+                                    <div class="item-sub-text">
+                                        <span class="lang-en">Global Samsung Retail Store</span>
+                                        <span class="lang-kr">글로벌 삼성 리테일 스토어</span>
+                                    </div>
+                                    <div class="item-sub-text">
+                                        <span class="lang-en">Device Experience App Content Planning</span>
+                                        <span class="lang-kr">디바이스 경험 앱 콘텐츠 기획</span>
+                                    </div>
+                                    <div class="item-sub-text">
+                                        <span class="lang-en">Freelance</span>
+                                        <span class="lang-kr">프리랜서</span>
+                                    </div>
                                     <span class="date-text">2025.02 - Present</span>
                                 </div>
                             </div>
@@ -948,13 +1072,25 @@
                                 <div class="exp-back-content">
                                     <div class="exp-block">
                                         <div class="f-600-12">1H 2025</div>
-                                        <div class="f-400-12">SmartThings: Galaxy Connected Experience</div>
-                                        <div class="f-400-10" style="margin-top:2px;">Designed multi-device UX flows and visual strategies to showcase Galaxy ecosystem connectivity.</div>
+                                        <div class="f-400-12">
+                                            <span class="lang-en">SmartThings:<br>Galaxy Connected Experience</span>
+                                            <span class="lang-kr">SmartThings:<br>갤럭시 에코 시스템 경험</span>
+                                        </div>
+                                        <div class="f-400-10" style="margin-top:2px;">
+                                            <span class="lang-en">Designed multi-device UX flows and visual strategies to showcase Galaxy ecosystem connectivity.</span>
+                                            <span class="lang-kr">갤럭시 생태계 연결성 체험을 위한 매장용 멀티 디바이스 앱 고객 여정 시나리오 설계 및 3D 영상 콘텐츠 기획</span>
+                                        </div>
                                     </div>
                                     <div class="exp-block">
                                         <div class="f-600-12">2H 2025</div>
-                                        <div class="f-400-12">Samsung Mobile Flagship Device Experience</div>
-                                        <div class="f-400-10" style="margin-top:2px;">Planned in-app media scenarios and interactive demo content to maximize feature delivery.</div>
+                                        <div class="f-400-12">
+                                            <span class="lang-en">Samsung Mobile<br>Flagship Device Experience</span>
+                                            <span class="lang-kr">Samsung Mobile<br>플래그십 디바이스 경험</span>
+                                        </div>
+                                        <div class="f-400-10" style="margin-top:2px;">
+                                            <span class="lang-en">Planned in-app media scenarios and interactive demo content to maximize feature delivery.</span>
+                                            <span class="lang-kr">신제품의 주요 기능을 강조하여 전달하기 위한 인앱 미디어 시나리오와 체험 콘텐츠 기획</span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -962,8 +1098,8 @@
                     </div>
                 </div>
 
-                <!-- COL 3 -->
-                <div class="bento-card card-capabilities" onclick="toggleFlip(this)">
+                <!-- COL 3: Capabilities -->
+                <div class="bento-card card-capabilities hover-trigger view-details" onclick="toggleExpand(this)">
                     <div class="card-inner">
                         <div class="card-front" style="padding-top: 15px; padding-left:20px; padding-bottom:20px">
                             <h3 class="card-title">Capabilities</h3>
@@ -983,7 +1119,7 @@
                             </div>
                         </div>
                         <div class="card-back" style="padding-top: 15px; padding-left:20px; padding-bottom:20px">
-                            <h4 class="sub-card-title">Tools</h4>
+                            <h3 class="card-title" >Tools</h3>
                             <div class="tools-vertical-list">
                                 <div class="tool-row-v">
                                     <span class="tool-cat-v">3D</span>
@@ -1001,22 +1137,42 @@
                                     <span class="tool-cat-v">Adobe</span>
                                     <span class="tool-items-v">Photoshop, Illustrator, Premiere Pro</span>
                                 </div>
+                                <div class="tool-row-v">
+                                    <span class="tool-cat-v">AI</span>
+                                    <span class="tool-items-v">Comfy UI, Midjourney</span>
+                                </div>
+                                <div class="tool-row-v">
+                                    <span class="tool-cat-v">Web</span>
+                                    <span class="tool-items-v">HTML5, CSS</span>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- COL 4 -->
+                <!-- COL 4: Connect & Circle -->
                 <div class="col-stack">
-                    <div class="bento-card card-connect" onclick="toggleFlip(this)">
+                    <div class="bento-card card-connect hover-trigger view-details" onclick="toggleContact(this)">
                         <div class="card-inner">
                             <div class="card-front" style="padding-top: 15px; padding-left:20px; padding-bottom:20px">
                                 <h4 class="sub-card-title">Connect</h4>
                                 <div class="connect-front-list">
-                                    <div class="f-600-12">Based in</div>
-                                    <div class="f-400-12 mb-8">Seoul(KST)</div>
-                                    <div class="f-600-12">Flexible</div>
-                                    <div class="f-400-12">Happy to discuss the right setup.</div>
+                                    <div class="f-600-12">
+                                        <span class="lang-en">Based in</span>
+                                        <span class="lang-kr">거주지</span>
+                                    </div>
+                                    <div class="f-400-12 mb-8">
+                                        <span class="lang-en">Seoul(KST)</span>
+                                        <span class="lang-kr">서울 (KST)</span>
+                                    </div>
+                                    <div class="f-600-12">
+                                        <span class="lang-en">Flexible</span>
+                                        <span class="lang-kr">근무 형태</span>
+                                    </div>
+                                    <div class="f-400-12">
+                                        <span class="lang-en">Happy to discuss the right setup.</span>
+                                        <span class="lang-kr">유연하게 협의 가능합니다.</span>
+                                    </div>
                                 </div>
                             </div>
                             <div class="card-back" style="padding-top: 15px; padding-left:20px; padding-bottom:20px">
@@ -1028,7 +1184,7 @@
                                     </div>
                                     <div class="contact-block">
                                         <div class="f-600-12">Linkedin</div>
-                                        <a href="https://www.google.com" target="_blank" class="f-400-12 contact-link">linkedin.com/in/hanuk</a>
+                                        <a href="https://www.linkedin.com/in/hnklee" target="_blank" class="f-400-12 contact-link" onclick="event.stopPropagation()">linkedin.com/in/hanuk</a>
                                     </div>
                                 </div>
                             </div>
@@ -1050,9 +1206,53 @@
         <p class="contact-simple">© 2026 Hanuk Lee. All rights reserved.</p>
     </footer>
 
+    <!-- EXTERNAL LIBRARIES -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    
+    <!-- [필수] Common Scripts -->
+    <script src="common.js" defer></script>
+
+    <!-- PAGE SPECIFIC SCRIPTS -->
     <script>
-        // Profile Flip
+        // ==========================================
+        // [추가된 핵심 코드] 헤더 스크롤 감지 로직 보장
+        // 외부 common.js에 문제가 있더라도 여기서 무조건 작동하도록 추가했습니다.
+        // ==========================================
+        document.addEventListener('DOMContentLoaded', () => {
+            let lastScrollTop = window.scrollY;
+            const header = document.getElementById('global-header');
+
+            if (header) {
+                window.addEventListener('scroll', () => {
+                    const currentScrollY = window.scrollY;
+
+                    // 최상단일 때
+                    if (currentScrollY <= 0) {
+                        header.classList.add('at-top');
+                        header.classList.remove('header-hidden');
+                    } else {
+                        header.classList.remove('at-top');
+                        
+                        // 아래로 스크롤 & 일정 높이 이상 내려왔을 때 숨김
+                        if (currentScrollY > lastScrollTop && currentScrollY > 60) {
+                            header.classList.add('header-hidden');
+                        } 
+                        // 위로 스크롤할 때 나타남
+                        else {
+                            header.classList.remove('header-hidden');
+                        }
+                    }
+                    lastScrollTop = currentScrollY;
+                }, { passive: true }); // 스크롤 성능 최적화
+            }
+        });
+
+        // Language Toggle Logic
+        function setLanguage(lang) {
+            document.body.setAttribute('data-lang', lang);
+        }
+
+        // Profile Flip (Keep this logic)
         function toggleProfile(card) {
             if (card.classList.contains('flipped')) {
                 card.classList.remove('flipped');
@@ -1061,181 +1261,165 @@
             }
         }
 
-        // Bento Grid Flip
-        function toggleFlip(card) {
-            if (card.classList.contains('flipped')) {
+        // ==========================================
+        //  Updated Expand Logic with Timer & State
+        // ==========================================
+        
+        let autoResetTimer = null;
+
+        // Reset all grid states
+        function resetGrid() {
+            const grid = document.querySelector('.bento-grid');
+            const allCols = grid.children;
+            const allCards = document.querySelectorAll('.bento-card');
+
+            // 1. Remove expanded from columns
+            for(let c of allCols) {
+                c.classList.remove('expanded');
+            }
+            // 2. Remove state from grid
+            grid.removeAttribute('data-state');
+
+            // 3. Unflip contact card if it was flipped
+            for(let card of allCards) {
                 card.classList.remove('flipped');
-                if (card.flipTimeout) {
-                    clearTimeout(card.flipTimeout);
-                    card.flipTimeout = null;
+            }
+
+            if(autoResetTimer) clearTimeout(autoResetTimer);
+        }
+
+        // Main Expand Function (Edu, Exp, Capa)
+        function toggleExpand(card) {
+            const col = card.closest('.bento-grid > div');
+            const grid = document.querySelector('.bento-grid');
+            const allCols = grid.children;
+            const isAlreadyExpanded = col.classList.contains('expanded');
+
+            // 1. Reset everything first
+            resetGrid();
+
+            // 2. If it wasn't expanded, expand it now
+            if(!isAlreadyExpanded) {
+                col.classList.add('expanded');
+                
+                // Determine width state based on card class
+                if (card.classList.contains('card-education')) {
+                    grid.setAttribute('data-state', 'education'); // Others -> 150px
+                } else {
+                    grid.setAttribute('data-state', 'medium');    // Others -> 200px
                 }
-            } else {
-                card.classList.add('flipped');
-                card.flipTimeout = setTimeout(() => {
-                    if (card.classList.contains('flipped')) {
-                        card.classList.remove('flipped');
-                    }
-                }, 5000);
+
+                // 3. Set Auto-Reset Timer (15 seconds)
+                autoResetTimer = setTimeout(() => {
+                    resetGrid();
+                }, 10000); 
             }
         }
 
-        // [수정됨] Custom Jelly Cursor Logic (레이어 분리형)
-        (function() {
-            // 레이어 1 (원)
-            const cursorBgLayer = document.getElementById('cursor-bg-layer');
-            const cursorCircle = document.getElementById('cursor-circle'); 
+        // Contact Card Logic
+        function toggleContact(card) {
+            const grid = document.querySelector('.bento-grid');
             
-            // 레이어 2 (텍스트)
+            if (card.classList.contains('flipped')) {
+                card.classList.remove('flipped');
+            } else {
+                card.classList.add('flipped');
+                
+                // Also set timer to unflip after 15s
+                if(autoResetTimer) clearTimeout(autoResetTimer);
+                autoResetTimer = setTimeout(() => {
+                    resetGrid();
+                }, 10000);
+            }
+        }
+
+        // 통합 Hover 관리 로직
+        window.addEventListener('load', () => {
+            const grid = document.querySelector('.bento-grid');
+            
+            // 그리드 전체에 대해 마우스가 올라가면 타이머 정지, 나가면 재개
+            grid.addEventListener('mouseenter', () => {
+                if(autoResetTimer) {
+                    clearTimeout(autoResetTimer);
+                    autoResetTimer = null;
+                }
+            }, true); // 캡처링 단계에서 감지
+
+            grid.addEventListener('mouseleave', () => {
+                // 어떤 카드라도 활성화(expanded 또는 flipped) 상태라면 타이머 재시작
+                const expanded = grid.querySelector('.expanded');
+                const flipped = grid.querySelector('.flipped');
+                if (expanded || flipped) {
+                    if(autoResetTimer) clearTimeout(autoResetTimer);
+                    autoResetTimer = setTimeout(() => {
+                        resetGrid();
+                    }, 15000);
+                }
+            }, true);
+        });
+
+
+        // Cursor Logic Supplement
+        document.addEventListener('mousemove', (e) => {
             const cursorTextLayer = document.getElementById('cursor-text-layer');
-            const cursorText = document.getElementById('cursor-text');      
-
-            let mouseX = window.innerWidth / 2;
-            let mouseY = window.innerHeight / 2;
-            let cursorX = mouseX;
-            let cursorY = mouseY;
-            let velX = 0;
-            let velY = 0;
-
-            document.addEventListener('mousemove', (e) => {
-                mouseX = e.clientX;
-                mouseY = e.clientY;
+            const cursorText = document.getElementById('cursor-text');
+            const profileCard = e.target.closest('.profile-card');
+            
+            if (profileCard && cursorText) {
+                const rect = profileCard.getBoundingClientRect();
+                const relX = e.clientX - rect.left;
+                const relY = e.clientY - rect.top;
+                const colWidth = rect.width / 3;
+                const rowHeight = rect.height / 3;
+                const isCenterCol = relX > colWidth && relX < colWidth * 2;
+                const isBottomTwoRows = relY > rowHeight;
                 
-                // [NEW] 프로필 카드 내부 호버 로직 (Spatial Detection)
-                const profileCard = e.target.closest('.profile-card');
-                if (profileCard) {
-                    const rect = profileCard.getBoundingClientRect();
-                    const relX = e.clientX - rect.left;
-                    const relY = e.clientY - rect.top;
-                    
-                    // Grid 3x3 Logic
-                    const colWidth = rect.width / 3;
-                    const rowHeight = rect.height / 3;
-                    
-                    const isCenterCol = relX > colWidth && relX < colWidth * 2;
-                    const isBottomTwoRows = relY > rowHeight;
-                    
-                    if (isCenterCol && isBottomTwoRows) {
-                        if (profileCard.classList.contains('flipped')) {
-                            cursorText.innerText = "It's also me!";
-                        } else {
-                            cursorText.innerText = "It's me!";
-                        }
+                if(cursorTextLayer) cursorTextLayer.classList.add('active-enter');
+
+                if (isCenterCol && isBottomTwoRows) {
+                    if (profileCard.classList.contains('flipped')) {
+                        cursorText.innerText = "It's also me!";
                     } else {
-                        cursorText.innerText = "Click";
-                    }
-                }
-            });
-
-            function animateCursor() {
-                const ease = 0.1; 
-                
-                const nextX = cursorX + (mouseX - cursorX) * ease;
-                const nextY = cursorY + (mouseY - cursorY) * ease;
-                
-                velX = nextX - cursorX;
-                velY = nextY - cursorY;
-                cursorX = nextX;
-                cursorY = nextY;
-                
-                const dist = Math.sqrt(velX * velX + velY * velY);
-                const angle = Math.atan2(velY, velX);
-                
-                const stretch = Math.min(dist * 0.1, 0.5); 
-                
-                const scaleX = 1 + stretch;        
-                const scaleY = 1 - stretch * 0.4; 
-                
-                // 1. 배경 레이어 이동 (원)
-                cursorBgLayer.style.transform = `translate3d(${cursorX}px, ${cursorY}px, 0)`;
-                // 2. 텍스트 레이어 이동 (동일하게 따라감)
-                cursorTextLayer.style.transform = `translate3d(${cursorX}px, ${cursorY}px, 0)`;
-                
-                // 원의 모양 변형
-                cursorCircle.style.transform = `rotate(${angle}rad) scale(${scaleX}, ${scaleY})`;
-
-                requestAnimationFrame(animateCursor);
-            }
-            animateCursor();
-
-            // [수정됨] 이벤트 위임 (두 레이어 모두 active 클래스 적용)
-            document.addEventListener('mouseover', (e) => {
-                const target = e.target.closest('a, button, .skill-item, .contact-btn, .bento-card, .circle-btn, .marquee-item, .marquee-item-wrapper, .lang-btn, .nav-link, .header-logo');
-                const profileCard = e.target.closest('.profile-card');
-                const circleBtn = e.target.closest('.circle-btn');
-
-                if (profileCard) {
-                    cursorBgLayer.classList.add('active-enter');
-                    cursorTextLayer.classList.add('active-enter');
-                } 
-                else if (circleBtn) {
-                    cursorBgLayer.classList.add('active-enter');
-                    cursorTextLayer.classList.add('active-enter');
-                    cursorText.innerText = "Works"; 
-                }
-                else if (target) {
-                    cursorBgLayer.classList.add('active-enter');
-                    cursorTextLayer.classList.add('active-enter');
-                    cursorText.innerText = ""; 
-                } 
-                else {
-                    cursorBgLayer.classList.remove('active-enter');
-                    cursorTextLayer.classList.remove('active-enter');
-                    cursorText.innerText = "";
-                }
-            });
-            
-        })();
-
-        // [New] Scroll Logic for Header & Logo
-        (function() {
-            let lastScrollY = 0;
-            const header = document.getElementById('global-header');
-            const heroText = document.querySelector('.hero-text-block');
-
-            // [NEW] 스크롤 임계값 동적 계산 (히어로 텍스트 위치 기준)
-            let hideThreshold = 0;
-            
-            function updateThreshold() {
-                if(heroText) {
-                    // 헤더 높이만큼 뺀 위치나, 텍스트 상단 위치에서 숨기기 시작
-                    hideThreshold = Math.max(50, heroText.offsetTop - 100); 
-                } else {
-                    hideThreshold = 100; // fallback
-                }
-            }
-            
-            updateThreshold();
-            window.addEventListener('resize', updateThreshold);
-
-            window.addEventListener('scroll', () => {
-                const currentScrollY = window.scrollY;
-
-                // 1. Logo Resize & Header Height Logic (At Top)
-                if (currentScrollY <= 10) {
-                    header.classList.add('at-top');
-                } else {
-                    header.classList.remove('at-top');
-                }
-
-                // 2. Header Hide/Show Logic
-                if (currentScrollY > hideThreshold) {
-                    if (currentScrollY > lastScrollY) {
-                        // 스크롤 내림 -> 헤더 숨김
-                        header.classList.add('header-hidden');
-                    } else {
-                        // 스크롤 올림 -> 헤더 보임
-                        header.classList.remove('header-hidden');
+                        cursorText.innerText = "It's me!";
                     }
                 } else {
-                    // 최상단 근처에서는 항상 보임
-                    header.classList.remove('header-hidden');
+                    cursorText.innerText = "Click";
                 }
+            }
+        });
 
-                lastScrollY = currentScrollY <= 0 ? 0 : currentScrollY;
+        // 커서 텍스트 오버라이드 로직
+        window.addEventListener('load', () => {
+            const cursorTextLayer = document.getElementById('cursor-text-layer');
+            const cursorText = document.getElementById('cursor-text');
+
+            if (!cursorTextLayer || !cursorText) return;
+
+            document.body.addEventListener('mouseover', (e) => {
+                const card = e.target.closest('.view-details');
+                // .view-details 클래스를 가진 요소 호버 시
+                if (card) {
+                    // 카드가 이미 펼쳐져 있거나(expanded) 뒤집힌(flipped) 상태면 텍스트 숨김
+                    if (card.classList.contains('expanded') || card.classList.contains('flipped')) {
+                        setTimeout(() => {
+                            cursorTextLayer.classList.remove('active-enter');
+                            cursorText.innerHTML = "";
+                        }, 0);
+                        return;
+                    }
+
+                    // common.js가 텍스트를 지우는 동작을 상쇄하기 위해 지연 실행
+                    setTimeout(() => {
+                        cursorTextLayer.classList.add('active-enter');
+                        cursorText.innerHTML = "View<br>Details";
+                        cursorText.style.textAlign = "center"; 
+                        cursorText.style.lineHeight = "1.2";
+                    }, 0);
+                }
             });
-        })();
+        });
 
-        // 3D Logic + Scroll
+        // 3D Logic + Scroll Sync
         (function() {
             const canvas = document.querySelector('#three-canvas');
             const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
@@ -1260,7 +1444,6 @@
             camera.position.set(10, 10, 10);
             camera.lookAt(0, 0, 0);
 
-            // Lights
             scene.add(new THREE.AmbientLight(0xffffff, 0.7));
             const point = new THREE.PointLight(0x2997ff, 0.8);
             point.position.set(5, 5, 5);
@@ -1272,11 +1455,8 @@
             const group = new THREE.Group();
             scene.add(group);
 
-            // [MODIFIED] 1. POINTS & LINES (Animated Drawing)
             const TOTAL_SIZE = 2.2;
             const boxGeo = new THREE.BoxGeometry(TOTAL_SIZE, TOTAL_SIZE, TOTAL_SIZE);
-            
-            // 1-1. Dot Cube (Vertices)
             const dotGeo = new THREE.BufferGeometry();
             const vertices = [];
             const posAttr = boxGeo.attributes.position;
@@ -1288,28 +1468,20 @@
             const dotCube = new THREE.Points(dotGeo, dotMat);
             group.add(dotCube);
 
-            // 1-2. Line Cube (Animated Edges)
             const edgesGeo = new THREE.EdgesGeometry(boxGeo);
             const lineMat = new THREE.LineDashedMaterial({ 
-                color: 0x2997ff, 
-                dashSize: 0, 
-                gapSize: 1000, 
-                transparent: true, 
-                opacity: 0.9 
+                color: 0x2997ff, dashSize: 0, gapSize: 1000, transparent: true, opacity: 0.9 
             });
             const lineCube = new THREE.LineSegments(edgesGeo, lineMat);
             lineCube.computeLineDistances();
             group.add(lineCube);
 
-            // 1-3. Solid Cube (Existing)
             const solidMat = new THREE.MeshPhysicalMaterial({
-                color: 0x2997ff, metalness: 0.0, roughness: 1.0, 
-                transparent: true, opacity: 0 
+                color: 0x2997ff, metalness: 0.0, roughness: 1.0, transparent: true, opacity: 0 
             });
             const solidCube = new THREE.Mesh(boxGeo, solidMat);
             group.add(solidCube);
 
-            // 2. CLONER SETS (Explosion)
             const unitGeo = new THREE.BoxGeometry(1, 1, 1);
             const clonerMat = new THREE.MeshPhysicalMaterial({
                 color: 0xe0e0e0, metalness: 0.0, roughness: 1.0
@@ -1326,7 +1498,6 @@
                 const mintColor = new THREE.Color(0x4fd1c5);
                 const baseColor = new THREE.Color(0xe0e0e0);
                 const maxDist = Math.sqrt(3 * Math.pow((gridCnt-1)/2, 2));
-
                 let idx = 0;
                 for(let x=0; x<gridCnt; x++){
                     for(let y=0; y<gridCnt; y++){
@@ -1337,24 +1508,18 @@
                             let pos = new THREE.Vector3(ix, iy, iz);
                             if (layoutType === 'rotated') pos.set(-iy, ix, iz); 
                             else if (layoutType === 'standard') pos.addScalar(0.2); 
-                            
                             data.push({
-                                ix: pos.x, iy: pos.y, iz: pos.z, 
-                                gap,        
+                                ix: pos.x, iy: pos.y, iz: pos.z, gap,        
                                 visualBase: baseScale.clone().multiplyScalar(0.9), 
                                 visualTarget: targetScale.clone().multiplyScalar(0.9),
-                                unitSize,
-                                randPhase: Math.random() * 100
+                                unitSize, randPhase: Math.random() * 100
                             });
-
                             dummy.position.set(0,0,0);
                             dummy.scale.set(0,0,0);
                             dummy.updateMatrix();
                             mesh.setMatrixAt(idx, dummy.matrix);
-                            
                             const dist = Math.sqrt(ix*ix + iy*iy + iz*iz);
                             const alpha = Math.min(1, dist / maxDist);
-
                             if (colorOrType === 'purple_gradient') {
                                 const t = alpha * alpha; 
                                 const c = baseColor.clone().lerp(purpleColor, t);
@@ -1381,41 +1546,27 @@
 
             const clock = new THREE.Clock();
             let state = 0; 
-            
             let currentDraw = 0; 
             let targetDraw = 0;  
-            
             let tempScale = new THREE.Vector3();
             const dummy = new THREE.Object3D();
 
             function animate() {
                 requestAnimationFrame(animate);
                 const time = clock.getElapsedTime() * 0.5;
-
-                // Rotation
                 if (state < 0.9) group.rotation.y += 0.005; 
                 else group.rotation.y += (Math.PI / 2 - group.rotation.y) * 0.05;
-
-                // [UPDATE] Auto Line Drawing Logic
                 currentDraw += (targetDraw - currentDraw) * 0.005;
+                lineCube.material.dashSize = currentDraw * 100;
                 
-                const maxDash = 100; 
-                lineCube.material.dashSize = currentDraw * maxDash;
-                
-                // 3D Logic (Explosion)
                 if(state > 0.9) {
                     const p = Math.max(0, state - 1.0); 
                     const spreadProgress = Math.min(p * 2.0, 1.0); 
                     const spread = 1.0 + (spreadProgress * 0.4);
-
                     allSets.forEach((set, sIdx) => {
                         let i = 0;
                         for(let data of set.data) {
-                            dummy.position.set(
-                                data.ix * data.gap * spread,
-                                data.iy * data.gap * spread,
-                                data.iz * data.gap * spread
-                            );
+                            dummy.position.set(data.ix * data.gap * spread, data.iy * data.gap * spread, data.iz * data.gap * spread);
                             const diag = data.ix + data.iy + data.iz; 
                             const val = time * 2.5 - diag - (sIdx * 2.5);
                             let scaleFactor = Math.pow((Math.sin(val) + 1) / 2, 1.5);
@@ -1423,7 +1574,6 @@
                             const morphProgress = Math.min(p * 1.5, 1.0);
                             const solidLookScale = new THREE.Vector3(data.unitSize, data.unitSize, data.unitSize);
                             tempScale.lerpVectors(solidLookScale, animatedScale, morphProgress);
-                            
                             dummy.scale.copy(tempScale);
                             dummy.updateMatrix();
                             set.mesh.setMatrixAt(i, dummy.matrix);
@@ -1450,7 +1600,6 @@
             }
             animate();
 
-            // SCROLL SYNC
             const section = document.getElementById('philosophy-section');
             const texts = [
                 document.getElementById('philo-text-intro'),
@@ -1460,71 +1609,28 @@
             ];
 
             function mapPercentToState(p) {
-                // [수정됨] 타이밍 조절
-                
-                // Phase 1: Wireframe (Intro ~ 01 구간)
-                if (p <= 0.40) {
-                    return 0; 
-                }
-                // Phase 2: Solidify (02 구간: 0.40 ~ 0.60)
-                else if (p <= 0.60) {
-                    return (p - 0.40) / 0.2; 
-                }
-                // Phase 3: Explode (03 구간: 0.60 이후)
-                else {
-                    return 1.0 + ((p - 0.60) / 0.40);
-                }
+                if (p <= 0.40) return 0; 
+                else if (p <= 0.60) return (p - 0.40) / 0.2; 
+                else return 1.0 + ((p - 0.60) / 0.40);
             }
 
             function updateCards(percent) {
-                // [수정됨] 스크롤 위치에 따라 0 또는 1로 명확하게 상태 변경 (구간 설정)
-                
-                // Helper: 텍스트 보임/숨김 처리
                 const setVisible = (index, isVisible, direction = 'up') => {
                     const el = texts[index];
                     if (isVisible) {
                         el.style.opacity = 1;
-                        el.style.transform = 'translateY(-50%)'; // 정위치
+                        el.style.transform = 'translateY(-50%)'; 
                     } else {
                         el.style.opacity = 0;
-                        // 안 보일 때 약간의 위치 이동으로 등장감을 줌 (취향에 따라 제거 가능)
-                        if (direction === 'up') {
-                            // 위로 사라짐 (Intro 등)
-                            el.style.transform = 'translateY(calc(-50% - 30px))';
-                        } else {
-                            // 아래로 대기 (나머지)
-                            el.style.transform = 'translateY(calc(-50% + 30px))';
-                        }
+                        el.style.transform = 'translateY(calc(-50% - 30px))'; // 더 위로 사라짐
+                        if (direction === 'up') el.style.transform = 'translateY(calc(-50% - 30px))';
+                        else el.style.transform = 'translateY(calc(-50% + 30px))';
                     }
                 };
-
-                // 1. Intro ("My Approach") : ~ 12%까지 보임
-                if (percent < 0.12) {
-                    setVisible(0, true);
-                } else {
-                    setVisible(0, false, 'up'); // 위로 사라짐
-                }
-
-                // 2. Text 01 : 15% ~ 38%
-                if (percent >= 0.15 && percent < 0.38) {
-                    setVisible(1, true);
-                } else {
-                    setVisible(1, false, 'down'); // 아래에서 대기
-                }
-
-                // 3. Text 02 : 40% ~ 63%
-                if (percent >= 0.40 && percent < 0.63) {
-                    setVisible(2, true);
-                } else {
-                    setVisible(2, false, 'down');
-                }
-
-                // 4. Text 03 : 65% ~ 끝
-                if (percent >= 0.65) {
-                    setVisible(3, true);
-                } else {
-                    setVisible(3, false, 'down');
-                }
+                if (percent < 0.12) setVisible(0, true); else setVisible(0, false, 'up'); 
+                if (percent >= 0.15 && percent < 0.38) setVisible(1, true); else setVisible(1, false, 'down'); 
+                if (percent >= 0.40 && percent < 0.63) setVisible(2, true); else setVisible(2, false, 'down');
+                if (percent >= 0.65) setVisible(3, true); else setVisible(3, false, 'down');
             }
 
             window.addEventListener('scroll', () => {
@@ -1532,37 +1638,22 @@
                 const secTop = section.offsetTop;
                 const secH = section.offsetHeight;
                 const winH = window.innerHeight;
-
                 let percent = (scrollY - secTop) / (secH - winH);
-                
-                if (percent > 0) {
-                    targetDraw = 1; 
-                } 
-                else if (percent < 0) {
-                    targetDraw = 0;
-                }
-
+                if (percent > 0) targetDraw = 1; else if (percent < 0) targetDraw = 0;
                 percent = Math.max(0, Math.min(1, percent));
-
                 updateCards(percent);
                 state = mapPercentToState(percent);
-
                 if (state < 1.0) {
                     const wireOp = Math.max(0, 1.0 - state * 2.0); 
-                    lineMat.opacity = wireOp;
-                    dotMat.opacity = wireOp;
-                    
-                    solidMat.opacity = state;
-                    allSets.forEach(s => s.mesh.visible = false);
+                    lineMat.opacity = wireOp; dotMat.opacity = wireOp;
+                    solidMat.opacity = state; allSets.forEach(s => s.mesh.visible = false);
                 } else {
                     const subP = state - 1.0;
-                    lineMat.opacity = 0; 
-                    dotMat.opacity = 0;
+                    lineMat.opacity = 0; dotMat.opacity = 0;
                     solidMat.opacity = Math.max(0, 1.0 - subP * 5.0); 
                     allSets.forEach(s => s.mesh.visible = true);
                 }
             });
-            
             window.addEventListener('resize', () => {
                 width = document.querySelector('.visual-col').clientWidth;
                 height = window.innerHeight;
@@ -1575,268 +1666,107 @@
                 camera.bottom = frustumSize / -2;
                 camera.updateProjectionMatrix();
             });
-
         })();
 
-        // [New] Image Marquee Population Logic & Drag Support
+        // 3D ROLODEX LOGIC (Stuck-in / Fan style) - 비활성화 처리
+        /*
         (function(){
-            const containerSection = document.getElementById('image-marquee-section');
+            const ring = document.getElementById('cylinder-ring');
             
-            containerSection.innerHTML = `
-                <div class="marquee-track-wrapper"><div class="marquee-track track-1" id="track-1"></div></div>
-                <div class="marquee-track-wrapper"><div class="marquee-track track-2" id="track-2"></div></div>
-                <div class="marquee-track-wrapper"><div class="marquee-track track-3" id="track-3"></div></div>
-            `;
-
-            const track1 = document.getElementById('track-1');
-            const track2 = document.getElementById('track-2');
-            const track3 = document.getElementById('track-3');
-
-            function randomInt(min, max) {
-                return Math.floor(Math.random() * (max - min + 1)) + min;
-            }
-
-            // [FIX] 화면 높이에 따라 이미지 배치를 유동적으로 조절하는 함수
-            function createMarqueeItems(start, end, container) {
-                // 현재 컨테이너 높이 계산 (노트북 등 작은 화면 대응)
-                const sectionHeight = containerSection.clientHeight;
+            // 카드 개수: 60개
+            const totalItems = 60; 
+            
+            // 링의 반지름 (800px)
+            const radius = 800; 
+            
+            for(let i=0; i<totalItems; i++) {
+                const div = document.createElement('div');
+                div.className = 'cylinder-item';
                 
-                for(let i=start; i<=end; i++) {
-                    
-                    // [구조 변경] Wrapper(위치) -> Item(디자인) -> Img
-                    const wrapper = document.createElement('div');
-                    wrapper.className = 'marquee-item-wrapper';
+                // 360도를 아이템 개수로 나눔
+                const angle = i * (360 / totalItems);
+                
+                // [배치 로직]
+                div.style.transform = `rotateY(${angle}deg) translateZ(${radius}px) rotateY(-90deg)`;
 
-                    const div = document.createElement('div');
-                    div.className = 'marquee-item';
-                    
-                    const h = randomInt(200, 320); 
-                    wrapper.style.height = `${h}px`; // 높이는 래퍼에 지정
+                const img = document.createElement('img');
+                const srcNum = (i % 36) + 1; // 1~36 이미지 순환
+                img.src = `assets/info_image/${srcNum}.png`;
+                img.alt = `Work ${srcNum}`;
+                
+                img.onerror = function() {
+                    this.style.display = 'none';
+                    div.style.backgroundColor = '#d0d0d5';
+                    div.innerHTML = `<span style="color:#fff; font-size:0.8rem;">${srcNum}</span>`;
+                    div.style.display = 'flex';
+                    div.style.alignItems = 'center';
+                    div.style.justifyContent = 'center';
+                };
 
-                    const mr = randomInt(300, 600);
-                    wrapper.style.marginRight = `${mr}px`; // 간격도 래퍼에 지정
-
-                    // [수정됨] 반응형 배치 로직
-                    // 이미지가 섹션 밖으로 튀어나가지 않도록 최대 Y값을 계산
-                    // sectionHeight - h(이미지 높이) - 50(여유 공간)
-                    const maxTop = sectionHeight - h - 50; 
-                    
-                    // maxTop이 음수면(이미지가 너무 크면) 0으로 고정
-                    const safeMaxTop = maxTop > 0 ? maxTop : 0;
-                    
-                    const mt = randomInt(0, safeMaxTop); 
-                    
-                    // 초기 위치 설정 (Wrapper가 담당)
-                    wrapper.style.transform = `translateY(${mt}px)`;
-                    
-                    const img = document.createElement('img');
-                    const imgNum = ((i - 1) % 36) + 1; 
-                    img.src = `assets/info_image/${imgNum}.png`;
-                    img.alt = `Work ${imgNum}`;
-                    
-                    img.onerror = function() {
-                        this.style.display = 'none';
-                        div.style.backgroundColor = '#d0d0d5';
-                        const w = Math.floor(h * (randomInt(8, 14) / 10)); 
-                        div.style.width = `${w}px`;
-                        div.innerText = `File?\n${imgNum}.png`; 
-                        div.style.color = '#fff';
-                        div.style.fontSize = '0.8rem';
-                        div.style.fontWeight = '400';
-                        div.style.display = 'flex';
-                        div.style.alignItems = 'center';
-                        div.style.justifyContent = 'center';
-                        div.style.textAlign = 'center';
-                        div.style.lineHeight = '1.2';
-                    };
-
-                    div.appendChild(img);
-                    wrapper.appendChild(div); // 래퍼 안에 아이템 넣기
-                    container.appendChild(wrapper); // 컨테이너에 래퍼 넣기
-                }
-            }
-
-            createMarqueeItems(1, 12, track1);
-            createMarqueeItems(13, 24, track2);
-            createMarqueeItems(25, 36, track3); 
-
-            function cloneContent(track) {
-                const items = Array.from(track.children);
-                items.forEach(item => {
-                    const clone = item.cloneNode(true);
-                    clone.setAttribute('aria-hidden', 'true');
-                    // 이벤트 리스너는 클론되지 않으므로 델리게이션(상위 요소 이벤트 위임) 방식 사용이 적합
-                    track.appendChild(clone);
+                div.appendChild(img);
+                if (ring) ring.appendChild(div);
+                
+                // 호버 이벤트
+                div.addEventListener('mouseenter', () => {
+                    div.style.transform = `rotateY(${angle}deg) translateZ(${radius + 50}px) rotateY(-90deg) scale(1.1)`;
+                    div.style.zIndex = 1000;
+                });
+                div.addEventListener('mouseleave', () => {
+                    div.style.transform = `rotateY(${angle}deg) translateZ(${radius}px) rotateY(-90deg)`;
+                    div.style.zIndex = '';
                 });
             }
-
-            cloneContent(track1);
-            cloneContent(track2);
-            cloneContent(track3);
-            
-            // ===============================================
-            // [NEW] Z-INDEX HOVER LOGIC (수정됨)
-            // ===============================================
-            // 마우스가 올라간 요소만 앞으로 가져오고, 트랙 전체는 건드리지 않음
-            containerSection.addEventListener('mouseover', (e) => {
-                const wrapper = e.target.closest('.marquee-item-wrapper');
-                if (wrapper) {
-                    // 1. 해당 아이템을 트랙 내에서 맨 앞으로
-                    wrapper.style.zIndex = 5000;
-                }
-            });
-
-            containerSection.addEventListener('mouseout', (e) => {
-                const wrapper = e.target.closest('.marquee-item-wrapper');
-                if (wrapper) {
-                    // 1. 아이템 z-index 초기화
-                    wrapper.style.zIndex = '';
-                }
-            });
-
-            // ===============================================
-            // [DRAG & DROP LOGIC] (Updated for Wrapper)
-            // ===============================================
-            let isDragging = false;
-            let dragItem = null; // 이것은 이제 wrapper가 됩니다.
-            let startX = 0, startY = 0;
-            let initialItemX = 0, initialItemY = 0;
-            let startTrackX = 0; 
-            let dragTrack = null;
-
-            containerSection.addEventListener('mousedown', startDrag);
-            window.addEventListener('mousemove', onDrag);
-            window.addEventListener('mouseup', endDrag);
-            
-            containerSection.addEventListener('touchstart', (e) => startDrag(e.touches[0]));
-            window.addEventListener('touchmove', (e) => onDrag(e.touches[0]));
-            window.addEventListener('touchend', endDrag);
-
-            function getTranslateX(el) {
-                const style = window.getComputedStyle(el);
-                const matrix = new WebKitCSSMatrix(style.transform);
-                return matrix.m41;
-            }
-
-            function startDrag(e) {
-                const target = e.target || e; 
-                // [수정] 래퍼를 찾습니다
-                const item = target.closest('.marquee-item-wrapper');
-                if (!item) return;
-
-                isDragging = true;
-                dragItem = item;
-                dragTrack = item.closest('.marquee-track');
-                item.classList.add('dragging');
-
-                startX = e.clientX;
-                startY = e.clientY;
-
-                const style = window.getComputedStyle(item);
-                const matrix = new WebKitCSSMatrix(style.transform);
-                initialItemX = matrix.m41;
-                initialItemY = matrix.m42;
-
-                startTrackX = getTranslateX(dragTrack);
-            }
-
-            function onDrag(e) {
-                if (!isDragging || !dragItem) return;
-                
-                const dx = e.clientX - startX;
-                const dy = e.clientY - startY;
-
-                const currentTrackX = getTranslateX(dragTrack);
-                const trackDiff = currentTrackX - startTrackX; 
-
-                let newX = initialItemX + dx - trackDiff;
-                let newY = initialItemY + dy;
-
-                const itemHeight = dragItem.offsetHeight; 
-                const sectionHeight = containerSection.clientHeight; 
-
-                const topLimit = 50; 
-                if (newY < topLimit) {
-                     newY = topLimit; 
-                }
-                
-                const bottomLimit = sectionHeight - itemHeight - 50;
-                if (newY > bottomLimit) {
-                     newY = bottomLimit; 
-                }
-
-                dragItem.style.transform = `translate(${newX}px, ${newY}px)`;
-                // scale은 CSS가 처리하도록 둡니다 (transform 속성을 분리할 수 없으므로 JS에선 translate만)
-                // 단, dragging 클래스가 붙으면 CSS에서 scale(1.05)를 덮어씁니다.
-            }
-
-            function endDrag() {
-                if (isDragging && dragItem) {
-                    dragItem.classList.remove('dragging');
-                }
-                isDragging = false;
-                dragItem = null;
-                dragTrack = null;
-            }
-
         })();
+        */
 
-        // [New] Loading Logic
+        // Loading Logic (Smooth Slide Up)
         (function() {
-            // 스크롤 잠금
             document.body.style.overflow = 'hidden';
-
+            
             const loader = document.getElementById('loading-screen');
-            const percentEl = document.getElementById('loading-percent');
-            const barEl = document.getElementById('loading-bar');
+            const percentEl = document.getElementById('loader-percent');
+            const circle = document.querySelector('.progress-ring__circle');
             
-            // [NEW] 트랜지션 커튼 (검은 배경)
-            const entryCurtain = document.getElementById('page-entry-curtain');
+            if(!circle) return;
 
-            let loadPercent = 0;
-            
-            const interval = setInterval(() => {
-                if (loadPercent < 90) {
-                    loadPercent += Math.floor(Math.random() * 5) + 1;
-                    if(loadPercent > 90) loadPercent = 90;
+            const radius = circle.r.baseVal.value;
+            const circumference = radius * 2 * Math.PI;
+
+            // 초기 설정
+            circle.style.strokeDasharray = `${circumference} ${circumference}`;
+            circle.style.strokeDashoffset = circumference;
+
+            const loadingState = { value: 0 };
+
+            // GSAP Animation
+            gsap.to(loadingState, {
+                value: 100,
+                duration: 2.0, 
+                ease: "power2.inOut",
+                onUpdate: () => {
+                    const progress = Math.round(loadingState.value);
+                    if(percentEl) percentEl.innerText = `${progress}%`;
                     
-                    percentEl.innerText = loadPercent;
-                    barEl.style.width = loadPercent + '%';
-                }
-            }, 100);
+                    const offset = circumference - (progress / 100) * circumference;
+                    circle.style.strokeDashoffset = offset;
+                },
+                onComplete: () => {
+                    // 1. 로더 내부 요소(원, 텍스트)만 먼저 투명하게
+                    gsap.to('.loader-wrapper', { opacity: 0, duration: 0.5 });
 
-            // 로딩 완료
-            function finishLoading() {
-                clearInterval(interval);
-                
-                percentEl.innerText = 100;
-                barEl.style.width = '100%';
-
-                // [순서]
-                // 1. 로딩 숫자/바 사라짐
-                // 2. 검은 커튼이 아래로 내려가며 화면을 보여줌
-                
-                setTimeout(() => {
-                    // 로딩 텍스트/바 숨김
-                    loader.classList.add('hidden');
-                    loader.style.display = 'none';
-
-                    // 커튼 걷어내기 (위에서 덮고 있으므로 아래로 내림: top 0 -> 100%)
-                    gsap.to(entryCurtain, {
-                        top: "100%", 
-                        duration: 0.8,
+                    // 2. 검정 배경 자체가 위로 부드럽게 올라가며(Curtain Slide) 사이트 공개
+                    gsap.to(loader, {
+                        top: "-100%", 
+                        duration: 1.2, 
                         ease: "power3.inOut",
+                        delay: 0.1, // 원이 사라지기 시작한 직후 슬라이드 시작
                         onComplete: () => {
-                            entryCurtain.style.display = 'none';
-                            document.body.style.overflow = ''; // 스크롤 잠금 해제
+                            loader.style.display = 'none';
+                            document.body.style.overflow = '';
                         }
                     });
-
-                }, 500);
-            }
-
-            window.addEventListener('load', finishLoading);
-            setTimeout(finishLoading, 5000);
+                }
+            });
         })();
     </script>
 </body>

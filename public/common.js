@@ -83,7 +83,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // 애니메이션 루프
         const animateCursor = () => {
             // 1. Follow Logic (Ease를 0.08로 설정하여 부드러운 뒤따름 효과)
-            const ease = 0.08; 
+            const ease = 0.1; 
             const nextX = cursorX + (mouseX - cursorX) * ease;
             const nextY = cursorY + (mouseY - cursorY) * ease;
             

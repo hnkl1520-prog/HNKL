@@ -14,15 +14,115 @@
     <!-- GSAP (필수 애니메이션 라이브러리) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- [추가] 프리로더 & 썸네일 비율 스타일 -->
+    <style>
+        /* [수정] 프리로더 전체 컨테이너 - 검정 배경 */
+        #preloader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #000000; /* 검정 배경 */
+            z-index: 9999;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* 로더 래퍼 */
+        .loader-wrapper {
+            position: relative;
+            width: 120px;
+            height: 120px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* SVG 원형 그래프 */
+        .progress-ring {
+            transform: rotate(-90deg); /* 12시 방향부터 시작하도록 회전 */
+            transform-origin: 50% 50%;
+        }
+
+        .progress-ring__circle-bg {
+            stroke: #333333; /* 어두운 회색 트랙 */
+        }
+
+        .progress-ring__circle {
+            stroke: url(#loader-gradient); /* 그라데이션 적용 */
+            transition: stroke-dashoffset 0.1s linear;
+        }
+
+        /* 가운데 숫자 텍스트 - 흰색 */
+        .loader-text {
+            position: absolute;
+            font-family: 'Pretendard', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #ffffff; /* 흰색 텍스트 */
+            text-align: center;
+        }
+        
+        /* [수정] 16:9 비율 설정을 위한 CSS 오버라이드 */
+        /* .mode-projects 클래스가 붙었을 때만 16:9 적용 */
+        .works-grid.mode-projects .thumb-wrapper {
+            aspect-ratio: 16 / 9 !important;
+            height: auto !important; /* 높이값 초기화하여 비율 따르도록 */
+        }
+        
+        .thumb-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+    </style>
 </head>
 <body>
+
+    <!-- [수정] 원형 프리로더 (검정 배경 + 키 컬러 그라데이션) -->
+    <div id="preloader">
+        <div class="loader-wrapper">
+            <!-- SVG Circle -->
+            <svg class="progress-ring" width="120" height="120">
+                <defs>
+                    <linearGradient id="loader-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stop-color="#2997ff" />
+                        <stop offset="100%" stop-color="#9c6dff" />
+                    </linearGradient>
+                </defs>
+                <!-- 배경 원 (어두운 회색) -->
+                <circle 
+                    class="progress-ring__circle-bg"
+                    stroke-width="4"
+                    fill="transparent"
+                    r="52"
+                    cx="60"
+                    cy="60"
+                />
+                <!-- 진행 원 (그라데이션) -->
+                <circle 
+                    class="progress-ring__circle"
+                    stroke-width="4"
+                    fill="transparent"
+                    r="52"
+                    cx="60"
+                    cy="60"
+                />
+            </svg>
+            <!-- 가운데 숫자 -->
+            <div class="loader-text" id="loader-percent">0%</div>
+        </div>
+    </div>
 
     <!-- 헤더 (ID: global-header 필수) -->
     <header id="global-header" class="at-top">
         <div class="header-inner">
             <div class="header-left">
-                <!-- [수정] 로고 경로: assets/logo.svg -->
-                <a href="index.html" class="header-logo hover-trigger">
+                <!-- 로고는 메인(또는 about)으로 이동 -->
+                <a href="about.html" class="header-logo hover-trigger">
                     <img src="assets/logo.svg" alt="HANUK Logo">
                 </a>
                 <nav class="header-nav">
@@ -38,10 +138,7 @@
         </div>
     </header>
 
-    <!-- 페이지 전환 커튼 -->
-    <div id="page-entry-curtain"></div>
-
-    <!-- 커스텀 젤리 커서 (common.js가 이 ID를 찾아서 움직입니다) -->
+    <!-- 커스텀 젤리 커서 -->
     <div id="cursor-bg-layer">
         <div id="cursor-circle"></div>
     </div>
@@ -62,7 +159,6 @@
         <!-- 움직이는 배경 (쫀득이) -->
         <div class="dock-pill" id="dock-pill"></div>
         
-        <!-- [수정] 아이콘 경로: public/assets -> assets/ -->
         <button onclick="switchCategory('projects', this)" class="dock-btn active hover-trigger" id="btn-projects">
             <img src="assets/Projects.svg" class="dock-icon" alt="Projects Icon">
             <span>Projects</span>
@@ -74,32 +170,29 @@
         </button>
     </nav>
 
-    <!-- [연결] 공통 스크립트 (커서, 헤더 스크롤 로직은 여기서 처리) -->
+    <!-- [연결] 공통 스크립트 -->
     <script src="common.js"></script>
 
-    <!-- 페이지 전용 스크립트 (데이터, 렌더링, 독 인터랙션) -->
+    <!-- 페이지 전용 스크립트 -->
     <script>
         // ===============================================
         // DATA
         // ===============================================
-        // [수정] 각 데이터에 'url' 속성을 추가하여 이동할 페이지를 지정했습니다.
         const projectsData = [
-            { title: "SmartThings: Connected Experience", cat: "UX/UI Design", img: "project_01.png", url: "404.html" },
-            { title: "Samsung Global Retail System", cat: "Service Design", img: "project_02.png", url: "404.html" },
-            { title: "Future Mobility Dashboard", cat: "Automotive UX", img: "project_03.png", url: "404.html" },
-            { title: "Generative AI Campaign", cat: "Web Promotion", img: "project_04.png", url: "404.html" },
-            { title: "Financial App Renewal", cat: "App Design", img: "project_05.png", url: "404.html" },
-            { title: "Sustainable Packaging", cat: "Branding", img: "project_06.png", url: "404.html" }
+            { title: "VIBRA: XR FOOTBALL BROADCASTING SERIVCE", cat: "XR, UX, INTERACTION", img: "VIBRA_Thumb.png", url: "404.html" },
+            { title: "REST MODE", cat: "Mobility, UX, UI", img: "Restmode_Thumb.png", url: "404.html" },
+            { title: "SWIG : a Smart Golf Cart", cat: "Mobility, UX, UI", img: "SWIG_Thumb.png", url: "404.html" },
+            { title: "VA PLAY", cat: "AR, Mobile Service", img: "VA_PLAY_Thumb.png", url: "404.html" },
+            { title: "CAP:US ", cat: "App Design", img: "CAPUS_Thumb.png", url: "404.html" },
+            { title: "KORAIL EDUCATION APP", cat: "UX, UI, AR, 3D", img: "project_06.png", url: "404.html" }
         ];
 
         const labsData = [
-            // [요청 반영] 1~3번 항목을 works/Labs/Untitled_XX.html 로 연결
+            { title: "Blur", cat: "Creative Coding", img: "lab_03.png", url: "works/Labs/Blur.html" },
             { title: "Untitled_01", cat: "Creative Coding", img: "lab_01.png", url: "works/Labs/Untitled_01.html" },
-            { title: "Untitled_02", cat: "Motion Graphic", img: "lab_02.png", url: "works/Labs/Untitled_02.html" },
-            { title: "Untitled_03f", cat: "Spark AR", img: "lab_03.png", url: "works/Labs/Untitled_03.html" },
-            // 나머지는 아직 없으므로 404 처리 (필요시 수정)
-            { title: "Procedural Texture Gen", cat: "WebGL", img: "lab_04.png", url: "404.html" },
-            { title: "Interactive Cube", cat: "3D Interaction", img: "lab_05.png", url: "404.html" }
+            { title: "Untitled_02", cat: "Creative Coding", img: "lab_02.png", url: "works/Labs/Untitled_02.html" },
+            
+ 
         ];
 
         let currentCategory = 'projects';
@@ -108,23 +201,62 @@
         // INITIALIZATION
         // ===============================================
         window.addEventListener('load', () => {
-            // 1. 페이지 로드 커튼 효과
-            const curtain = document.getElementById('page-entry-curtain');
-            if(curtain) {
-                gsap.to(curtain, {
-                    top: "100%", duration: 0.8, ease: "power3.inOut", delay: 0.2,
-                    onComplete: () => { curtain.style.display = 'none'; }
-                });
-            }
-
-            // 2. 초기 데이터 렌더링
-            renderWorks('projects');
-            
-            // 3. 독(Dock) 초기 위치 설정
-            const initialBtn = document.getElementById('btn-projects');
-            if(initialBtn) movePill(initialBtn, true); 
+            initPreloader(() => {
+                // 로딩이 끝난 후 실행될 콜백
+                renderWorks('projects');
+                
+                // 독(Dock) 초기 위치 설정
+                const initialBtn = document.getElementById('btn-projects');
+                if(initialBtn) movePill(initialBtn, true); 
+            });
         });
 
+        // [수정] 원형 프리로더 로직 (About 페이지와 동일한 Slide Up 효과 적용)
+        function initPreloader(onCompleteCallback) {
+            // 스크롤 잠금
+            document.body.style.overflow = 'hidden';
+
+            const circle = document.querySelector('.progress-ring__circle');
+            const radius = circle.r.baseVal.value;
+            const circumference = radius * 2 * Math.PI; 
+            
+            const textElement = document.getElementById('loader-percent');
+            const preloader = document.getElementById('preloader');
+
+            circle.style.strokeDasharray = `${circumference} ${circumference}`;
+            circle.style.strokeDashoffset = circumference;
+
+            const loading = { value: 0 };
+
+            gsap.to(loading, {
+                value: 100,
+                duration: 2.0, // About 페이지와 동일하게 2초
+                ease: "power2.inOut",
+                onUpdate: () => {
+                    const progress = Math.round(loading.value);
+                    textElement.innerText = `${progress}%`;
+                    const offset = circumference - (progress / 100) * circumference;
+                    circle.style.strokeDashoffset = offset;
+                },
+                onComplete: () => {
+                    // 1. 로더 내부 요소(원, 텍스트)만 먼저 투명하게
+                    gsap.to('.loader-wrapper', { opacity: 0, duration: 0.5 });
+
+                    // 2. 검정 배경 자체가 위로 부드럽게 올라가며(Curtain Slide) 사이트 공개
+                    gsap.to(preloader, {
+                        top: "-100%", 
+                        duration: 1.2, 
+                        ease: "power3.inOut",
+                        delay: 0.1, // 원이 사라지기 시작한 직후 슬라이드 시작
+                        onComplete: () => {
+                            preloader.style.display = 'none';
+                            document.body.style.overflow = ''; // 스크롤 잠금 해제
+                            if(onCompleteCallback) onCompleteCallback();
+                        }
+                    });
+                }
+            });
+        }
 
         // ===============================================
         // GALLERY LOGIC
@@ -134,13 +266,27 @@
             const grid = document.getElementById('works-grid');
             const data = category === 'projects' ? projectsData : labsData;
             
+            // [수정] 16:9 비율 제어를 위한 클래스 토글
+            if (category === 'projects') {
+                grid.classList.add('mode-projects');
+                grid.classList.remove('mode-labs');
+            } else {
+                grid.classList.add('mode-labs');
+                grid.classList.remove('mode-projects');
+            }
+
+            // [수정] 카테고리별 이미지 경로 설정
+            let basePath = '';
+            if (category === 'projects') {
+                basePath = 'works/Projects/Thumbs'; // Projects 경로
+            } else {
+                basePath = 'assets/works/thumb';    // Labs 경로 (기존 유지)
+            }
+
             grid.innerHTML = ''; 
 
             data.forEach((item, index) => {
-                // 썸네일 경로: assets/works/thumb
-                const imgSrc = `assets/works/thumb/${item.img}`;
-                
-                // 링크 설정: 데이터에 url이 있으면 사용, 없으면 404.html
+                const imgSrc = `${basePath}/${item.img}`;
                 const linkUrl = item.url ? item.url : '404.html';
                 
                 const html = `
@@ -200,19 +346,16 @@
             if (currentCategory === category) return;
             currentCategory = category;
 
-            // 버튼 상태 업데이트 & 알약 이동
             document.querySelectorAll('.dock-btn').forEach(btn => btn.classList.remove('active'));
             clickedBtn.classList.add('active');
             movePill(clickedBtn);
 
-            // 다크모드/라이트모드 전환 (Labs 클릭 시 다크모드)
             if (category === 'labs') {
                 document.body.classList.add('dark-mode');
             } else {
                 document.body.classList.remove('dark-mode');
             }
 
-            // 기존 목록 퇴장 후 새 목록 로드
             const oldItems = document.querySelectorAll('.work-item');
             gsap.to(oldItems, {
                 opacity: 0, y: -20, duration: 0.3, stagger: 0.02,

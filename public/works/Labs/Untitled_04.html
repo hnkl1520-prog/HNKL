@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Uniform Ice Glass</title>
+    <style>
+        @import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.8/dist/web/static/pretendard.css");
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #000000;
+            font-family: 'Pretendard', sans-serif;
+        }
+
+        #canvas-container {
+            width: 100vw;
+            height: 100vh;
+            display: block;
+        }
+
+        #ui-container {
+            position: absolute;
+            bottom: 10%;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+            z-index: 10;
+            pointer-events: none;
+            width: auto;
+        }
+
+        /* [수정] 입력창 크기 대폭 축소 */
+        .input-wrapper {
+            position: relative;
+            pointer-events: auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(10, 10, 10, 0.6); 
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            padding: 8px 20px; /* 패딩 축소 */
+            border-radius: 9999px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 4px 20px 0 rgba(0, 0, 0, 0.5);
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+
+        .input-wrapper:hover, .input-wrapper:focus-within {
+            border-color: rgba(255, 255, 255, 0.3);
+            background: rgba(20, 20, 20, 0.8);
+            box-shadow: 0 8px 30px 0 rgba(0, 0, 0, 0.7);
+            transform: translateY(-1px);
+        }
+
+        input[type="text"] {
+            width: 140px; /* [수정] 너비 대폭 축소 */
+            background: transparent;
+            border: none;
+            color: #ffffff;
+            font-size: 1.0rem; /* [수정] 폰트 사이즈 축소 */
+            font-weight: 600;
+            font-family: 'Pretendard', sans-serif;
+            text-align: center;
+            outline: none;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        
+        input::placeholder {
+            color: rgba(255, 255, 255, 0.2);
+            font-weight: 400;
+            font-family: 'Pretendard', sans-serif;
+            letter-spacing: 1px;
+        }
+
+        #loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #444;
+            z-index: 9999;
+            transition: opacity 0.5s;
+            font-size: 0.9rem;
+            letter-spacing: 2px;
+            font-weight: 400;
+            font-family: 'Pretendard', sans-serif;
+        }
+    </style>
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+</head>
+<body>
+
+    <div id="loader">INITIALIZING...</div>
+
+    <div id="canvas-container"></div>
+
+    <div id="ui-container">
+        <div class="input-wrapper">
+            <input type="text" id="text-input" placeholder="" maxlength="15" spellcheck="false" autocomplete="off" value="">
+        </div>
+    </div>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+        import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+
+        const CONFIG = {
+            textResolution: 0.35, 
+            minBlockWidth: 5,     
+            maxBlockWidth: 10,    
+            minBlockHeight: 5,    
+            maxBlockHeight: 12,   
+            
+            baseDepth: 3.0,       
+            animAmpZ: 1.5,        
+            animSpeed: 1.2,       
+            
+            glassColor: 0xffffff,       
+            emissiveColor: 0x000000,
+            attenuationColor: 0x44ccff, 
+        };
+
+        let scene, camera, renderer, controls;
+        let instancedMesh = null;
+        let particles = [];
+        let dummy = new THREE.Object3D();
+        let noiseTexture = null; 
+        
+        let bgParticlesMesh = null;
+        
+        const textCanvas = document.createElement('canvas');
+        const textCtx = textCanvas.getContext('2d', { willReadFrequently: true });
+
+        function createNoiseTexture() {
+            const size = 512;
+            const canvas = document.createElement('canvas');
+            canvas.width = size;
+            canvas.height = size;
+            const ctx = canvas.getContext('2d');
+            
+            ctx.fillStyle = '#808080';
+            ctx.fillRect(0, 0, size, size);
+
+            for (let i = 0; i < 20000; i++) {
+                const x = Math.random() * size;
+                const y = Math.random() * size;
+                const radius = Math.random() * 2 + 0.5;
+                const grey = Math.floor(Math.random() * 255);
+                
+                ctx.beginPath();
+                ctx.arc(x, y, radius, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(${grey}, ${grey}, ${grey}, 0.1)`;
+                ctx.fill();
+            }
+
+            for (let i = 0; i < 50; i++) {
+                const x = Math.random() * size;
+                const y = Math.random() * size;
+                const w = Math.random() * 100 + 50;
+                const h = Math.random() * 100 + 50;
+                
+                const grad = ctx.createRadialGradient(x, y, 0, x, y, w/2);
+                grad.addColorStop(0, 'rgba(255, 255, 255, 0.05)');
+                grad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+                
+                ctx.fillStyle = grad;
+                ctx.fillRect(x - w/2, y - h/2, w, h);
+            }
+
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.wrapS = THREE.RepeatWrapping;
+            texture.wrapT = THREE.RepeatWrapping;
+            return texture;
+        }
+
+        function init() {
+            const container = document.getElementById('canvas-container');
+
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x050505); 
+
+            camera = new THREE.PerspectiveCamera(35, window.innerWidth / window.innerHeight, 0.1, 2000); // far plane 증가
+            camera.position.set(0, 0, 130); 
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: "high-performance" });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            renderer.toneMappingExposure = 1.8; 
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            container.appendChild(renderer.domElement);
+
+            noiseTexture = createNoiseTexture();
+            createBackgroundParticles(); 
+
+            const pmremGenerator = new THREE.PMREMGenerator(renderer);
+            scene.environment = pmremGenerator.fromScene(new RoomEnvironment(), 0.04).texture;
+
+            // --- 조명 시스템 전면 개편 (균일성 확보) ---
+            // PointLight, SpotLight, RectAreaLight 모두 제거.
+            // 오직 DirectionalLight와 AmbientLight만 사용.
+
+            const ambient = new THREE.AmbientLight(0x444444, 2.5); 
+            scene.add(ambient);
+
+            // 1. Key Light (Main) - 우측 상단에서 전체적으로 비춤
+            const keyLight = new THREE.DirectionalLight(0xddeeff, 200.0); 
+            keyLight.position.set(50, 50, 100); 
+            keyLight.castShadow = true;
+            // 그림자 범위 대폭 확장 (글자가 길어져도 그림자 잘림 방지)
+            keyLight.shadow.camera.left = -2000;
+            keyLight.shadow.camera.right = 2000;
+            keyLight.shadow.camera.top = 2000;
+            keyLight.shadow.camera.bottom = -2000;
+            keyLight.shadow.mapSize.width = 4096;
+            keyLight.shadow.mapSize.height = 4096;
+            keyLight.shadow.bias = -0.0001;
+            scene.add(keyLight);
+
+            // 2. Fill Light - 좌측에서 그림자 완화 (균일도 핵심)
+            const fillLight = new THREE.DirectionalLight(0xddeeff, 1.0);
+            fillLight.position.set(-50, 0, 100);
+            scene.add(fillLight);
+
+            // 3. Back Light - 뒤에서 비추어 투명도 강조
+            const backLight = new THREE.DirectionalLight(0x44ccff, 3.0); 
+            backLight.position.set(0, 50, -100);
+            scene.add(backLight);
+
+            // 4. Rim Light (Top) - 윗면 하이라이트
+            const topLight = new THREE.DirectionalLight(0xffffff, 1.0);
+            topLight.position.set(0, 100, 0);
+            scene.add(topLight);
+
+            // Controls
+            controls = new OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.enablePan = false;
+            
+            controls.enableZoom = true; 
+            controls.zoomSpeed = 0.5; 
+            
+            controls.minDistance = 20;
+            controls.maxDistance = 2000;
+
+            window.addEventListener('resize', onWindowResize);
+            
+            const input = document.getElementById('text-input');
+            input.addEventListener('input', (e) => {
+                const val = e.target.value.toUpperCase();
+                if(window.updateTimeout) clearTimeout(window.updateTimeout);
+                window.updateTimeout = setTimeout(() => generateText(val), 100);
+            });
+
+            setTimeout(() => {
+                document.getElementById('loader').style.opacity = '0';
+                setTimeout(() => document.getElementById('loader').remove(), 500);
+            }, 800);
+
+            animate();
+        }
+
+        function createBackgroundParticles() {
+            const count = 2000; 
+            const geometry = new THREE.BufferGeometry();
+            const positions = [];
+            
+            for(let i=0; i<count; i++) {
+                const x = (Math.random() - 0.5) * 500; 
+                const y = (Math.random() - 0.5) * 500;
+                const z = (Math.random() - 0.5) * 300; 
+                positions.push(x, y, z);
+            }
+            
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+            
+            const material = new THREE.PointsMaterial({
+                color: 0x88ccff,
+                size: 0.15, 
+                transparent: true,
+                opacity: 0.6,
+                blending: THREE.AdditiveBlending
+            });
+            
+            bgParticlesMesh = new THREE.Points(geometry, material);
+            scene.add(bgParticlesMesh);
+        }
+
+        function fitCameraToSelection(width, height) {
+            const fov = camera.fov * (Math.PI / 180);
+            const aspect = camera.aspect;
+            
+            const distanceH = width / (2 * Math.tan(fov / 2) * aspect);
+            const distanceV = height / (2 * Math.tan(fov / 2));
+            
+            // [수정] 여유 공간(Padding)을 1.5 -> 2.0으로 늘려서 양끝이 절대 잘리지 않게 함
+            const finalDist = Math.max(distanceH, distanceV) * 2.0 + 50;
+            
+            camera.position.set(0, 0, finalDist);
+            camera.lookAt(0, 0, 0);
+            controls.target.set(0, 0, 0);
+        }
+
+        function generateText(text) {
+            if (!text || text.trim() === "") {
+                if (instancedMesh) {
+                    scene.remove(instancedMesh);
+                    instancedMesh.geometry.dispose();
+                    instancedMesh.material.dispose();
+                    instancedMesh = null;
+                }
+                return;
+            }
+            
+            text = text.toUpperCase();
+
+            if (instancedMesh) {
+                scene.remove(instancedMesh);
+                instancedMesh.geometry.dispose();
+                instancedMesh.material.dispose();
+                instancedMesh = null;
+            }
+            particles = [];
+
+            const fontSize = 200; 
+            // [수정] 캔버스 너비 계산식 변경: 글자수 * 300px로 넉넉하게 확보하여 잘림 방지
+            const canvasW = Math.max(1024, text.length * 300); 
+            const canvasH = 350;
+            
+            textCanvas.width = canvasW;
+            textCanvas.height = canvasH;
+            textCtx.fillStyle = '#000000';
+            textCtx.fillRect(0, 0, canvasW, canvasH);
+            
+            textCtx.letterSpacing = "15px"; 
+            textCtx.font = `900 ${fontSize}px "Pretendard", "Arial Black", sans-serif`; 
+            textCtx.fillStyle = '#FFFFFF';
+            textCtx.textAlign = 'center';
+            textCtx.textBaseline = 'middle';
+            textCtx.fillText(text, canvasW / 2, canvasH / 2);
+
+            const imageData = textCtx.getImageData(0, 0, canvasW, canvasH);
+            const data = imageData.data;
+
+            let minX = Infinity, maxX = -Infinity;
+            let minY = Infinity, maxY = -Infinity;
+            let currentX = 0;
+            const scale = 0.12; 
+
+            while (currentX < canvasW) {
+                let sliceWidth = Math.floor(Math.random() * (CONFIG.maxBlockWidth - CONFIG.minBlockWidth + 1)) + CONFIG.minBlockWidth;
+                if (currentX + sliceWidth > canvasW) sliceWidth = canvasW - currentX;
+
+                let currentY = 0;
+                while (currentY < canvasH) {
+                    let sliceHeight = Math.floor(Math.random() * (CONFIG.maxBlockHeight - CONFIG.minBlockHeight + 1)) + CONFIG.minBlockHeight;
+                    if (currentY + sliceHeight > canvasH) sliceHeight = canvasH - currentY;
+
+                    const checkX = Math.floor(currentX + sliceWidth / 2);
+                    const checkY = Math.floor(currentY + sliceHeight / 2);
+                    
+                    if (checkX < canvasW && checkY < canvasH) {
+                        const index = (checkY * canvasW + checkX) * 4;
+                        if (data[index] > 100) { 
+                            const w = sliceWidth * scale;
+                            const h = sliceHeight * scale;
+                            
+                            const posX = (currentX + sliceWidth / 2) * scale;
+                            const posY = -(currentY + sliceHeight / 2) * scale;
+
+                            particles.push({
+                                x: posX,
+                                y: posY,
+                                z: 0,
+                                baseScaleX: Math.max(0.1, w),
+                                baseScaleY: Math.max(0.1, h),
+                                phase: Math.random() * Math.PI * 2, 
+                                speed: 0.5 + Math.random() * 1.5, 
+                                ampRandom: 0.5 + Math.random() * 1.0 
+                            });
+
+                            if (posX < minX) minX = posX;
+                            if (posX > maxX) maxX = posX;
+                            if (posY < minY) minY = posY;
+                            if (posY > maxY) maxY = posY;
+                        }
+                    }
+                    currentY += sliceHeight; 
+                }
+                currentX += sliceWidth; 
+            }
+
+            if (particles.length === 0) return;
+
+            const centerX = (minX + maxX) / 2;
+            const centerY = (minY + maxY) / 2;
+            particles.forEach(p => {
+                p.x -= centerX;
+                p.y -= centerY;
+            });
+
+            const geometry = new RoundedBoxGeometry(1, 1, 1, 4, 0.02); 
+
+            const material = new THREE.MeshPhysicalMaterial({
+                color: CONFIG.glassColor,       
+                metalness: 0.05,                
+                roughnessMap: noiseTexture,
+                roughness: 0.1,                 
+                transmission: 1.0,              
+                thickness: 3.5,                 
+                ior: 1.6,                       
+                attenuationColor: CONFIG.attenuationColor, 
+                attenuationDistance: 8.0,       
+                clearcoat: 1.0,                 
+                clearcoatRoughness: 0.05,
+                envMapIntensity: 3.5,           
+                side: THREE.DoubleSide,         
+                transparent: true               
+            });
+
+            if (material.roughnessMap) {
+                material.roughnessMap.repeat.set(2, 2);
+            }
+
+            instancedMesh = new THREE.InstancedMesh(geometry, material, particles.length);
+            instancedMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+            instancedMesh.castShadow = true;
+            instancedMesh.receiveShadow = true;
+            scene.add(instancedMesh);
+
+            const textWidth = maxX - minX;
+            const textHeight = maxY - minY;
+            fitCameraToSelection(textWidth, textHeight);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const time = performance.now() * 0.001;
+
+            if(bgParticlesMesh) {
+                bgParticlesMesh.rotation.y = time * 0.05;
+                bgParticlesMesh.rotation.x = Math.sin(time * 0.02) * 0.1;
+            }
+
+            if (instancedMesh) {
+                let idx = 0;
+                for (let p of particles) {
+                    
+                    let rawSine = Math.sin(time * CONFIG.animSpeed * p.speed + p.phase);
+                    let viscousPulse = Math.pow(rawSine, 3); 
+
+                    const scaleZ = CONFIG.baseDepth + (viscousPulse * CONFIG.animAmpZ * p.ampRandom);
+
+                    const inversePulse = -viscousPulse; 
+                    
+                    const xyFactor = 1.0 + (inversePulse * 1.2 * p.ampRandom); 
+                    
+                    const safeXYFactor = Math.max(0.3, xyFactor);
+
+                    const scaleX = p.baseScaleX * safeXYFactor;
+                    const scaleY = p.baseScaleY * safeXYFactor;
+
+                    dummy.position.set(p.x, p.y, 0);
+                    
+                    dummy.scale.set(
+                        Math.max(0.1, scaleX), 
+                        Math.max(0.1, scaleY), 
+                        Math.max(0.1, scaleZ)
+                    );
+                    
+                    dummy.updateMatrix();
+                    instancedMesh.setMatrixAt(idx++, dummy.matrix);
+                }
+                instancedMesh.instanceMatrix.needsUpdate = true;
+            }
+
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        init();
+
+    </script>
+</body>
+</html>

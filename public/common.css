@@ -101,7 +101,7 @@ body.dark-mode .header-logo img { filter: invert(1) brightness(2); }
     font-size: inherit; transition: color 0.2s;
 }
 .lang-btn.active { color: var(--text-color); font-weight: 700; }
-.lang-btn:hover { color: var(--accent-color); }
+.lang-btn.hover { color: var(--accent-color); }
 
 /* =========================================
    CURSOR & TRANSITION
@@ -132,7 +132,7 @@ body.dark-mode .header-logo img { filter: invert(1) brightness(2); }
 }
 
 #cursor-bg-layer.active-enter #cursor-circle {
-    width: 80px; height: 80px; background: #ffffff; opacity: 1; animation: none;
+    width: 100px; height: 100px; background: #ffffff; opacity: 1; animation: none;
 }
 
 /* 커서 텍스트 레이어 */
@@ -181,11 +181,17 @@ main {
 
 .work-item { opacity: 0; cursor: pointer; }
 
+/* [수정] 비율 설정 - 기본값(Labs)은 1:1 */
 .thumb-wrapper {
     position: relative; width: 100%;
-    padding-bottom: 100%; /* 1:1 Aspect Ratio */
+    aspect-ratio: 1 / 1; /* 최신 비율 설정 방식 사용 (padding-bottom 대체) */
     overflow: hidden; border-radius: 12px;
     background-color: var(--card-bg); margin-bottom: 20px;
+}
+
+/* [추가] Projects 모드일 때 16:9 비율 적용 (분기 처리) */
+.works-grid.mode-projects .thumb-wrapper {
+    aspect-ratio: 4 / 3;
 }
 
 .thumb-img {
