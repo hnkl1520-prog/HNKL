@@ -4,39 +4,49 @@
     <meta charset="UTF-8">
     <title>AI Generative Art - Density Control</title>
     <style>
-        body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Courier New', Courier, monospace; }
+        body { margin: 0; overflow: hidden; background-color: #000; font-family: sans-serif; }
         #canvas-container { width: 100vw; height: 100vh; }
         
-        /* UI 패널 스타일 */
+        /* UI 패널 - 글래스모피즘 효과 및 하단 중앙 배치 */
         #ui-container {
             position: absolute;
-            top: 20px;
-            right: 20px;
-            width: 300px;
+            bottom: 30px; 
+            left: 50%;
+            transform: translateX(-50%);
+            
+            /* 글래스모피즘 핵심 속성 */
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+            
             padding: 20px;
-            background: rgba(0, 0, 0, 0.8);
-            border: 1px solid #00ff00;
-            border-radius: 10px;
-            color: #00ff00;
+            border-radius: 12px;
+            color: #eee;
             z-index: 100;
-            box-shadow: 0 0 15px rgba(0, 255, 0, 0.2);
+            width: 260px;
         }
-        h2 { margin: 0 0 15px 0; font-size: 18px; text-transform: uppercase; letter-spacing: 2px; border-bottom: 1px solid #00ff00; padding-bottom: 5px;}
         
+        /* 업로드 버튼 디자인 변경 (파란색 포인트) */
         .file-upload {
             display: block;
             width: 100%;
-            padding: 10px;
-            margin-bottom: 20px;
-            background: transparent;
-            border: 1px solid #00ff00;
-            color: #00ff00;
+            padding: 12px 0;
+            background: #2b50f1; /* 요청하신 베이스 컬러 */
+            border: none;
+            border-radius: 6px;
+            color: #ffffff;
             text-align: center;
             cursor: pointer;
             font-weight: bold;
-            transition: 0.3s;
+            font-size: 14px;
+            transition: background 0.3s;
+            box-sizing: border-box;
         }
-        .file-upload:hover { background: #00ff00; color: #000; }
+        .file-upload:hover { 
+            background: #1a3cb5; /* 호버 시 살짝 어두운 파란색 */
+        }
         input[type="file"] { display: none; }
 
         #loading {
@@ -44,29 +54,35 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            color: #00ff00;
-            font-size: 24px;
+            color: #ffffff;
+            font-size: 20px;
             pointer-events: none;
             display: none;
+            z-index: 200;
+        }
+        
+        /* 하단 안내 텍스트 스타일 */
+        .helper-text {
+            margin-top: 15px; 
+            font-size: 11px; 
+            color: #ccc; 
+            text-align: center;
         }
     </style>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.7.7/dat.gui.min.js"></script>
-</head>
+    </head>
 <body>
 
     <div id="ui-container">
-        <h2>Parameter Control</h2>
         <label class="file-upload">
             [ + ] 이미지 업로드
             <input type="file" id="imageInput" accept="image/*">
         </label>
-        <div id="gui-container"></div>
-        <div style="margin-top:10px; font-size:12px; opacity:0.7;">
-            * Particle Gap: 낮을수록 촘촘함<br>
-            * 마우스 왼쪽: 회전 / 휠: 줌<br>
+        
+        <div class="helper-text">
+            * 마우스 왼쪽: 회전 / 휠: 줌
         </div>
     </div>
 
@@ -125,24 +141,21 @@
             }
         `;
 
-        // 3. 변수 및 데이터 캐싱 (새로고침 없이 파티클 재생성을 위해)
+        // 3. 변수 및 데이터 캐싱
         let particles;
-        let cachedImgData = null; // 이미지 데이터를 저장해둠
+        let cachedImgData = null;
         let cachedWidth = 0;
         let cachedHeight = 0;
 
+        // ★ 이미지 수치에 맞춘 고정 파라미터 값 설정
         const params = {
-            particleSize: 4.0,
-            particleGap: 2,       // ★ 추가된 기능: 파티클 간격 (기본 2칸)
-            zDisplacement: 100.0,
-            noiseSpeed: 2.0,
-            noiseFreq: 0.02,
-            noiseAmp: 20.0
+            particleSize: 4.4,
+            particleGap: 4,      
+            zDisplacement: 176.0,
+            noiseSpeed: 1.5,
+            noiseFreq: 0.011,
+            noiseAmp: 19.0
         };
-
-        const gui = new dat.GUI({ autoPlace: false });
-        document.getElementById('gui-container').appendChild(gui.domElement);
-        gui.domElement.style.width = '100%';
         
         const uniforms = {
             uTime: { value: 0 },
@@ -153,25 +166,10 @@
             uNoiseAmp: { value: params.noiseAmp }
         };
 
-        // GUI 설정
-        gui.add(params, 'particleSize', 1, 20).onChange(v => uniforms.uSize.value = v);
-        
-        // ★ 간격 조절 슬라이더 (변경 시 rebuildParticles 호출)
-        gui.add(params, 'particleGap', 1, 10).step(1).name('Particle Gap').onChange(() => {
-            if (cachedImgData) rebuildParticles();
-        });
-
-        gui.add(params, 'zDisplacement', 0, 500).onChange(v => uniforms.uDepth.value = v);
-        gui.add(params, 'noiseSpeed', 0, 10).onChange(v => uniforms.uNoiseSpeed.value = v);
-        gui.add(params, 'noiseFreq', 0.001, 0.1).onChange(v => uniforms.uNoiseFreq.value = v);
-        gui.add(params, 'noiseAmp', 0, 100).onChange(v => uniforms.uNoiseAmp.value = v);
-
-
-        // 4. 파티클 생성 로직 (분리됨)
+        // 4. 파티클 생성 로직
         function rebuildParticles() {
             if (!cachedImgData) return;
 
-            // 기존 파티클 삭제
             if (particles) {
                 scene.remove(particles);
                 particles.geometry.dispose();
@@ -181,9 +179,8 @@
             const positions = [];
             const colors = [];
             const brightnesses = [];
-            const gap = params.particleGap; // 현재 설정된 간격 값
+            const gap = params.particleGap; // 고정된 간격 값 사용
 
-            // ★ 간격(Gap)만큼 건너뛰면서 루프 돌기
             for (let y = 0; y < cachedHeight; y += gap) {
                 for (let x = 0; x < cachedWidth; x += gap) {
                     const i = (y * cachedWidth + x) * 4;
@@ -226,7 +223,7 @@
             img.onload = () => {
                 const canvas = document.createElement('canvas');
                 const ctx = canvas.getContext('2d');
-                const width = 500; // 해상도를 조금 높였습니다
+                const width = 500; 
                 const scale = width / img.width;
                 const height = Math.floor(img.height * scale);
                 
@@ -234,13 +231,11 @@
                 canvas.height = height;
                 ctx.drawImage(img, 0, 0, width, height);
                 
-                // 이미지 데이터 저장 (캐싱)
                 const imgData = ctx.getImageData(0, 0, width, height);
                 cachedImgData = imgData.data;
                 cachedWidth = width;
                 cachedHeight = height;
 
-                // 파티클 생성 실행
                 rebuildParticles();
                 
                 controls.reset();
