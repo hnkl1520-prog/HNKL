@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Image Reveal</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #000; /* 검정 배경 */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+            color: white;
+            font-family: sans-serif;
+        }
+        canvas {
+            display: block;
+            cursor: crosshair;
+            box-shadow: 0 0 20px rgba(0,0,0,0.8);
+        }
+        #loading {
+            position: absolute;
+            font-size: 1.2rem;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="loading">이미지를 불러오는 중입니다...</div>
+    <canvas id="canvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const loadingText = document.getElementById('loading');
+
+        let imgData = null;
+        let nodes = [];
+        
+        // --- 설정 값 ---
+        const maxDepth = 5; // 쪼개지는 최대 횟수 (0부터 시작하므로 6이면 충분히 선명함)
+        const initialTilesX = 6; // 처음에 보여질 가로 원의 개수
+        const brushRadius = 35; // 마우스 인식 반경 (너무 작으면 답답할 수 있어 여유를 줌)
+        
+        let mouseX = -1000;
+        let mouseY = -1000;
+
+        // 지정된 경로의 이미지 로드
+        const image = new Image();
+        image.src = 'Image/Dots.jpg';
+
+        image.onload = () => {
+            loadingText.style.display = 'none';
+
+            // 환경에 따라 innerWidth/innerHeight가 0일 수 있으므로 기본값(fallback) 제공
+            const vw = window.innerWidth > 0 ? window.innerWidth : 800;
+            const vh = window.innerHeight > 0 ? window.innerHeight : 600;
+
+            // 화면 크기에 맞게 캔버스 사이즈 조정
+            const maxDim = Math.min(vw * 0.9, 800);
+            let scale = Math.min(maxDim / image.width, vh * 0.9 / image.height);
+            
+            // canvas 너비/높이가 0이 되는 것을 방지하기 위해 Math.max(10, ...) 적용
+            canvas.width = Math.max(10, Math.floor(image.width * scale));
+            canvas.height = Math.max(10, Math.floor(image.height * scale));
+
+            // 이미지의 픽셀 데이터를 추출하기 위해 캔버스에 한번 그렸다가 픽셀 정보만 가져옴
+            ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+            imgData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            initNodes();
+            requestAnimationFrame(animate);
+        };
+
+        image.onerror = () => {
+            loadingText.innerText = "Dots.jpg 이미지를 지정된 경로에서 불러올 수 없습니다.";
+        };
+
+        // 특정 영역의 평균 색상을 계산하는 함수 (성능 향상을 위해 5포인트 샘플링으로 변경)
+        function getAverageColor(x, y, size) {
+            let r = 0, g = 0, b = 0, count = 0;
+            const offset = size * 0.25;
+            // 중앙과 4개의 모서리 지점만 빠르게 샘플링
+            const points = [
+                [x + size * 0.5, y + size * 0.5],
+                [x + offset, y + offset],
+                [x + size - offset, y + offset],
+                [x + offset, y + size - offset],
+                [x + size - offset, y + size - offset]
+            ];
+
+            for (let p of points) {
+                const px = Math.floor(p[0]);
+                const py = Math.floor(p[1]);
+                if (px >= 0 && px < canvas.width && py >= 0 && py < canvas.height) {
+                    const i = (py * canvas.width + px) * 4;
+                    r += imgData[i];
+                    g += imgData[i + 1];
+                    b += imgData[i + 2];
+                    count++;
+                }
+            }
+            if (count === 0) return 'rgb(0,0,0)';
+            return `rgb(${Math.floor(r/count)}, ${Math.floor(g/count)}, ${Math.floor(b/count)})`;
+        }
+
+        // 각각의 원 영역을 관리하는 클래스 (트리 구조 및 딜레이 추가)
+        class CircleNode {
+            constructor(x, y, size, depth) {
+                this.x = x;
+                this.y = y;
+                this.size = size;
+                this.depth = depth;
+                this.color = getAverageColor(x, y, size);
+                
+                this.currentSize = 0;
+                this.targetSize = size;
+                this.isSplit = false;
+                this.children = []; // 자식 노드들을 담을 배열
+                this.createdAt = Date.now(); // 생성 시간 기록 (딜레이용)
+            }
+
+            draw(ctx) {
+                this.currentSize += (this.targetSize - this.currentSize) * 0.2;
+                const radius = (this.currentSize / 2) * 0.94; 
+
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x + this.size / 2, this.y + this.size / 2, radius > 0 ? radius : 0, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            split() {
+                this.isSplit = true;
+                const half = this.size / 2;
+                const nextDepth = this.depth + 1;
+                // 4개의 새로운 자식 노드 생성
+                this.children = [
+                    new CircleNode(this.x, this.y, half, nextDepth),                 
+                    new CircleNode(this.x + half, this.y, half, nextDepth),          
+                    new CircleNode(this.x, this.y + half, half, nextDepth),          
+                    new CircleNode(this.x + half, this.y + half, half, nextDepth)    
+                ];
+            }
+        }
+
+        function initNodes() {
+            nodes = [];
+            const initialSize = canvas.width / initialTilesX;
+            
+            for (let y = 0; y < canvas.height; y += initialSize) {
+                for (let x = 0; x < canvas.width; x += initialSize) {
+                    nodes.push(new CircleNode(x, y, initialSize, 0));
+                }
+            }
+        }
+
+        // 마우스 및 터치 이벤트 처리
+        function updateMousePos(e) {
+            const rect = canvas.getBoundingClientRect();
+            if (e.touches) {
+                mouseX = e.touches[0].clientX - rect.left;
+                mouseY = e.touches[0].clientY - rect.top;
+            } else {
+                mouseX = e.clientX - rect.left;
+                mouseY = e.clientY - rect.top;
+            }
+        }
+
+        canvas.addEventListener('mousemove', updateMousePos);
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault(); // 스크롤 방지
+            updateMousePos(e);
+        }, { passive: false });
+
+        // 화면 밖으로 나가면 마우스 위치 초기화
+        canvas.addEventListener('mouseleave', () => {
+            mouseX = -1000;
+            mouseY = -1000;
+        });
+
+        // 재귀적으로 트리를 순회하며 렌더링 및 분할 체크를 하는 함수
+        function traverseAndDraw(node) {
+            if (node.isSplit) {
+                // 이미 쪼개진 원이면 자식들을 그리기
+                for (let i = 0; i < 4; i++) {
+                    traverseAndDraw(node.children[i]);
+                }
+            } else {
+                // 아직 안 쪼개진 원이면 자신을 그리기
+                node.draw(ctx);
+
+                // 마우스와 원 중심 간의 거리 계산
+                const dx = mouseX - (node.x + node.size / 2);
+                const dy = mouseY - (node.y + node.size / 2);
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                // 분할 조건:
+                // 1. 최소 300ms(0.3초)가 지났고 (쿨타임)
+                // 2. 크기가 원래 목표 크기의 80% 이상 커졌을 때 (애니메이션이 어느정도 진행됨)
+                const isReadyToSplit = (Date.now() - node.createdAt > 300) && (node.currentSize > node.targetSize * 0.8);
+
+                if (node.depth < maxDepth && dist < Math.max(brushRadius, node.size/2)) {
+                    if (isReadyToSplit) {
+                        node.split(); 
+                    }
+                }
+            }
+        }
+
+        function animate() {
+            // 배경을 검은색으로 지움
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // 초기 노드들(Root)부터 시작해서 자식들로 파고들며 그리기
+            for (let i = 0; i < nodes.length; i++) {
+                traverseAndDraw(nodes[i]);
+            }
+
+            requestAnimationFrame(animate);
+        }
+
+    </script>
+</body>
+</html>

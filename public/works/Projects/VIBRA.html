@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VIBRA - Project Detail</title>
+    
+    <!-- Pretendard Font -->
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.8/dist/web/static/pretendard.css" />
+    
+    <!-- [연결] 공통 스타일 (루트 폴더의 common.css) -->
+    <link rel="stylesheet" href="../../common.css">
+    
+    <!-- Tailwind & GSAP -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+
+    <style>
+        /* 상세 페이지 전용 추가 스타일 */
+        body { 
+            font-family: 'Pretendard', sans-serif; 
+            background-color: #ffffff; /* 하얀색 배경으로 변경 */
+            color: #111111; /* 텍스트를 어두운 색으로 변경 */
+            overflow-x: hidden;
+        }
+        
+        /* 타이틀 및 설명 영역 */
+        .detail-header {
+            padding: 180px 5% 80px;
+            max-width: 1440px; /* 전체 최대 너비 */
+            margin: 0 auto;
+        }
+
+        .back-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: #888;
+            text-decoration: none;
+            margin-bottom: 40px;
+            transition: color 0.3s ease;
+            font-size: 1.1rem;
+        }
+
+        .back-btn:hover { color: #fff; }
+
+        .project-category { color: #2997ff; font-weight: 600; margin-bottom: 16px; letter-spacing: 0.05em; }
+        .project-title { font-size: clamp(2.5rem, 5vw, 4rem); font-weight: 700; line-height: 1.2; margin-bottom: 30px; }
+        .project-desc { font-size: 1.1rem; color: #555555; max-width: 800px; line-height: 1.6; word-break: keep-all; } /* 텍스트 색상 조정 */
+
+        /* 이미지 갤러리 영역 */
+        .content-area {
+            width: 100%;
+            max-width: 2560px; /* 너무 과도하게 커지는 것 방지 */
+            margin: 0 auto;
+            padding: 0 10% 120px; /* 양옆 10% 마진 적용 */
+            display: flex;
+            flex-direction: column;
+            gap: 40px; /* 이미지 사이의 간격 (적당히 띄움) */
+        }
+
+        .content-image {
+            width: 100%;
+            height: auto;
+            border-radius: 16px; /* 모서리를 살짝 둥글게 처리하여 세련된 느낌 */
+            box-shadow: 0 20px 50px rgba(0,0,0,0.15); /* 하얀 배경에 맞춰 그림자 연하게 조정 */
+            opacity: 0; /* GSAP 스크롤 애니메이션용 초기값 */
+            transform: translateY(40px);
+        }
+
+        /* 하단 네비게이션 버튼 */
+        .bottom-back-btn {
+            display: inline-block;
+            padding: 16px 40px;
+            border: 1px solid rgba(0,0,0,0.2); /* 어두운 반투명 테두리로 변경 */
+            border-radius: 50px;
+            color: #000; /* 검은색 텍스트로 변경 */
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            margin-top: 60px;
+        }
+
+        .bottom-back-btn:hover {
+            background-color: #000; /* 호버 시 검은색 배경 */
+            color: #fff; /* 호버 시 하얀색 텍스트 */
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 커스텀 젤리 커서 (common.js에서 작동) -->
+    <div id="cursor-bg-layer">
+        <div id="cursor-circle"></div>
+    </div>
+    <div id="cursor-text-layer">
+        <span id="cursor-text"></span>
+    </div>
+
+    <!-- 헤더 (works.html과 동일한 구조, 경로만 상위로 수정) -->
+    <header id="global-header" class="at-top fixed top-0 left-0 w-full z-50 transition-all duration-300">
+        <div class="header-inner flex justify-between items-center px-6 py-4 md:px-10 md:py-6">
+            <div class="header-left flex items-center gap-10">
+                <a href="../../about.html" class="header-logo hover-trigger">
+                    <!-- 로고 이미지 반전(invert) 제거 -->
+                    <img src="../../assets/logo.svg" alt="HANUK Logo" class="h-6">
+                </a>
+                <nav class="header-nav hidden md:flex gap-6">
+                    <a href="../../about.html" class="nav-link text-gray-500 hover:text-black transition-colors hover-trigger">About</a>
+                    <a href="../../works.html" class="nav-link text-black font-semibold hover-trigger">Works</a>
+                </nav>
+            </div>
+            <div class="header-right text-sm font-medium">
+                <button class="lang-btn text-black hover-trigger">KR</button>
+                <span class="text-gray-400 mx-2">/</span>
+                <button class="lang-btn text-gray-500 hover:text-black transition-colors hover-trigger">EN</button>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <!-- 프로젝트 타이틀 영역 -->
+        <section class="detail-header">
+            <!-- 텍스트 영역 임시 주석 처리 (나중에 텍스트 추가 시 아래 주석 해제)
+            <div class="project-category" id="anim-cat">XR, UX, INTERACTION</div>
+            <h1 class="project-title" id="anim-title">VIBRA: XR FOOTBALL<br>BROADCASTING SERVICE</h1>
+            <p class="project-desc" id="anim-desc">
+                이 프로젝트는 XR 기술을 활용하여 기존의 축구 중계를 완전히 새로운 차원의 인터랙티브 경험으로 탈바꿈시킵니다. 사용자는 단순히 경기를 보는 것을 넘어 가상 환경 속에서 데이터를 확인하고 능동적으로 참여할 수 있습니다.
+            </p>
+            -->
+        </section>
+
+        <!-- 프로젝트 본문 (이미지 1~6 순차 렌더링) -->
+        <section class="content-area">
+            <!-- 이미지 경로: 현재 vibra.html 위치 기준 Images/VIBRA/ -->
+            <img src="Images/VIBRA/1.jpg" class="content-image hover-trigger" alt="VIBRA Board 1">
+            <img src="Images/VIBRA/2.jpg" class="content-image hover-trigger" alt="VIBRA Board 2">
+            <img src="Images/VIBRA/3.jpg" class="content-image hover-trigger" alt="VIBRA Board 3">
+            <img src="Images/VIBRA/4.jpg" class="content-image hover-trigger" alt="VIBRA Board 4">
+            <img src="Images/VIBRA/5.jpg" class="content-image hover-trigger" alt="VIBRA Board 5">
+            <img src="Images/VIBRA/6.jpg" class="content-image hover-trigger" alt="VIBRA Board 6">
+            
+            <!-- 하단 뒤로가기 버튼 -->
+            <div class="text-center">
+                <a href="../../works.html" class="bottom-back-btn hover-trigger">
+                    Back to Works
+                </a>
+            </div>
+        </section>
+    </main>
+
+    <!-- [연결] 공통 스크립트 -->
+    <script src="../../common.js"></script>
+    
+    <!-- 상세 페이지 등장 및 스크롤 애니메이션 -->
+    <script>
+        window.addEventListener('DOMContentLoaded', () => {
+            // 1. 헤더 텍스트 등장 애니메이션 (텍스트 주석 처리로 인해 함께 주석 처리)
+            // gsap.from("#anim-cat", { opacity: 0, y: 20, duration: 0.8, delay: 0.1 });
+            // gsap.from("#anim-title", { opacity: 0, y: 20, duration: 0.8, delay: 0.2 });
+            // gsap.from("#anim-desc", { opacity: 0, y: 20, duration: 0.8, delay: 0.3 });
+
+            // 2. 스크롤 시 이미지 부드럽게 등장하는 애니메이션 (Intersection Observer 활용)
+            const images = document.querySelectorAll('.content-image');
+            
+            const observerOptions = {
+                root: null,
+                rootMargin: '0px',
+                threshold: 0.15 // 이미지가 15% 정도 화면에 보일 때 애니메이션 시작
+            };
+
+            const observer = new IntersectionObserver((entries, observer) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        gsap.to(entry.target, { 
+                            opacity: 1, 
+                            y: 0, 
+                            duration: 1.2, 
+                            ease: "power3.out" 
+                        });
+                        // 한 번 나타난 이미지는 다시 감지하지 않음
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, observerOptions);
+
+            images.forEach(img => {
+                observer.observe(img);
+            });
+        });
+    </script>
+</body>
+</html>
