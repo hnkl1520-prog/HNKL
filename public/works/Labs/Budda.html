@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BUDDHA IN THE WINDOW</title>
+    
+    <!-- Pretendard Font -->
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+    
+    <style>
+        :root {
+            --color-main-blue: #2b50f1;
+            --color-purple: #9c6dff;
+            --color-mint: #4fd1c5;
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #000;
+            color: white;
+            font-family: 'Pretendard', sans-serif;
+        }
+        
+        #canvas-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 1;
+        }
+
+        /* [NEW] 원형 프로그레스 로딩 오버레이 */
+        #loading-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background-color: #000000;
+            z-index: 99999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.8s cubic-bezier(0.19, 1, 0.22, 1);
+        }
+
+        .circular-progress {
+            position: relative;
+            width: 140px;
+            height: 140px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .circular-progress svg {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%;
+            height: 100%;
+            transform: rotate(-90deg);
+        }
+
+        .track {
+            fill: none;
+            stroke: rgba(255, 255, 255, 0.1);
+            stroke-width: 4;
+        }
+
+        .progress-arc {
+            fill: none;
+            stroke: url(#loading-gradient);
+            stroke-width: 4;
+            stroke-linecap: round;
+            /* 원주율 계산: 2 * pi * r(45) ≈ 282.74 */
+            stroke-dasharray: 282.74;
+            stroke-dashoffset: 282.74;
+            transition: stroke-dashoffset 0.15s ease-out;
+        }
+
+        #loading-percent {
+            font-size: 1.3rem;
+            font-weight: 500;
+            color: white;
+            z-index: 1;
+            font-variant-numeric: tabular-nums;
+            letter-spacing: 0.02em;
+        }
+
+        /* 웹캠 권한 대기 UI (모델 로딩 후 표시됨) */
+        #camera-ui {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 20;
+            text-align: center;
+            pointer-events: none;
+            transition: opacity 0.5s ease-out;
+            background: rgba(20, 20, 20, 0.4);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            padding: 35px 40px;
+            border-radius: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
+            opacity: 0; /* 처음엔 숨김 */
+        }
+
+        #camera-ui h2 { margin: 0 0 10px 0; font-weight: 500; font-size: 1.2rem; color: #fff; }
+        #camera-ui p { margin: 0; color: rgba(255,255,255,0.6); font-size: 0.9rem; font-weight: 300; }
+
+        .spinner {
+            border: 3px solid rgba(255,255,255,0.1);
+            border-top: 3px solid var(--color-main-blue);
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px auto;
+        }
+
+        @keyframes spin { 
+            0% { transform: rotate(0deg); } 
+            100% { transform: rotate(360deg); } 
+        }
+
+        #model-error {
+            display: none;
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 60, 60, 0.9);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 8px;
+            z-index: 999999;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            line-height: 1.6;
+        }
+
+        #model-error strong { font-weight: 600; font-size: 1.1rem; }
+
+        #webcam-container {
+            display: none;
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            width: 160px;
+            height: 120px;
+            z-index: 10;
+        }
+        video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
+
+    </style>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lil-gui"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_detection/face_detection.js" crossorigin="anonymous"></script>
+</head>
+<body>
+
+    <!-- [NEW] 미니멀 원형 로딩창 -->
+    <div id="loading-overlay">
+        <div class="circular-progress">
+            <svg viewBox="0 0 100 100">
+                <defs>
+                    <linearGradient id="loading-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#2b50f1" />
+                        <stop offset="100%" stop-color="#9c6dff" />
+                    </linearGradient>
+                </defs>
+                <circle class="track" cx="50" cy="50" r="45"></circle>
+                <circle class="progress-arc" cx="50" cy="50" r="45"></circle>
+            </svg>
+            <div id="loading-percent">0%</div>
+        </div>
+    </div>
+
+    <!-- 웹캠 권한 대기 UI (모델 로딩 완료 후 필요시 나타남) -->
+    <div id="camera-ui">
+        <div class="spinner"></div>
+        <h2 id="camera-title">얼굴 트래킹 준비 중...</h2>
+        <p id="camera-desc">원활한 감상을 위해 웹캠 권한을 허용해 주세요.</p>
+    </div>
+
+    <div id="model-error">
+        <strong>⚠️ 3D 모델 에러</strong><br>
+        <span id="model-error-desc"></span>
+    </div>
+
+    <div id="webcam-container">
+        <video id="input_video" autoplay playsinline></video>
+    </div>
+
+    <div id="canvas-container"></div>
+
+    <script>
+        // ==========================================
+        // UI 상태 관리
+        // ==========================================
+        let isModelLoaded = false;
+        let isFaceTrackingStarted = false;
+        let cameraStatus = 'pending'; 
+
+        function checkAndHideCameraUI() {
+            if (isModelLoaded && (isFaceTrackingStarted || cameraStatus === 'failed')) {
+                const cameraUi = document.getElementById('camera-ui');
+                if (cameraUi) cameraUi.style.opacity = '0';
+            }
+        }
+
+        // ==========================================
+        // 1. Three.js 초기 설정
+        // ==========================================
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(0x000000, 0.015);
+
+        const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        container.appendChild(renderer.domElement);
+
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+        scene.add(ambientLight);
+        const directionalLight = new THREE.DirectionalLight(0xffd700, 1.5);
+        directionalLight.position.set(5, 10, 10);
+        scene.add(directionalLight);
+
+        // ==========================================
+        // 2. 파라미터 고정값 설정
+        // ==========================================
+        const params = {
+            lineColor: '#70aeff', 
+            lineOpacity: 0.9,   
+            gridColumns: 22,    
+            roomWidth: 32,      
+            roomDepth: 16.174,      
+            buddhaScale: 50,
+            buddhaX: 0,
+            buddhaY: 0.32,
+            buddhaZ: -7.68,        
+            cameraZ: 40,        
+            parallaxOffset: 15  
+        };
+
+        // ==========================================
+        // 3. 환경 구성: 실제 선(Line)을 수학적으로 계산
+        // ==========================================
+        let roomGroup = null;
+
+        function buildRoom() {
+            if (roomGroup) scene.remove(roomGroup);
+            roomGroup = new THREE.Group();
+
+            const cellSize = params.roomWidth / params.gridColumns;
+            const colsHalfW = params.gridColumns / 2; 
+            const colsHalfH = Math.round((params.roomWidth * 9 / 16 / 2) / cellSize); 
+            
+            const halfW = colsHalfW * cellSize;
+            const halfH = colsHalfH * cellSize;
+            const W_exact = halfW * 2;
+            const H_exact = halfH * 2;
+            const D = params.roomDepth;
+
+            const extCols = Math.ceil(150 / cellSize);
+            const ext = extCols * cellSize;
+
+            const planeMat = new THREE.MeshBasicMaterial({
+                color: 0x050505, 
+                polygonOffset: true, 
+                polygonOffsetFactor: 1, 
+                polygonOffsetUnits: 1
+            });
+
+            function addPlane(w, h, x, y, z, rx, ry) {
+                const geo = new THREE.PlaneGeometry(w, h);
+                const mesh = new THREE.Mesh(geo, planeMat);
+                mesh.position.set(x, y, z);
+                mesh.rotation.set(rx, ry, 0);
+                roomGroup.add(mesh);
+            }
+
+            addPlane(W_exact, H_exact, 0, 0, -D, 0, 0); 
+            addPlane(D, H_exact, -halfW, 0, -D/2, 0, Math.PI/2); 
+            addPlane(D, H_exact, halfW, 0, -D/2, 0, Math.PI/2); 
+            addPlane(W_exact, D, 0, halfH, -D/2, Math.PI/2, 0); 
+            addPlane(W_exact, D, 0, -halfH, -D/2, Math.PI/2, 0); 
+
+            addPlane(W_exact + ext*2, ext, 0, halfH + ext/2, 0, 0, 0);
+            addPlane(W_exact + ext*2, ext, 0, -halfH - ext/2, 0, 0, 0);
+            addPlane(ext, H_exact, -halfW - ext/2, 0, 0, 0, 0);
+            addPlane(ext, H_exact, halfW + ext/2, 0, 0, 0, 0);
+
+            const positions = [];
+            function addLine(x1, y1, z1, x2, y2, z2) {
+                positions.push(x1, y1, z1, x2, y2, z2);
+            }
+
+            const totalColsX = colsHalfW + extCols;
+            const totalColsY = colsHalfH + extCols;
+
+            for (let i = -totalColsX; i <= totalColsX; i++) {
+                let x = i * cellSize;
+                if (i > -colsHalfW && i < colsHalfW) {
+                    addLine(x, halfH, 0, x, halfH + ext, 0); 
+                    addLine(x, -halfH - ext, 0, x, -halfH, 0); 
+                } else {
+                    addLine(x, -halfH - ext, 0, x, halfH + ext, 0); 
+                }
+            }
+            for (let j = -totalColsY; j <= totalColsY; j++) {
+                let y = j * cellSize;
+                if (j > -colsHalfH && j < colsHalfH) {
+                    addLine(halfW, y, 0, halfW + ext, y, 0); 
+                    addLine(-halfW - ext, y, 0, -halfW, y, 0); 
+                } else {
+                    addLine(-halfW - ext, y, 0, halfW + ext, y, 0); 
+                }
+            }
+
+            for (let i = -colsHalfW; i <= colsHalfW; i++) {
+                let x = i * cellSize;
+                addLine(x, halfH, 0, x, halfH, -D);
+                addLine(x, -halfH, 0, x, -halfH, -D);
+            }
+            for (let j = -colsHalfH; j <= colsHalfH; j++) {
+                let y = j * cellSize;
+                addLine(-halfW, y, 0, -halfW, y, -D);
+                addLine(halfW, y, 0, halfW, y, -D);
+            }
+
+            for (let i = -colsHalfW; i <= colsHalfW; i++) {
+                let x = i * cellSize;
+                addLine(x, -halfH, -D, x, halfH, -D);
+            }
+            for (let j = -colsHalfH; j <= colsHalfH; j++) {
+                let y = j * cellSize;
+                addLine(-halfW, y, -D, halfW, y, -D);
+            }
+
+            const depthCols = Math.floor(D / cellSize);
+            for (let k = 0; k <= depthCols; k++) {
+                let z = -k * cellSize;
+                addLine(-halfW, halfH, z, halfW, halfH, z);
+                addLine(-halfW, -halfH, z, halfW, -halfH, z);
+                addLine(-halfW, -halfH, z, -halfW, halfH, z);
+                addLine(halfW, -halfH, z, halfW, halfH, z);
+            }
+            
+            if (D % cellSize !== 0) {
+                addLine(-halfW, halfH, -D, halfW, halfH, -D);
+                addLine(-halfW, -halfH, -D, halfW, -halfH, -D);
+                addLine(-halfW, -halfH, -D, -halfW, halfH, -D);
+                addLine(halfW, -halfH, -D, halfW, halfH, -D);
+            }
+
+            const linesGeo = new THREE.BufferGeometry();
+            linesGeo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+            
+            const linesMat = new THREE.LineBasicMaterial({ 
+                color: params.lineColor, 
+                linewidth: 1,
+                transparent: true,
+                opacity: params.lineOpacity
+            }); 
+            const linesMesh = new THREE.LineSegments(linesGeo, linesMat);
+            
+            roomGroup.add(linesMesh);
+            scene.add(roomGroup);
+        }
+
+        buildRoom(); 
+
+        // ==========================================
+        // 4. GUI 컨트롤 패널 연동 (비활성화 상태)
+        // ==========================================
+        const gui = new lil.GUI({ title: '환경 설정' });
+        
+        const folderGrid = gui.addFolder('공간 및 와이어프레임');
+        folderGrid.addColor(params, 'lineColor').name('선 색상').onChange(buildRoom);
+        folderGrid.add(params, 'lineOpacity', 0.1, 1.0).name('선 투명도 (굵기 효과)').onChange(buildRoom);
+        folderGrid.add(params, 'gridColumns', 4, 32, 2).name('선 밀도').onChange(buildRoom);
+        folderGrid.add(params, 'roomWidth', 10, 80).name('방 가로 너비 (16:9)').onChange(buildRoom);
+        folderGrid.add(params, 'roomDepth', 2, 40).name('방 깊이').onChange(buildRoom);
+
+        let buddhaWrapper = new THREE.Group();
+        scene.add(buddhaWrapper);
+
+        const folderBuddha = gui.addFolder('부처님 모델');
+        folderBuddha.add(params, 'buddhaScale', 1, 50).name('크기').onChange((val) => buddhaWrapper.scale.set(val, val, val));
+        folderBuddha.add(params, 'buddhaX', -20, 20).name('위치 X').onChange((val) => buddhaWrapper.position.x = val);
+        folderBuddha.add(params, 'buddhaY', -20, 20).name('위치 Y').onChange((val) => buddhaWrapper.position.y = val);
+        folderBuddha.add(params, 'buddhaZ', -30, 10).name('위치 Z').onChange((val) => buddhaWrapper.position.z = val);
+
+        const folderCamera = gui.addFolder('카메라 설정');
+        folderCamera.add(params, 'cameraZ', 10, 100).name('카메라 거리 (Z)').onChange((val) => camera.position.z = val);
+        folderCamera.add(params, 'parallaxOffset', 0, 40).name('입체감 (이동 반경)');
+
+        gui.hide();
+
+        // ==========================================
+        // 5. 외부 3D 모델링 로드 및 프로그레스바 연동
+        // ==========================================
+        let buddhaModel = null;
+        const loader = new THREE.GLTFLoader();
+        
+        // 💡 [경로 확정] 2번 경로 (public/index.html 에서 실행 중인 경우)
+        const modelUrl = './works/Labs/Image/buddha.glb'; 
+
+        const loadingOverlay = document.getElementById('loading-overlay');
+        const progressArc = document.querySelector('.progress-arc');
+        const loadingText = document.getElementById('loading-percent');
+        const cameraUi = document.getElementById('camera-ui');
+
+        // 원 둘레 길이 계산값 (2 * PI * 45)
+        const circumference = 282.74;
+
+        try {
+            loader.load(
+                modelUrl,
+                function (gltf) {
+                    buddhaModel = gltf.scene;
+                    
+                    const box = new THREE.Box3().setFromObject(buddhaModel);
+                    const center = box.getCenter(new THREE.Vector3());
+                    
+                    buddhaModel.position.x = -center.x;
+                    buddhaModel.position.y = -center.y;
+                    buddhaModel.position.z = -center.z;
+                    
+                    buddhaWrapper.add(buddhaModel);
+                    buddhaWrapper.scale.set(params.buddhaScale, params.buddhaScale, params.buddhaScale); 
+                    buddhaWrapper.position.set(params.buddhaX, params.buddhaY, params.buddhaZ);
+                    
+                    buddhaModel.traverse(function (child) {
+                        if (child.isMesh) {
+                            child.material = new THREE.MeshStandardMaterial({
+                                color: 0xffd700, roughness: 0.3, metalness: 0.8
+                            });
+                        }
+                    });
+
+                    // 로딩 100% 처리
+                    progressArc.style.strokeDashoffset = 0;
+                    loadingText.innerText = `100%`;
+                    isModelLoaded = true;
+                    
+                    setTimeout(() => {
+                        loadingOverlay.style.opacity = '0';
+                        setTimeout(() => { 
+                            loadingOverlay.style.display = 'none'; 
+                            // 로딩화면이 걷히면 카메라 권한창 띄움
+                            if (!isFaceTrackingStarted) {
+                                cameraUi.style.opacity = '1';
+                            }
+                        }, 800);
+                    }, 400);
+                },
+                function (xhr) {
+                    // 원형 SVG 프로그레스 바 연동
+                    if (xhr.total > 0) {
+                        const percent = (xhr.loaded / xhr.total) * 100;
+                        const offset = circumference - (percent / 100) * circumference;
+                        progressArc.style.strokeDashoffset = offset;
+                        loadingText.innerText = `${Math.round(percent)}%`;
+                    }
+                },
+                function (error) { 
+                    console.error("3D Model Load Error:", error);
+                    const errorDiv = document.getElementById('model-error');
+                    const errorDesc = document.getElementById('model-error-desc');
+                    errorDiv.style.display = 'block'; 
+
+                    // 💡 [수정됨] 이제 에러 창에 하드코딩된 텍스트가 아닌, 실제 시도한 'modelUrl' 변수값이 출력됩니다.
+                    if (window.location.protocol === 'file:') {
+                        errorDesc.innerHTML = `<span style='font-size:0.85em; font-weight:300;'>HTML 파일을 더블클릭해서 열 경우(file://) 3D 모델을 불러올 수 없습니다.<br><b>VS Code의 Live Server</b>를 사용하거나 웹 서버에 올려주세요.</span>`;
+                    } else {
+                        errorDesc.innerHTML = `<span style='font-size:0.85em; font-weight:300;'>요청 경로: <b>${modelUrl}</b><br>위 경로에서 모델을 찾지 못했습니다.<br>키보드 <b>F12</b>를 눌러 Console 창의 빨간 에러를 확인하세요!</span>`;
+                    }
+                    loadingText.innerText = `Error`;
+                }
+            );
+        } catch (error) { 
+            document.getElementById('model-error').style.display = 'block'; 
+        }
+
+        // ==========================================
+        // 6. 얼굴 트래킹 
+        // ==========================================
+        let targetX = 0, targetY = 0;
+        
+        setTimeout(() => {
+            if (!isFaceTrackingStarted) {
+                cameraStatus = 'failed';
+                if (cameraUi) {
+                    document.getElementById('camera-title').innerText = "트래킹 비활성화 상태";
+                    document.getElementById('camera-desc').innerText = "기본 시점으로 화면을 전환합니다.";
+                    setTimeout(() => { cameraUi.style.opacity = '0'; }, 2500);
+                }
+            }
+        }, 10000);
+        
+        const videoElement = document.getElementById('input_video');
+        
+        function onResults(results) {
+            if (results.detections.length > 0) {
+                isFaceTrackingStarted = true;
+                const bbox = results.detections[0].boundingBox;
+                
+                targetX = (bbox.xCenter - 0.5) * -2; 
+                targetY = -(bbox.yCenter - 0.5) * 2; 
+
+                checkAndHideCameraUI();
+            }
+        }
+
+        const faceDetection = new FaceDetection({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_detection/${file}`});
+        faceDetection.setOptions({ model: 'short', minDetectionConfidence: 0.5 });
+        faceDetection.onResults(onResults);
+
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+            const cameraUtils = new Camera(videoElement, {
+                onFrame: async () => { await faceDetection.send({image: videoElement}); },
+                width: 320, height: 240
+            });
+            cameraUtils.start().catch(err => {
+                cameraStatus = 'failed';
+                checkAndHideCameraUI();
+            });
+        } else {
+            cameraStatus = 'failed';
+            checkAndHideCameraUI();
+        }
+
+        // ==========================================
+        // 7. 렌더링 루프
+        // ==========================================
+        camera.position.z = params.cameraZ;
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const maxOffset = params.parallaxOffset;
+            const lerpFactor = 0.05;
+
+            camera.position.x += ((targetX * maxOffset) - camera.position.x) * lerpFactor;
+            camera.position.y += ((targetY * maxOffset) - camera.position.y) * lerpFactor;
+            
+            camera.position.z = params.cameraZ;
+            camera.lookAt(0, 0, 0);
+
+            renderer.render(scene, camera);
+        }
+        
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>

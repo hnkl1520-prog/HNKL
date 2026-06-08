@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Media Art - Goldfish</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #050505;
+            overflow: hidden;
+            font-family: sans-serif;
+        }
+        
+        /* UI 패널 - 글래스모피즘 효과 적용 */
+        #info-panel {
+            position: absolute; 
+            bottom: 30px; 
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10; 
+            pointer-events: none;
+            display: flex;
+            justify-content: center;
+            width: 100%;
+        }
+        
+        #instruction {
+            background: rgba(255, 255, 255, 0.05); 
+            backdrop-filter: blur(12px); 
+            -webkit-backdrop-filter: blur(12px); 
+            border: 1px solid rgba(255, 255, 255, 0.1); 
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5); 
+            
+            padding: 15px 30px; 
+            border-radius: 12px; 
+            color: #eee;
+            font-size: 1.1rem;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            text-align: center;
+            white-space: nowrap;
+        }
+
+        #loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #ffaa00;
+            font-size: 1.2rem;
+            font-weight: bold;
+            z-index: 20;
+            text-align: center;
+            line-height: 1.5;
+            background: rgba(0,0,0,0.8);
+            padding: 20px;
+            border-radius: 12px; 
+        }
+
+        /* 웹캠 프리뷰 */
+        #cam-container {
+            position: absolute;
+            top: 20px; 
+            right: 20px;
+            width: 160px;
+            height: 120px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px; 
+            overflow: hidden;
+            z-index: 30;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+            opacity: 0.7;
+            transition: opacity 0.3s;
+        }
+        #cam-container:hover { opacity: 1.0; }
+        #pip_video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform: scaleX(-1);
+            display: none;
+        }
+        #cam-status {
+            color: #ffaa00;
+            font-size: 0.8rem;
+            text-align: center;
+            padding: 10px;
+        }
+        canvas { display: block; }
+    </style>
+    <!-- Three.js 및 MediaPipe 로더 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <!-- ✨ 핸드 트래킹 시각화를 위한 drawing_utils 추가 -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+    
+    <style>
+        <div id="instruction" style="display: none;"> 주먹(압축) |  쫙 펴서 밀기(회전) | 핀치(크기) |  터치</div>
+        /* 웹캠 프리뷰 */
+        #cam-container {
+            position: absolute;
+            top: 20px; 
+            right: 20px;
+            /* ✨ 카메라 창 사이즈 증가 (1.5배) */
+            width: 320px;
+            height: 240px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px; 
+            overflow: hidden;
+            z-index: 30;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+            opacity: 0.8;
+            transition: opacity 0.3s;
+        }
+        #cam-container:hover { opacity: 1.0; }
+        #pip_video {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform: scaleX(-1);
+            display: none;
+            z-index: 1;
+        }
+        /* ✨ 핸드 뼈대를 그릴 투명 캔버스 레이어 */
+        #cam-canvas {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform: scaleX(-1);
+            z-index: 2;
+            pointer-events: none;
+        }
+        #cam-status {
+            color: #ffffff;
+            font-size: 0.9rem;
+            text-align: center;
+            padding: 10px;
+        }
+        canvas { display: block; }
+    </style>
+</head>
+<body>
+    <div id="loading">모델 및 AI 엔진 로딩 중...<br>잠시만 기다려주세요.</div>
+    <div id="info-panel">
+        <!-- ✨ 이모지 제거 및 직관적인 짧은 텍스트 적용 -->
+        <div id="instruction" style="display: none;">손가락 : 터치  |  주먹 : 압축  |  손바닥 스와이프: 회전  |  양 손으로 핀치 : 크기조절 </div>
+    </div>
+    
+    <div id="cam-container">
+        <div id="cam-status">카메라 연결 대기 중...</div>
+        <video id="pip_video" autoplay playsinline></video>
+        <!-- ✨ 뼈대가 그려질 캔버스 추가 -->
+        <canvas id="cam-canvas"></canvas>
+    </div>
+    
+    <script>
+        let scene, camera, renderer;
+        let mainContainer; 
+        let fishParticles = null;
+        let particleMaterial = null;
+        let clock; 
+        
+        let appState = "FISH"; 
+        const BOX_SIZE = 14;     
+        
+        // 아이소메트릭 완벽 구도
+        const CAM_X = 18;
+        const CAM_Y = -11;
+        const CAM_Z = 24;
+        const FRUSTUM = 28;
+
+        // Y축 관성 회전 변수
+        let rotationVelocityY = 0;
+        let currentRotationY = 0;
+        let prevWristX = null; 
+
+        // 스케일링 변수
+        let targetGlobalScale = 1.0;
+        let currentGlobalScale = 1.0;
+        let isPinching = false;
+        let initialPinchDist = 1.0;
+        let startScale = 1.0;
+        
+        let particleCount = 120000; 
+        let currentPositions, fishPositions, spherePositions, particleVelocities;
+        let originalColors, sphereColors; 
+
+        // 제스처 안정화를 위한 프레임 카운터
+        let fistCount = 0, openCount = 0, defaultCount = 0, pinchFrames = 0;
+        const THRESHOLD = 5; 
+
+        const raycaster = new THREE.Raycaster();
+        const interactionPlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
+        
+        let activePointers = []; 
+        let prevPointerMap = new Map(); 
+        let cursorOrbs = []; 
+
+        init();
+        animate();
+
+        function init() {
+            scene = new THREE.Scene();
+            scene.fog = new THREE.FogExp2(0x020202, 0.015);
+            clock = new THREE.Clock(); 
+
+            const aspect = window.innerWidth / window.innerHeight;
+            camera = new THREE.OrthographicCamera(
+                FRUSTUM * aspect / -2, 
+                FRUSTUM * aspect / 2, 
+                FRUSTUM / 2, 
+                FRUSTUM / -2, 
+                0.1, 
+                1000
+            );
+            camera.position.set(CAM_X, CAM_Y, CAM_Z); 
+            camera.lookAt(0, 0, 0);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            document.body.appendChild(renderer.domElement);
+
+            mainContainer = new THREE.Group();
+            scene.add(mainContainer);
+
+            const cursorGeo = new THREE.SphereGeometry(0.4, 16, 16);
+            const cursorMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.6 });
+            for(let i=0; i<2; i++) {
+                const orb = new THREE.Mesh(cursorGeo, cursorMat);
+                orb.visible = false;
+                scene.add(orb); 
+                cursorOrbs.push(orb);
+            }
+
+            createBoundingCube();
+            loadGLBAndExtractSurface('./Image/gold_fish.glb');
+            initHandTracking();
+
+            window.addEventListener('resize', onWindowResize, false);
+        }
+
+        function createBoundingCube() {
+            const boxGeometry = new THREE.BoxGeometry(BOX_SIZE, BOX_SIZE, BOX_SIZE);
+            const edgesGeometry = new THREE.EdgesGeometry(boxGeometry);
+            const lineMaterial = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.2 });
+            const cubeLines = new THREE.LineSegments(edgesGeometry, lineMaterial);
+            mainContainer.add(cubeLines); 
+
+            const pointsMaterial = new THREE.PointsMaterial({ color: 0xffffff, size: 0.25, sizeAttenuation: false });
+            const hs = BOX_SIZE / 2;
+            const corners = [
+                [hs, hs, hs], [hs, hs, -hs], [hs, -hs, hs], [hs, -hs, -hs],
+                [-hs, hs, hs], [-hs, hs, -hs], [-hs, -hs, hs], [-hs, -hs, -hs]
+            ];
+            const cornerGeo = new THREE.BufferGeometry();
+            const cornerVertices = new Float32Array(8 * 3);
+            corners.forEach((c, i) => {
+                cornerVertices[i * 3] = c[0];
+                cornerVertices[i * 3 + 1] = c[1];
+                cornerVertices[i * 3 + 2] = c[2];
+            });
+            cornerGeo.setAttribute('position', new THREE.BufferAttribute(cornerVertices, 3));
+            mainContainer.add(new THREE.Points(cornerGeo, pointsMaterial));
+        }
+
+        function initHandTracking() {
+            const videoElement = document.getElementById('pip_video');
+            const statusElement = document.getElementById('cam-status');
+            const instruction = document.getElementById('instruction');
+            
+            // ✨ 카메라 뼈대 캔버스 가져오기
+            const camCanvas = document.getElementById('cam-canvas');
+            const camCtx = camCanvas.getContext('2d');
+
+            const hands = new Hands({locateFile: (file) => {
+                return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
+            }});
+            
+            hands.setOptions({
+                maxNumHands: 2, 
+                modelComplexity: 1,
+                minDetectionConfidence: 0.6,
+                minTrackingConfidence: 0.6
+            });
+
+            // ✋ 제스처 판별을 위한 헬퍼 함수들
+            const isFingerCurled = (landmarks, tipIdx, mcpIdx) => {
+                const wrist = landmarks[0];
+                const tipDist = Math.hypot(landmarks[tipIdx].x - wrist.x, landmarks[tipIdx].y - wrist.y);
+                const mcpDist = Math.hypot(landmarks[mcpIdx].x - wrist.x, landmarks[mcpIdx].y - wrist.y);
+                return tipDist < mcpDist * 0.85; 
+            };
+            const checkFist = (landmarks) => {
+                return isFingerCurled(landmarks, 8, 5) && isFingerCurled(landmarks, 12, 9) && 
+                       isFingerCurled(landmarks, 16, 13) && isFingerCurled(landmarks, 20, 17);
+            };
+            const isFingerExtended = (landmarks, tipIdx, mcpIdx) => {
+                const wrist = landmarks[0];
+                const tipDist = Math.hypot(landmarks[tipIdx].x - wrist.x, landmarks[tipIdx].y - wrist.y);
+                const mcpDist = Math.hypot(landmarks[mcpIdx].x - wrist.x, landmarks[mcpIdx].y - wrist.y);
+                return tipDist > mcpDist * 1.3; 
+            };
+            const isThumbExtended = (landmarks) => {
+                const wrist = landmarks[0];
+                const tipDist = Math.hypot(landmarks[4].x - wrist.x, landmarks[4].y - wrist.y);
+                const mcpDist = Math.hypot(landmarks[2].x - wrist.x, landmarks[2].y - wrist.y);
+                return tipDist > mcpDist * 1.25; 
+            };
+            const checkOpen = (landmarks) => {
+                return isThumbExtended(landmarks) && isFingerExtended(landmarks, 8, 5) && 
+                       isFingerExtended(landmarks, 12, 9) && isFingerExtended(landmarks, 16, 13) && isFingerExtended(landmarks, 20, 17);
+            };
+            // 핀치는 "엄지/검지가 맞닿아 있으면서, 절대 주먹상태가 아닐 때"만 인정!
+            const checkPinch = (landmarks) => {
+                const thumbTip = landmarks[4];
+                const indexTip = landmarks[8];
+                const dist = Math.hypot(thumbTip.x - indexTip.x, thumbTip.y - indexTip.y);
+                return dist < 0.05 && !checkFist(landmarks); 
+            };
+
+            hands.onResults((results) => {
+                if (statusElement.style.display !== 'none') {
+                    statusElement.style.display = 'none';
+                    videoElement.style.display = 'block';
+                    instruction.style.display = 'block';
+                }
+
+                // ✨ 카메라 영상 위에 뼈대(Skeleton) 그리기
+                camCanvas.width = videoElement.videoWidth || 320;
+                camCanvas.height = videoElement.videoHeight || 240;
+                camCtx.save();
+                camCtx.clearRect(0, 0, camCanvas.width, camCanvas.height);
+                
+                if (results.multiHandLandmarks) {
+                    for (const landmarks of results.multiHandLandmarks) {
+                        // 창이 작은 만큼 라인과 점을 굵고 선명한 흰색/회색으로 표시
+                        drawConnectors(camCtx, landmarks, HAND_CONNECTIONS, {color: 'rgba(255, 255, 255, 0.8)', lineWidth: 3});
+                        drawLandmarks(camCtx, landmarks, {color: '#ffffff', lineWidth: 2, radius: 4});
+                    }
+                }
+                camCtx.restore();
+
+                activePointers = [];
+                let currentPointerMap = new Map();
+
+                let isFistAny = false;
+                let isOpenAny = false;
+                let activeScreenX = null;
+                let pinchHand1 = null;
+                let pinchHand2 = null;
+
+                if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+                    
+                    results.multiHandLandmarks.forEach((landmarks, index) => {
+                        const tip = landmarks[8];
+                        const screenX = -(tip.x * 2 - 1);
+                        const screenY = -(tip.y * 2 - 1);
+                        
+                        const intersectPoint = new THREE.Vector3();
+                        raycaster.setFromCamera(new THREE.Vector2(screenX, screenY), camera);
+                        raycaster.ray.intersectPlane(interactionPlane, intersectPoint);
+
+                        let vel = new THREE.Vector3(0, 0, 0);
+                        if (prevPointerMap.has(index)) {
+                            vel.subVectors(intersectPoint, prevPointerMap.get(index));
+                            if (vel.length() > 3.0) vel.set(0,0,0); 
+                        }
+                        currentPointerMap.set(index, intersectPoint.clone());
+                        
+                        const localIntersect = intersectPoint.clone();
+                        mainContainer.worldToLocal(localIntersect);
+                        
+                        activePointers.push({ worldPos: intersectPoint, localPos: localIntersect, vel: vel });
+
+                        // 상태 판별 (루프 돌며 각 손 확인)
+                        if (checkFist(landmarks)) isFistAny = true;
+                        if (checkOpen(landmarks)) {
+                            isOpenAny = true;
+                            activeScreenX = -(landmarks[0].x * 2 - 1); 
+                        }
+                        if (checkPinch(landmarks)) {
+                            if (!pinchHand1) pinchHand1 = landmarks;
+                            else if (!pinchHand2) pinchHand2 = landmarks;
+                        }
+                    });
+
+                    // ✨ 최강의 우선순위(Priority) 시스템 도입 (색상 고정 및 문구 간소화)
+                    // 1순위: 주먹 (압축)
+                    if (isFistAny) {
+                        fistCount++; openCount = 0; pinchFrames = 0; defaultCount = 0;
+                        isPinching = false;
+                        if (fistCount >= THRESHOLD && appState !== "SPHERE") {
+                            appState = "SPHERE";
+                            instruction.innerHTML = "파티클 모으기";
+                            prevWristX = null;
+                        }
+                    } 
+                    // 2순위: 양손 핀치 (크기 조절)
+                    else if (pinchHand1 && pinchHand2) {
+                        pinchFrames++; fistCount = 0; openCount = 0; defaultCount = 0;
+                        if (pinchFrames >= 3) { 
+                            const tip1 = pinchHand1[8];
+                            const tip2 = pinchHand2[8];
+                            const dist = Math.hypot(tip1.x - tip2.x, tip1.y - tip2.y);
+                            
+                            if (!isPinching) {
+                                isPinching = true;
+                                initialPinchDist = dist;
+                                startScale = targetGlobalScale;
+                                appState = "FISH"; 
+                                instruction.innerHTML = "양 손의 간격을 조절하여 크기를 변경하세요";
+                            } else {
+                                if (initialPinchDist > 0.01) {
+                                    let newScale = startScale * (dist / initialPinchDist);
+                                    if (isFinite(newScale)) {
+                                        targetGlobalScale = Math.max(0.3, Math.min(newScale, 12.0)); 
+                                    }
+                                }
+                            }
+                        }
+                    } 
+                    // 3순위: 오픈 팜 (회전)
+                    else if (isOpenAny) {
+                        openCount++; fistCount = 0; pinchFrames = 0; defaultCount = 0;
+                        if (isPinching) {
+                            isPinching = false;
+                            instruction.innerHTML = "손가락 : 터치  |  주먹 : 압축  |  손바닥 스와이프: 회전  |  양 손으로 핀치 : 크기조절";
+                        }
+                        if (openCount >= THRESHOLD) {
+                            if (appState !== "ROTATE") {
+                                appState = "ROTATE";
+                                instruction.innerHTML = "손바닥을 움직여 큐브를 돌려보세요";
+                                prevWristX = activeScreenX; 
+                            }
+                            if (appState === "ROTATE" && prevWristX !== null && activeScreenX !== null) {
+                                let diffX = activeScreenX - prevWristX;
+                                rotationVelocityY -= diffX * 0.4; 
+                            }
+                            prevWristX = activeScreenX; 
+                        }
+                    } 
+                    // 4순위: 기본 상태 (FISH)
+                    else {
+                        defaultCount++; fistCount = 0; openCount = 0; pinchFrames = 0;
+                        if (isPinching) isPinching = false;
+                        if (defaultCount >= THRESHOLD && appState !== "FISH") {
+                            appState = "FISH";
+                            instruction.innerHTML = "손가락 : 터치  |  주먹 : 압축  |  손바닥 스와이프: 회전  |  양 손으로 핀치 : 크기조절";
+                            prevWristX = null;
+                        }
+                    }
+                } else {
+                    fistCount = 0; openCount = 0; defaultCount = 0; pinchFrames = 0;
+                    isPinching = false;
+                    prevWristX = null; 
+                    
+                    if (appState === "SPHERE" || appState === "ROTATE") {
+                        appState = "FISH";
+                        instruction.innerHTML = "손가락 : 터치  |  주먹 : 압축  |  손바닥 스와이프: 회전  |  양 손으로 핀치 : 크기조절";
+                    }
+                }
+                prevPointerMap = currentPointerMap;
+            });
+
+            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } })
+                    .then((stream) => {
+                        videoElement.srcObject = stream;
+                        const cameraMP = new Camera(videoElement, {
+                            onFrame: async () => { await hands.send({image: videoElement}); },
+                            width: 320, height: 240
+                        });
+                        cameraMP.start();
+                    })
+                    .catch((err) => {
+                        statusElement.innerHTML = `웹캠 권한이 필요합니다.`;
+                    });
+            }
+        }
+
+        function loadGLBAndExtractSurface(modelUrl) {
+            const loader = new THREE.GLTFLoader();
+            loader.load(modelUrl, (gltf) => {
+                
+                gltf.scene.rotation.y = Math.PI / 2;
+                gltf.scene.updateMatrixWorld(true);
+
+                const box = new THREE.Box3().setFromObject(gltf.scene);
+                const center = box.getCenter(new THREE.Vector3());
+                const size = box.getSize(new THREE.Vector3());
+                const maxDim = Math.max(size.x, size.y, size.z);
+                const scale = isFinite(maxDim) && maxDim > 0 ? 9.5 / maxDim : 1; 
+
+                const triangles = [];
+                gltf.scene.traverse((child) => {
+                    if (child.isMesh && child.geometry && child.geometry.attributes.position) {
+                        const pos = child.geometry.attributes.position;
+                        const idx = child.geometry.index;
+                        const matrix = child.matrixWorld;
+                        const extract = (i, j, k) => triangles.push([
+                            new THREE.Vector3().fromBufferAttribute(pos, i).applyMatrix4(matrix),
+                            new THREE.Vector3().fromBufferAttribute(pos, j).applyMatrix4(matrix),
+                            new THREE.Vector3().fromBufferAttribute(pos, k).applyMatrix4(matrix)
+                        ]);
+                        if (idx) {
+                            for (let i = 0; i < idx.count; i += 3) extract(idx.getX(i), idx.getX(i+1), idx.getX(i+2));
+                        } else {
+                            for (let i = 0; i < pos.count; i += 3) extract(i, i+1, i+2);
+                        }
+                    }
+                });
+
+                if (triangles.length === 0) return; 
+
+                let maxX = 0.001, maxY = 0.001, maxZ = 0.001;
+                for (const tri of triangles) {
+                    for (let j = 0; j < 3; j++) {
+                        maxX = Math.max(maxX, Math.abs((tri[j].x - center.x) * scale));
+                        maxY = Math.max(maxY, Math.abs((tri[j].y - center.y) * scale));
+                        maxZ = Math.max(maxZ, Math.abs((tri[j].z - center.z) * scale));
+                    }
+                }
+
+                currentPositions = new Float32Array(particleCount * 3);
+                fishPositions = new Float32Array(particleCount * 3);
+                spherePositions = new Float32Array(particleCount * 3);
+                particleVelocities = new Float32Array(particleCount * 3);
+                
+                const colors = new Float32Array(particleCount * 3);
+                originalColors = new Float32Array(particleCount * 3);
+                sphereColors = new Float32Array(particleCount * 3); 
+
+                for (let i = 0; i < particleCount; i++) {
+                    const ix = i * 3, iy = i * 3 + 1, iz = i * 3 + 2;
+
+                    const tri = triangles[Math.floor(Math.random() * triangles.length)];
+                    let r1 = Math.random(), r2 = Math.random();
+                    if (r1 + r2 > 1) { r1 = 1 - r1; r2 = 1 - r2; }
+                    const r3 = 1 - r1 - r2;
+                    
+                    let fx = (tri[0].x * r1 + tri[1].x * r2 + tri[2].x * r3 - center.x) * scale;
+                    let fy = (tri[0].y * r1 + tri[1].y * r2 + tri[2].y * r3 - center.y) * scale;
+                    let fz = (tri[0].z * r1 + tri[1].z * r2 + tri[2].z * r3 - center.z) * scale;
+
+                    fishPositions[ix] = fx; fishPositions[iy] = fy; fishPositions[iz] = fz;
+                    currentPositions[ix] = fx; currentPositions[iy] = fy; currentPositions[iz] = fz;
+                    particleVelocities[ix] = particleVelocities[iy] = particleVelocities[iz] = 0;
+
+                    const u = Math.random(), v = Math.random();
+                    const theta = u * 2.0 * Math.PI;
+                    const phi = Math.acos(2.0 * v - 1.0);
+                    const r = Math.pow(Math.random(), 0.7) * 2.5; 
+                    
+                    spherePositions[ix] = r * Math.sin(phi) * Math.cos(theta);
+                    spherePositions[iy] = r * Math.sin(phi) * Math.sin(theta);
+                    spherePositions[iz] = r * Math.cos(phi);
+
+                    const color = new THREE.Color();
+                    const absX = Math.abs(fx), absY = Math.abs(fy), absZ = Math.abs(fz); 
+                    const heightRatio = (fy + maxY) / (maxY * 2); 
+                    const noise = (Math.random() - 0.5) * 0.04;
+                    color.setHSL(0.055 + noise, 1.0, 0.45 + heightRatio * 0.15 + noise); 
+
+                    let edgeFactor = 0;
+                    if (absZ > maxZ * 0.72) edgeFactor = Math.max(edgeFactor, (absZ - maxZ * 0.72) / (maxZ * 0.28));
+                    if (absY > maxY * 0.55) edgeFactor = Math.max(edgeFactor, (absY - maxY * 0.55) / (maxY * 0.45));
+                    if (absX > maxX * 0.35) edgeFactor = Math.max(edgeFactor, (absX - maxX * 0.35) / (maxX * 0.65));
+
+                    if (edgeFactor > 0) color.lerp(new THREE.Color(0xffffff), Math.pow(edgeFactor, 1.2) * 0.4); 
+                    
+                    colors[ix] = color.r; colors[iy] = color.g; colors[iz] = color.b;
+                    originalColors[ix] = color.r; originalColors[iy] = color.g; originalColors[iz] = color.b;
+
+                    const distRatio = r / 2.5;
+                    const sColor = color.clone(); 
+                    if (distRatio > 0.8) {
+                        sColor.lerp(new THREE.Color(0xffffff), Math.pow((distRatio - 0.8) / 0.2, 1.5) * 0.9);
+                    }
+                    sphereColors[ix] = sColor.r; sphereColors[iy] = sColor.g; sphereColors[iz] = sColor.b;
+                }
+
+                const geometry = new THREE.BufferGeometry();
+                geometry.setAttribute('position', new THREE.BufferAttribute(currentPositions, 3));
+                geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+                particleMaterial = new THREE.PointsMaterial({
+                    size: 0.035, 
+                    vertexColors: true,
+                    transparent: true,
+                    depthWrite: false, 
+                    opacity: 1.0, 
+                    blending: THREE.AdditiveBlending 
+                });
+
+                fishParticles = new THREE.Points(geometry, particleMaterial);
+                mainContainer.add(fishParticles); 
+
+                document.getElementById('loading').style.display = 'none';
+            });
+        }
+
+        function onWindowResize() {
+            const aspect = window.innerWidth / window.innerHeight;
+            camera.left = FRUSTUM * aspect / -2;
+            camera.right = FRUSTUM * aspect / 2;
+            camera.top = FRUSTUM / 2;
+            camera.bottom = FRUSTUM / -2;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const time = clock ? clock.getElapsedTime() : 0;
+
+            for(let i=0; i<2; i++) {
+                if (i < activePointers.length && appState === "FISH") {
+                    cursorOrbs[i].position.copy(activePointers[i].worldPos);
+                    cursorOrbs[i].visible = true;
+                } else {
+                    cursorOrbs[i].visible = false;
+                }
+            }
+
+            if (fishParticles && particleMaterial) {
+                
+                if(!isFinite(targetGlobalScale)) targetGlobalScale = 1.0;
+                if(!isFinite(currentGlobalScale)) currentGlobalScale = 1.0;
+
+                currentGlobalScale += (targetGlobalScale - currentGlobalScale) * 0.1;
+                
+                currentRotationY += rotationVelocityY;
+                rotationVelocityY *= 0.94; 
+                
+                mainContainer.rotation.set(0, currentRotationY, 0); 
+
+                const positions = fishParticles.geometry.attributes.position.array;
+                const colorsArray = fishParticles.geometry.attributes.color.array;
+                
+                const interactionRadius = 4.5 + (currentGlobalScale * 0.5); 
+                const interactionRadiusSq = interactionRadius * interactionRadius; 
+                
+                const boxLimit = (BOX_SIZE / 2) - 0.1; 
+
+                const safeZone = boxLimit * 0.6; 
+                const squishZone = boxLimit * 0.4; 
+                
+                const applySquish = (val) => {
+                    const absVal = Math.abs(val);
+                    if (absVal <= safeZone) return val;
+                    const excess = absVal - safeZone;
+                    const compressed = safeZone + squishZone * Math.tanh(excess / squishZone);
+                    return val > 0 ? compressed : -compressed;
+                };
+
+                for (let i = 0; i < particleCount; i++) {
+                    const ix = i * 3, iy = i * 3 + 1, iz = i * 3 + 2;
+                    let targetX, targetY, targetZ;
+                    let targetR, targetG, targetB;
+
+                    if (appState === "SPHERE") {
+                        if (i < particleCount * 0.66) {
+                            const sx = spherePositions[ix], sy = spherePositions[iy], sz = spherePositions[iz];
+                            const angle = time * 0.1; 
+                            
+                            targetX = (sx * Math.cos(angle) - sz * Math.sin(angle)) * currentGlobalScale;
+                            targetY = sy * currentGlobalScale;
+                            targetZ = (sx * Math.sin(angle) + sz * Math.cos(angle)) * currentGlobalScale;
+                            
+                            targetR = sphereColors[ix]; targetG = sphereColors[iy]; targetB = sphereColors[iz];
+                        } else {
+                            targetX = fishPositions[ix] * currentGlobalScale;
+                            targetY = fishPositions[iy] * currentGlobalScale;
+                            targetZ = fishPositions[iz] * currentGlobalScale;
+                            targetR = 0.0; targetG = 0.0; targetB = 0.0; 
+                        }
+                    } else {
+                        const ox = fishPositions[ix] * currentGlobalScale;
+                        const oy = fishPositions[iy] * currentGlobalScale;
+                        const oz = fishPositions[iz] * currentGlobalScale;
+                        
+                        const wiggleAmplitude = 0.2 + Math.abs(oz) * 0.08; 
+                        const wavePhase = (oz * 0.4) - (time * 3.0); 
+                        
+                        targetX = ox + Math.sin(wavePhase) * wiggleAmplitude;
+                        targetY = oy + Math.sin(time * 1.5 + oz * 0.2) * 0.25; 
+                        targetZ = oz;
+                        
+                        targetR = originalColors[ix]; targetG = originalColors[iy]; targetB = originalColors[iz];
+                    }
+                    
+                    targetX = applySquish(targetX);
+                    targetY = applySquish(targetY);
+                    targetZ = applySquish(targetZ);
+                    
+                    colorsArray[ix] += (targetR - colorsArray[ix]) * 0.15;
+                    colorsArray[iy] += (targetG - colorsArray[iy]) * 0.15;
+                    colorsArray[iz] += (targetB - colorsArray[iz]) * 0.15;
+
+                    let spinSpeed = rotationVelocityY; 
+                    if (Math.abs(spinSpeed) > 0.002 && (appState === "FISH" || appState === "ROTATE")) {
+                        let swirlForce = -spinSpeed * 0.15; 
+                        let spreadForce = Math.abs(spinSpeed) * 0.03;
+                        
+                        particleVelocities[ix] += (targetZ * swirlForce) + (targetX * spreadForce);
+                        particleVelocities[iz] += (-targetX * swirlForce) + (targetZ * spreadForce);
+                        particleVelocities[iy] += targetY * spreadForce * 0.1; 
+                    }
+
+                    // 터치 인터랙션 (FISH 상태에서만)
+                    if (appState === "FISH") {
+                        for(let ptr of activePointers) {
+                            // ✨ 2D 평면(원통) 거리가 아닌 Z축을 포함한 완벽한 3D 구형(Sphere) 거리 계산!
+                            const dx = positions[ix] - ptr.localPos.x;
+                            const dy = positions[iy] - ptr.localPos.y;
+                            const dz = positions[iz] - ptr.localPos.z; 
+                            const distSq3D = dx*dx + dy*dy + dz*dz; 
+
+                            if (distSq3D < interactionRadiusSq) {
+                                const dist3D = Math.sqrt(distSq3D);
+                                const force = Math.pow((interactionRadius - dist3D) / interactionRadius, 2.0); 
+                                
+                                // ✨ X, Y 뿐만 아니라 Z 방향으로도 사방으로 둥글게 파티클을 밀어냅니다.
+                                particleVelocities[ix] += (dx / (dist3D || 1)) * force * 0.3 + ptr.vel.x * force * 1.5;
+                                particleVelocities[iy] += (dy / (dist3D || 1)) * force * 0.3 + ptr.vel.y * force * 1.5;
+                                particleVelocities[iz] += (dz / (dist3D || 1)) * force * 0.3 + ptr.vel.z * force * 1.5;
+                            }
+                        }
+                    }
+
+                    let vx = (targetX - positions[ix]) * 0.008; 
+                    let vy = (targetY - positions[iy]) * 0.008;
+                    let vz = (targetZ - positions[iz]) * 0.008;
+
+                    particleVelocities[ix] += isFinite(vx) ? vx : 0;
+                    particleVelocities[iy] += isFinite(vy) ? vy : 0;
+                    particleVelocities[iz] += isFinite(vz) ? vz : 0;
+
+                    particleVelocities[ix] *= 0.92; 
+                    particleVelocities[iy] *= 0.92;
+                    particleVelocities[iz] *= 0.92;
+
+                    positions[ix] += particleVelocities[ix];
+                    positions[iy] += particleVelocities[iy];
+                    positions[iz] += particleVelocities[iz];
+
+                    if(!isFinite(positions[ix])) positions[ix] = 0;
+                    if(!isFinite(positions[iy])) positions[iy] = 0;
+                    if(!isFinite(positions[iz])) positions[iz] = 0;
+
+                    if (positions[ix] > boxLimit) { positions[ix] = boxLimit; particleVelocities[ix] *= -0.5; }
+                    else if (positions[ix] < -boxLimit) { positions[ix] = -boxLimit; particleVelocities[ix] *= -0.5; }
+
+                    if (positions[iy] > boxLimit) { positions[iy] = boxLimit; particleVelocities[iy] *= -0.5; }
+                    else if (positions[iy] < -boxLimit) { positions[iy] = -boxLimit; particleVelocities[iy] *= -0.5; }
+
+                    if (positions[iz] > boxLimit) { positions[iz] = boxLimit; particleVelocities[iz] *= -0.5; }
+                    else if (positions[iz] < -boxLimit) { positions[iz] = -boxLimit; particleVelocities[iz] *= -0.5; }
+                }
+                
+                fishParticles.geometry.attributes.position.needsUpdate = true;
+                fishParticles.geometry.attributes.color.needsUpdate = true;
+            }
+
+            renderer.render(scene, camera);
+        }
+    </script>
+</body>
+</html>

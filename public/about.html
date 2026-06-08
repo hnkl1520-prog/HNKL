@@ -1008,7 +1008,7 @@
                     </div>
                 </div>
 
-                <!-- COL 2: Language & Experience -->
+                <!-- COL 2: Language & Experience (Now Capabilities) -->
                 <div class="col-stack">
                     <div class="bento-card card-language">
                         <div class="card-inner">
@@ -1043,6 +1043,8 @@
                         </div>
                     </div>
 
+                    <!-- [임시 백업] 기존 Experience 원본 상태 -->
+                    <!--
                     <div class="bento-card card-experience hover-trigger view-details" onclick="toggleExpand(this)">
                         <div class="card-inner">
                             <div class="card-front" style="padding-top: 15px; padding-left:20px; padding-bottom:20px">
@@ -1096,9 +1098,35 @@
                             </div>
                         </div>
                     </div>
+                    -->
+
+                    <!-- 수정된 Experience 위치에 Capabilities 내용 반영 (Flip 제거됨) -->
+                    <div class="bento-card card-experience">
+                        <div class="card-inner">
+                            <div class="card-front" style="padding-top: 15px; padding-left:20px; padding-bottom:20px">
+                                <h3 class="card-title">Capabilities</h3>
+                                <div class="capa-list">
+                                    <div class="capa-row">
+                                        <div class="capa-tag">UX/UI</div>
+                                        <div class="capa-tag">Interaction</div>
+                                    </div>
+                                    <div class="capa-row">
+                                         <div class="capa-tag">3D</div>
+                                         <div class="capa-tag">XR</div>
+                                         <div class="capa-tag">Prototyping</div>
+                                    </div>
+                                    <div class="capa-row">
+                                        <div class="capa-tag">Interactive Web</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
-                <!-- COL 3: Capabilities -->
+                <!-- COL 3: Capabilities (Now Tools) -->
+                <!-- [임시 백업] 기존 Capabilities 원본 상태 -->
+                <!--
                 <div class="bento-card card-capabilities hover-trigger view-details" onclick="toggleExpand(this)">
                     <div class="card-inner">
                         <div class="card-front" style="padding-top: 15px; padding-left:20px; padding-bottom:20px">
@@ -1136,6 +1164,43 @@
                                 <div class="tool-row-v">
                                     <span class="tool-cat-v">Adobe</span>
                                     <span class="tool-items-v">Photoshop, Illustrator, Premiere Pro</span>
+                                </div>
+                                <div class="tool-row-v">
+                                    <span class="tool-cat-v">AI</span>
+                                    <span class="tool-items-v">Comfy UI, Midjourney</span>
+                                </div>
+                                <div class="tool-row-v">
+                                    <span class="tool-cat-v">Web</span>
+                                    <span class="tool-items-v">HTML5, CSS</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                -->
+
+                <!-- 수정된 Capabilities 위치에 Tools 내용 반영 (Flip 제거 및 2x3 레이아웃) -->
+                <div class="bento-card card-capabilities">
+                    <div class="card-inner">
+                        <div class="card-front" style="padding-top: 15px; padding-left:20px; padding-bottom:20px">
+                            <h3 class="card-title">Tools</h3>
+                            <!-- 글자 간 상하 간격은 유지하고 2열 3행으로 변경하기 위해 CSS Grid 인라인 추가 -->
+                            <div class="tools-vertical-list" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px 20px; margin-top: auto;">
+                                <div class="tool-row-v">
+                                    <span class="tool-cat-v">3D</span>
+                                    <span class="tool-items-v">Blender, Rhino</span>
+                                </div>
+                                <div class="tool-row-v">
+                                    <span class="tool-cat-v">Rendering</span>
+                                    <span class="tool-items-v">KeyShot</span>
+                                </div>
+                                <div class="tool-row-v">
+                                    <span class="tool-cat-v">UX/UI & Prototyping</span>
+                                    <span class="tool-items-v">Figma, Framer, Unity</span>
+                                </div>
+                                <div class="tool-row-v">
+                                    <span class="tool-cat-v">Adobe</span>
+                                    <span class="tool-items-v">Photoshop, Illustrator,<br>Premiere Pro</span>
                                 </div>
                                 <div class="tool-row-v">
                                     <span class="tool-cat-v">AI</span>
@@ -1667,57 +1732,6 @@
                 camera.updateProjectionMatrix();
             });
         })();
-
-        // 3D ROLODEX LOGIC (Stuck-in / Fan style) - 비활성화 처리
-        /*
-        (function(){
-            const ring = document.getElementById('cylinder-ring');
-            
-            // 카드 개수: 60개
-            const totalItems = 60; 
-            
-            // 링의 반지름 (800px)
-            const radius = 800; 
-            
-            for(let i=0; i<totalItems; i++) {
-                const div = document.createElement('div');
-                div.className = 'cylinder-item';
-                
-                // 360도를 아이템 개수로 나눔
-                const angle = i * (360 / totalItems);
-                
-                // [배치 로직]
-                div.style.transform = `rotateY(${angle}deg) translateZ(${radius}px) rotateY(-90deg)`;
-
-                const img = document.createElement('img');
-                const srcNum = (i % 36) + 1; // 1~36 이미지 순환
-                img.src = `assets/info_image/${srcNum}.png`;
-                img.alt = `Work ${srcNum}`;
-                
-                img.onerror = function() {
-                    this.style.display = 'none';
-                    div.style.backgroundColor = '#d0d0d5';
-                    div.innerHTML = `<span style="color:#fff; font-size:0.8rem;">${srcNum}</span>`;
-                    div.style.display = 'flex';
-                    div.style.alignItems = 'center';
-                    div.style.justifyContent = 'center';
-                };
-
-                div.appendChild(img);
-                if (ring) ring.appendChild(div);
-                
-                // 호버 이벤트
-                div.addEventListener('mouseenter', () => {
-                    div.style.transform = `rotateY(${angle}deg) translateZ(${radius + 50}px) rotateY(-90deg) scale(1.1)`;
-                    div.style.zIndex = 1000;
-                });
-                div.addEventListener('mouseleave', () => {
-                    div.style.transform = `rotateY(${angle}deg) translateZ(${radius}px) rotateY(-90deg)`;
-                    div.style.zIndex = '';
-                });
-            }
-        })();
-        */
 
         // Loading Logic (Smooth Slide Up)
         (function() {
