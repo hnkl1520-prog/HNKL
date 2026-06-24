@@ -184,24 +184,23 @@
         // ===============================================
         // DATA
         // ===============================================
+        // 경로 규칙: img·url 모두 public 루트 기준 전체 경로 (프로젝트별 폴더 구조)
         const projectsData = [
-            { title: "VIBRA: XR FOOTBALL BROADCASTING SERIVCE", cat: "XR, UX, INTERACTION", img: "VIBRA_Thumb.png", url: "works/Projects/VIBRA.html" },
-            { title: "REST MODE", cat: "Mobility, UX, UI", img: "Restmode_Thumb.png", url: "works/Projects/Restmode.html" },
-            { title: "SWIG : a Smart Golf Cart", cat: "Mobility, UX, UI", img: "SWIG_Thumb.png", url: "404.html" },
-            { title: "VA PLAY", cat: "AR, Mobile Service", img: "VAPlay_Thumb.png", url: "404.html" },
-            { title: "CAP:US ", cat: "App Design", img: "CAPUS_Thumb.png", url: "404.html" },
-            { title: "KORAIL EDUCATION APP", cat: "UX, UI, AR, 3D", img: "project_06.png", url: "404.html" }
+            { title: "VIBRA: XR FOOTBALL BROADCASTING SERIVCE", cat: "XR, UX, INTERACTION", img: "works/projects/vibra/thumb.png", url: "works/projects/vibra/vibra.html" },
+            { title: "REST MODE", cat: "Mobility, UX, UI", img: "works/projects/restmode/thumb.png", url: "works/projects/restmode/restmode.html" },
+            { title: "SWIG : a Smart Golf Cart", cat: "Mobility, UX, UI", img: "works/projects/swig/thumb.png", url: "404.html" },
+            { title: "VA PLAY", cat: "AR, Mobile Service", img: "works/projects/vaplay/thumb.png", url: "404.html" },
+            { title: "CAP:US ", cat: "App Design", img: "works/projects/capus/thumb.png", url: "404.html" },
+            { title: "KORAIL EDUCATION APP", cat: "UX, UI, AR, 3D", img: "works/projects/korail/thumb.png", url: "404.html" }
         ];
 
         const labsData = [
-            // 수정됨: 경로가 이중으로 결합되지 않도록 'Thumbs/' 부분을 제거했습니다.
-            // (만약 실제 경로가 'works/Labs/Thumbs/Goldfish_Thumb.jpg' 라면 아래 renderWorks 함수의 basePath를 수정해야 합니다.)
-            { title: "Budda in the Window", cat: "Creative Coding", img: "Budda_Thumb.png", url: "works/Labs/Budda.html" },
-            { title: "Goldfish", cat: "Creative Coding", img: "Goldfish_Thumb.jpg", url: "works/Labs/Goldfish.html" },
-            { title: "Dots", cat: "Creative Coding", img: "Dots_Thumb.jpg", url: "works/Labs/Dots.html" },
-            { title: "Blur", cat: "Creative Coding", img: "lab_03.png", url: "works/Labs/Blur.html" },
-            { title: "Untitled_01", cat: "Creative Coding", img: "lab_01.png", url: "works/Labs/Untitled_01.html" },
-            { title: "Untitled_02", cat: "Creative Coding", img: "lab_02.png", url: "works/Labs/Untitled_02.html" }
+            { title: "Budda in the Window", cat: "Creative Coding", img: "works/labs/budda/thumb.png", url: "works/labs/budda/budda.html" },
+            { title: "Goldfish", cat: "Creative Coding", img: "works/labs/goldfish/thumb.jpg", url: "works/labs/goldfish/goldfish.html" },
+            { title: "Dots", cat: "Creative Coding", img: "works/labs/dots/thumb.jpg", url: "works/labs/dots/dots.html" },
+            { title: "Blur", cat: "Creative Coding", img: "works/labs/blur/thumb.png", url: "works/labs/blur/blur.html" },
+            { title: "Untitled_01", cat: "Creative Coding", img: "works/labs/untitled-01/thumb.png", url: "works/labs/untitled-01/untitled-01.html" },
+            { title: "Untitled_02", cat: "Creative Coding", img: "works/labs/untitled-02/thumb.png", url: "works/labs/untitled-02/untitled-02.html" }
         ];
 
         let currentCategory = 'projects';
@@ -284,19 +283,10 @@
                 grid.classList.remove('mode-projects');
             }
 
-            // [수정] 카테고리별 이미지 경로 설정
-            let basePath = '';
-            if (category === 'projects') {
-                basePath = 'works/Projects/Thumbs'; // Projects 경로
-            } else {
-                // Labs 이미지가 실제로 'works/Labs/Thumbs'에 있다면 아래를 'works/Labs/Thumbs'로 수정하셔야 합니다.
-                basePath = 'works/Labs/Thumbs';    // Labs 경로 (기존 유지)
-            }
-
-            grid.innerHTML = ''; 
+            grid.innerHTML = '';
 
             data.forEach((item, index) => {
-                const imgSrc = `${basePath}/${item.img}`;
+                const imgSrc = item.img;   // 데이터에 전체 경로가 들어있음
                 const linkUrl = item.url ? item.url : '404.html';
                 
                 const html = `

@@ -1,0 +1,1531 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VIBRA — XR Football Broadcasting Platform</title>
+
+    <!-- Pretendard Font -->
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+
+    <!-- 공통 스타일 (전역 헤더 + 젤리 커서) -->
+    <link rel="stylesheet" href="../../../common.css">
+
+    <!-- GSAP (스크롤 등장 애니메이션) + ScrollTrigger 플러그인 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+
+    <style>
+        /* =========================================================
+           VIBRA Detail — 디자인 시스템 적용
+           검정 배경 + 흑백(회색 스케일). 색/타이포/간격은 common.css의
+           --gray-* / --fs-* / --space-* 토큰을 참조. (핑크 포인트 제거)
+           남은 --vb-* 는 이 페이지 고유의 레이아웃 리듬값(폭/패딩)만.
+           ========================================================= */
+        :root {
+            /* 색은 디자인 시스템 토큰으로 매핑 (기본 라이트 = 흰 배경 + 검정 글씨) */
+            --vb-bg: #ffffff;                 /* 페이지 베이스 흰색 */
+            --vb-panel: var(--gray-50);       /* 면·카드  (다크: #1C1C1E) */
+            --vb-line: var(--gray-300);       /* 테두리   (다크: #3A3A3C) */
+            --vb-text: var(--gray-ink);       /* 제목·강조 (다크: #F5F5F7) */
+            --vb-body: var(--gray-700);       /* 본문 보조 (다크: #A1A1A6) */
+            --vb-muted: var(--gray-500);      /* 캡션·라벨 (다크: #8E8E93) */
+
+            /* 페이지 고유 레이아웃 리듬 (반응형 대비 clamp) */
+            --vb-pad-block: clamp(80px, 11vw, 180px);
+            --vb-pad-inline: clamp(24px, 6vw, 100px);
+            --vb-maxw: 1280px;
+            --vb-gap: var(--space-md);        /* 그리드 기본 간격 = 32px */
+        }
+
+        /* common.css의 main 기본 패딩 무력화 (히어로 풀스크린을 위해) */
+        body {
+            background-color: var(--vb-bg);
+            color: var(--vb-text);
+            font-family: 'Pretendard', sans-serif;
+            /* overflow-x 미설정: body에 overflow를 주면 sticky/스크롤 기준이 꼬여
+               히어로 sticky가 깨짐. 이 레이아웃은 가로 넘침이 없어 불필요. */
+        }
+        main { padding: 0; min-height: auto; }
+
+        /* =========================================================
+           공통 레이아웃 유틸 (vb- 접두사로 common.css와 충돌 방지)
+           ========================================================= */
+        .vb-section {
+            padding-block: var(--vb-pad-block);
+            padding-inline: var(--vb-pad-inline);
+        }
+        .vb-wrap {
+            max-width: var(--vb-maxw);
+            margin-inline: auto;
+        }
+        /* 콘텐츠 타이포: 디자인 시스템 스케일(--fs-*) 사용 */
+        .vb-eyebrow {
+            display: inline-block;
+            color: var(--vb-muted);
+            font-weight: 600;
+            font-size: var(--fs-caption);
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            margin: 0 0 var(--space-sm);
+        }
+        .vb-title {           /* 섹션 메인 제목 = h1 스케일 */
+            font-size: var(--fs-h1);
+            font-weight: 600;
+            line-height: 1.25;          /* 한글 제목 보강 */
+            letter-spacing: -0.015em;
+            color: var(--vb-text);
+            word-break: keep-all;
+            margin: 0 0 var(--space-md);
+        }
+        .vb-subtitle {        /* = h3 스케일 */
+            font-size: var(--fs-h3);
+            font-weight: 600;
+            line-height: 1.4;
+            color: var(--vb-text);
+            margin: 0 0 18px;
+        }
+        .vb-body {
+            font-size: var(--fs-body);
+            line-height: 1.7;
+            color: var(--vb-body);
+            word-break: keep-all;
+            max-width: 60ch;
+        }
+        .vb-body + .vb-body { margin-top: 1em; }
+
+        /* =========================================================
+           Placeholder 박스 (이미지/영상 자리)
+           나중에 박스 자리에 실제 미디어를 채움
+           ========================================================= */
+        .ph {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            background-color: var(--vb-panel);
+            background-image:
+                repeating-linear-gradient(45deg,
+                    rgba(255, 255, 255, 0.018) 0,
+                    rgba(255, 255, 255, 0.018) 1px,
+                    transparent 1px,
+                    transparent 11px);
+            border: 1px dashed var(--vb-line);
+            border-radius: 16px;
+            overflow: hidden;
+            color: var(--vb-muted);
+        }
+        .ph__label {
+            font-size: var(--fs-caption);
+            font-weight: 500;
+            letter-spacing: 0.04em;
+            text-align: center;
+            padding: 12px 18px;
+            color: var(--vb-muted);
+        }
+        .ph__label::before {
+            content: "◻";
+            display: block;
+            font-size: 1.4rem;
+            color: var(--vb-muted);
+            margin-bottom: 8px;
+        }
+        /* 비율 modifier */
+        .ph--21x9 { aspect-ratio: 21 / 9; }
+        .ph--16x9 { aspect-ratio: 16 / 9; }
+        .ph--3x2  { aspect-ratio: 3 / 2; }
+        .ph--4x3  { aspect-ratio: 4 / 3; }
+        .ph--1x1  { aspect-ratio: 1 / 1; }
+        .ph--3x4  { aspect-ratio: 3 / 4; }
+        .ph--fill { position: absolute; inset: 0; border-radius: 0; border: none; }
+
+        /* =========================================================
+           1. HERO STAGE (Apple Vision Pro 스타일 스크롤 레이어)
+           ========================================================= */
+        /* .vb-stage = 히어로(sticky) + 그 위를 덮으며 올라오는 레이어를 품음.
+           sticky 기반이라 JS 없이도 동작 → 무조건 렌더됨 */
+        .vb-stage {
+            position: relative;
+        }
+        .vb-hero {
+            position: sticky;          /* 스크롤 동안 화면에 고정 */
+            top: 0;
+            height: 100vh;
+            min-height: 600px;
+            overflow: hidden;          /* 더미 그라데이션 클립 */
+        }
+        /* 더미 키비주얼: 실제 이미지 넣기 전 더미 사진으로 대체
+           (디테일이 있어야 프로스티드 블러가 어떻게 들어가는지 구분됨)
+           → 나중에 url(...) 부분만 실제 키비주얼 경로로 교체 */
+        .vb-hero--dummy {
+            background: #1a1a1a url("https://picsum.photos/seed/vibra/1920/1080") center / cover no-repeat;
+        }
+        .vb-hero--dummy .ph__label {
+            color: rgba(255, 255, 255, 0.9);
+            text-shadow: 0 1px 8px rgba(0, 0, 0, 0.5);
+        }
+
+        /* 레이어: 일반 흐름에서 sticky 히어로 위로 스크롤되어 올라옴.
+           DOM상 히어로보다 뒤 → 자연히 히어로 위에 그려짐 (Vision Pro식 덮기) */
+        .vb-cover {
+            position: relative;
+            z-index: 5;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            /* 프로스티드 블러 (뒤의 sticky 히어로가 흐릿하게 비침) */
+            background: rgba(255, 255, 255, 0.72);
+            -webkit-backdrop-filter: blur(24px) saturate(1.2);
+            backdrop-filter: blur(24px) saturate(1.2);
+            border-top: 1px solid var(--vb-line);
+        }
+        .vb-cover__inner {
+            width: 100%;
+            max-width: 820px;
+            padding: clamp(40px, 7vh, 96px) var(--vb-pad-inline);
+        }
+        .vb-cover__inner .vb-subtitle + .vb-body { margin-top: 12px; }
+
+        /* =========================================================
+           2. INFO
+           ========================================================= */
+        .vb-info-grid {
+            display: grid;
+            grid-template-columns: minmax(280px, 0.9fr) minmax(240px, 0.7fr);
+            gap: clamp(40px, 6vw, 96px);
+            align-items: start;
+        }
+        .vb-meta { display: flex; flex-direction: column; gap: 22px; }
+        .vb-meta__row {
+            display: flex;
+            justify-content: space-between;
+            gap: 16px;
+            padding-bottom: 14px;
+            border-bottom: 1px solid var(--vb-line);
+        }
+        .vb-meta__key { color: var(--vb-muted); font-size: 0.9rem; letter-spacing: 0.03em; }
+        .vb-meta__val { color: var(--vb-text); font-weight: 600; font-size: 0.95rem; text-align: right; }
+
+        /* Contribution 70% 옆 작은 토글 버튼 */
+        .vb-meta__val { display: inline-flex; align-items: center; gap: 8px; justify-content: flex-end; }
+        .vb-toggle-btn {
+            display: inline-flex; align-items: center; justify-content: center;
+            padding: 0; border: none; background: none;
+            color: var(--vb-muted); cursor: pointer;
+            transition: color 0.2s ease;
+        }
+        .vb-toggle-btn:hover { color: var(--vb-text); }
+        .vb-toggle-btn:focus { outline: none; }
+        .vb-toggle-btn:focus-visible { outline: 2px solid var(--vb-text); outline-offset: 2px; border-radius: 4px; }
+        .vb-toggle__icon {
+            display: inline-block; font-size: 1.15rem; line-height: 1;
+            transition: transform 0.35s ease;
+        }
+        .vb-toggle-btn[aria-expanded="true"] .vb-toggle__icon { transform: rotate(180deg); }
+
+        /* 접힘/펼침 (grid-template-rows 0fr→1fr 기법으로 높이 부드럽게) */
+        .vb-roles-wrap {
+            display: grid; grid-template-rows: 0fr;
+            transition: grid-template-rows 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .vb-roles-wrap.is-open { grid-template-rows: 1fr; }
+        .vb-roles-inner { overflow: hidden; }
+
+        /* Role 막대 (실제 데이터 시각화 — placeholder 아님) */
+        /* 폭을 줄여 Contribution '70%'의 시작점에서 끝나도록 정렬 */
+        .vb-roles { margin-top: 18px; display: flex; flex-direction: column; gap: 14px; width: calc(100% - 3em); }
+        .vb-role__head {
+            display: flex; justify-content: space-between;
+            font-size: 0.85rem; margin-bottom: 7px;
+        }
+        .vb-role__name { color: var(--vb-text); font-weight: 500; }
+        .vb-role__pct { color: var(--vb-text); font-weight: 600; }
+        .vb-bar { height: 6px; border-radius: 99px; background: var(--vb-line); overflow: hidden; }
+        .vb-bar__fill {
+            height: 100%; width: 0; border-radius: 99px; background: var(--vb-text);
+            transition: width 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .vb-credits { display: flex; flex-direction: column; gap: var(--space-md); }
+        .vb-credit__label {
+            font-size: 0.78rem; text-transform: uppercase;
+            letter-spacing: 0.1em; color: var(--vb-muted); margin-bottom: 10px;
+        }
+        /* 크레딧 로고 (PNG) */
+        .vb-logos { display: flex; flex-wrap: wrap; align-items: center; gap: 20px; }
+        .vb-logo {
+            height: 64px; width: auto; max-width: 280px;
+            object-fit: contain;
+            opacity: 0.85;
+            transition: opacity 0.2s ease;
+        }
+        .vb-logo:hover { opacity: 1; }
+
+        .vb-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+        .vb-chip {
+            padding: 7px 14px; border-radius: 99px;
+            border: 1px solid var(--vb-line); background: transparent;
+            color: var(--vb-text);
+            font-size: 0.85rem; font-weight: 500;
+        }
+
+        /* =========================================================
+           공통 카드 / 그리드
+           ========================================================= */
+        .vb-grid { display: grid; gap: var(--vb-gap); }
+        .vb-grid--2 { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+        .vb-grid--3 { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+        .vb-grid--4 { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+
+        .vb-card {
+            background: var(--vb-panel);
+            border: 1px solid var(--vb-line);
+            border-radius: 16px;
+            padding: var(--space-md);
+        }
+        .vb-card__tag {
+            display: inline-block; font-size: 0.75rem; font-weight: 600;
+            color: var(--vb-muted); letter-spacing: 0.08em; margin-bottom: 12px;
+        }
+        .vb-card h3 { margin: 0 0 12px; font-size: var(--fs-h3); font-weight: 600; color: var(--vb-text); }
+        .vb-card p { margin: 0; font-size: var(--fs-body); line-height: 1.7; color: var(--vb-body); word-break: keep-all; }
+
+        .vb-group { margin-top: var(--space-lg); }
+        .vb-group:first-of-type { margin-top: 0; }
+        .vb-group__head {
+            display: flex; align-items: baseline; gap: 14px; margin-bottom: var(--space-sm);
+        }
+        .vb-group__num { color: var(--vb-text); font-weight: 700; font-size: 0.95rem; }
+        .vb-group__name { font-size: var(--fs-h3); font-weight: 600; color: var(--vb-text); }
+
+        .vb-caption {
+            margin-top: 12px; font-size: var(--fs-caption); color: var(--vb-muted); letter-spacing: 0.02em;
+        }
+
+        /* UX Direction 키워드 */
+        .vb-keyword {
+            background: var(--vb-panel);
+            border: 1px solid var(--vb-line);
+            border-radius: 14px;
+            padding: 26px 22px;
+            text-align: center;
+        }
+        .vb-keyword__idx { color: var(--vb-muted); font-size: 0.8rem; font-weight: 700; }
+        .vb-keyword__name { margin-top: 10px; font-size: var(--fs-body); font-weight: 600; color: var(--vb-text); }
+
+        /* Service Flow */
+        .vb-flow {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: var(--vb-gap);
+        }
+        .vb-flow__step { position: relative; }
+        .vb-flow__phase {
+            display: inline-block; color: var(--vb-text); font-weight: 700;
+            font-size: 0.8rem; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 14px;
+        }
+
+        /* =========================================================
+           데이터 카드 (Quantitative Research) — 수치·인용·출처 + CSS 도넛
+           ========================================================= */
+        .qr-card {
+            /* ▼▼▼ 조절 패널 - 작업용: 이 변수들을 하단 슬라이더가 실시간 덮어씀 ▼▼▼
+               (확정되면 이 기본값을 디자인 토큰/고정값으로 옮기면 됨) */
+            --qr-gap-num: 24px;      /* 번호 → 인용문 간격 */
+            --qr-gap-quote: 4px;     /* 인용문 → 출처 간격 */
+            --qr-gap-source: 64px;   /* 출처 → 도넛 간격 */
+            --qr-donut-size: 181px;  /* 도넛 지름 */
+            --qr-donut-legend-gap: 20px; /* 도넛 → 범례 간격 */
+            --qr-legend-item-gap: 4px;   /* 범례 항목(줄)끼리 간격 */
+            --qr-legend-offset: 80px;     /* 범례 세로 위치 미세조정(+아래/−위) */
+            --qr-donut-gap: 35px;    /* 도넛 쌍 사이 세로 간격 */
+            --qr-pad: 40px;          /* 카드 안쪽 여백 */
+            --qr-maxw: 658px;        /* 카드 최대 너비 */
+            /* ▲▲▲ 조절 패널 - 작업용 ▲▲▲ */
+
+            background: var(--vb-panel);            /* 연한 회색 면 (--gray-50) */
+            border: 1px solid var(--vb-line);
+            border-radius: 18px;
+            padding: var(--qr-pad);
+            display: flex;
+            flex-direction: column;                 /* 간격은 자식 margin-top으로 개별 제어 */
+        }
+
+        /* 카드 그리드 2:1 — 도넛 2개 카드(넓게) : 도넛 1개 카드(좁게) */
+        .qr-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: var(--vb-gap);
+            align-items: stretch;                   /* 같은 줄 카드 높이 맞춤 */
+            margin-bottom: var(--space-xl);         /* 다음 섹션과 충분한 간격 (겹침 방지) */
+        }
+        @media (max-width: 768px) {
+            .qr-grid { grid-template-columns: 1fr; } /* 좁은 화면: 전부 1열 */
+        }
+        .qr-card__num {
+            display: inline-block;
+            font-size: var(--fs-h3);
+            font-weight: 700;
+            color: var(--accent-color);            /* 포인트 컬러 */
+            letter-spacing: 0.02em;
+        }
+        .qr-card__quote {
+            margin: var(--qr-gap-num) 0 0;          /* 번호 → 인용문 */
+            font-size: var(--fs-h3);
+            font-weight: 600;
+            line-height: 1.5;
+            color: var(--vb-text);
+            word-break: keep-all;
+            text-indent: -0.45em;                   /* 여는 따옴표를 왼쪽으로 매달기 → 본문 첫 글자가 번호·출처와 같은 선에서 시작 */
+        }
+        .qr-card__source {
+            margin: var(--qr-gap-quote) 0 0;        /* 인용문 → 출처 */
+            font-size: var(--fs-caption);
+            font-style: normal;
+            color: var(--vb-muted);
+            line-height: 1.5;
+        }
+
+        /* 도넛 영역: 도넛+범례 쌍을 가로로 나란히 (좁으면 자동 줄바꿈) */
+        .qr-card__data {
+            flex: 1 1 auto;                         /* 남는 높이 차지 → 도넛을 바닥에 붙임 */
+            display: flex;
+            flex-wrap: wrap;                        /* 칸 좁아지면 아래로 떨어짐 */
+            align-items: flex-end;                  /* 도넛을 카드 바닥 기준 정렬 (두 카드 도넛 높이 일치) */
+            gap: var(--qr-donut-gap);               /* 도넛 쌍 사이 간격 */
+            margin-top: var(--qr-gap-source);       /* 출처 → 도넛 (최소 간격) */
+        }
+        .qr-stat { flex: 1 1 0; }                   /* 두 쌍이 칸을 고르게 나눠 가짐 */
+        /* 재사용 단위: 도넛(좌) + 범례(우) 가로 배치 */
+        .qr-stat {
+            display: flex;
+            align-items: flex-start;                /* 범례를 도넛 위쪽 기준 정렬 → 여러 범례 시작 높이 동일 */
+            gap: var(--qr-donut-legend-gap);        /* 도넛 → 범례 간격 */
+        }
+
+        /* SVG 도넛 — 색 끝 둥글게(stroke-linecap) + 차오름 애니메이션(stroke-dashoffset).
+           둘레를 100으로 맞춘 원(r=15.9155)이라 dash 값 = 퍼센트로 바로 대응 */
+        .qr-donut {
+            --size: var(--qr-donut-size);           /* 도넛 지름 (조절 패널 제어) */
+            --stroke: 3.6;                          /* 링 두께 (viewBox 36 기준) */
+            --fill: var(--accent-color);            /* 채움: 포인트 파랑 */
+            --fill-2: color-mix(in srgb, var(--accent-color) 40%, #fff); /* 두번째 구간(연한 파랑) */
+            --track: var(--gray-300);               /* 빈 부분: 연한 회색 */
+            position: relative;
+            flex-shrink: 0;                         /* 좁은 칸에서도 원형 유지 */
+            width: var(--size);
+            height: var(--size);
+            display: grid;
+            place-items: center;
+        }
+        .qr-donut svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+        .qr-donut circle { fill: none; stroke-width: var(--stroke); }
+        .qr-donut__track { stroke: var(--track); }
+        .qr-donut__arc {
+            stroke: var(--fill);
+            stroke-linecap: round;                  /* 색 부분 끝 둥글게 */
+            stroke-dasharray: 100;                  /* 둘레 = 100 */
+            stroke-dashoffset: 100;                 /* 초기: 완전히 빈 상태 */
+            /* 시작점을 12시로: 각 구간 시작%(--start)만큼 추가 회전 */
+            transform: rotate(calc((var(--start, 0) * 3.6 - 90) * 1deg));
+            transform-origin: center;
+            transform-box: fill-box;
+            transition: stroke-dashoffset 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .qr-donut__arc--2 { stroke: var(--fill-2); } /* 두번째 구간 색 */
+        /* 화면에 들어오면 0 → 목표%로 차오름 (--seg = 그 구간 길이%).
+           둥근 끝이 양 끝에서 stroke 두께만큼 더 길어 보이므로 그만큼 빼서 실제 %와 맞춤 */
+        .qr-donut.is-filled .qr-donut__arc { stroke-dashoffset: calc(100 - var(--seg) + var(--stroke)); }
+        @media (prefers-reduced-motion: reduce) {
+            .qr-donut__arc, .qr-bar__fill { transition: none; } /* 모션 최소화 설정 시 즉시 표시 */
+        }
+        .qr-donut__val {
+            position: relative;
+            z-index: 1;
+            font-size: var(--fs-h2);
+            font-weight: 700;
+            color: var(--vb-text);
+        }
+        /* 범례 (도넛 오른쪽): 제목 + 점·항목 */
+        .qr-legend {
+            display: flex;
+            flex-direction: column;
+            gap: var(--qr-legend-item-gap);         /* 범례 줄끼리 간격 (조절 패널 제어) */
+            transform: translateY(var(--qr-legend-offset)); /* 범례 세로 위치 미세조정 */
+        }
+        .qr-legend__title + .qr-legend__item { margin-top: 4px; } /* 제목 ↔ 첫 항목은 살짝 띄움 */
+        .qr-legend__title {
+            margin: 0;
+            font-size: var(--fs-body);
+            font-weight: 600;
+            line-height: 1.4;
+            color: var(--vb-text);
+            word-break: keep-all;
+        }
+        .qr-legend__item {
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: var(--fs-caption);
+            line-height: 1.5;
+            color: var(--vb-body);
+            word-break: keep-all;
+        }
+        .qr-legend__dot {
+            flex-shrink: 0;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--dot, var(--accent-color)); /* 항목별로 style="--dot:..."로 색 지정 */
+        }
+
+        /* =========================================================
+           인사이트 두괄식 결론 (Desk Research 카드 위)
+           번호 1·2·3 = 아래 근거카드 01·02·03 와 같은 포인트색으로 연결
+           ========================================================= */
+        .qr-insights {
+            max-width: 72ch;
+            margin-bottom: var(--space-lg);
+        }
+        .qr-insights__intro {
+            margin: 0 0 var(--space-md);
+            font-size: var(--fs-body);
+            color: var(--vb-muted);
+            word-break: keep-all;
+        }
+        .qr-insights__list {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+        .qr-insights__item {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 18px;
+            align-items: baseline;
+        }
+        .qr-insights__num {
+            font-size: var(--fs-h3);
+            font-weight: 700;
+            color: var(--accent-color);            /* 카드 번호(01·02·03)와 동일한 포인트색 */
+            letter-spacing: 0.02em;
+            font-variant-numeric: tabular-nums;
+        }
+        .qr-insights__text {
+            font-size: var(--fs-h3);
+            font-weight: 500;
+            line-height: 1.5;
+            color: var(--vb-text);
+            word-break: keep-all;
+        }
+        .qr-insights__key {
+            font-style: normal;
+            font-weight: 700;
+            color: var(--accent-color);            /* 키워드 강조 = 포인트색 + 볼드 */
+        }
+
+        /* =========================================================
+           가로 막대그래프 (03 카드)
+           ========================================================= */
+        .qr-card--wide { grid-column: 1 / -1; }     /* 03 카드는 그리드 전체 너비 차지 */
+        .qr-bars-wrap {
+            margin-top: var(--qr-gap-source);       /* 출처 → 그래프 */
+            display: grid;
+            grid-template-columns: 1fr 1fr;          /* 두 데이터 그룹을 좌우로 */
+            gap: clamp(32px, 5vw, 80px);
+        }
+        @media (max-width: 768px) {
+            .qr-bars-wrap { grid-template-columns: 1fr; } /* 좁으면 위아래로 */
+        }
+        .qr-bar-group__title {
+            margin: 0 0 18px;
+            font-size: var(--fs-body);
+            font-weight: 600;
+            color: var(--vb-text);
+            word-break: keep-all;
+        }
+        .qr-bar-group__sub {
+            margin: 20px 0 10px;
+            font-size: var(--fs-caption);
+            font-weight: 600;
+            color: var(--vb-muted);
+        }
+        .qr-bars { display: flex; flex-direction: column; gap: 12px; }
+        .qr-bar {
+            display: grid;
+            grid-template-columns: 8em 1fr auto;     /* 라벨 / 막대 / 값 */
+            align-items: center;
+            gap: 14px;
+            font-size: var(--fs-caption);
+        }
+        .qr-bar__label { color: var(--vb-body); word-break: keep-all; }
+        .qr-bar__track {
+            height: 10px;
+            background: var(--gray-300);
+            border-radius: 99px;
+            overflow: hidden;
+        }
+        .qr-bar__fill {
+            height: 100%;
+            width: 0;                                /* 초기 0 → is-filled 시 목표 너비로 */
+            background: var(--accent-color);         /* 기본 채움색 = 포인트색 */
+            border-radius: 99px;
+            transition: width 1.1s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .qr-bar.is-filled .qr-bar__fill { width: var(--w); }
+        .qr-bar__val {
+            color: var(--vb-body);
+            font-weight: 600;
+            font-variant-numeric: tabular-nums;
+            white-space: nowrap;
+        }
+        /* 강조 항목(예: 분석하다)만 진하게 */
+        .qr-bar--accent .qr-bar__fill { background: color-mix(in srgb, var(--accent-color) 68%, #000); }
+        .qr-bar--accent .qr-bar__label,
+        .qr-bar--accent .qr-bar__val {
+            color: color-mix(in srgb, var(--accent-color) 68%, #000);
+            font-weight: 700;
+        }
+
+        /* =========================================================
+           Market Research — 가로 타임라인 (Norgram 스타일)
+           큰 연한 회색 번호 앵커 + 얇은 세로 구분선 + 가로 축선,
+           번호 → 날짜 → 제목 → 카테고리 → 이미지 → 설명 으로 쌓는 에디토리얼 컬럼.
+           1단계: 정적 배치 (스크롤 등장 애니메이션은 나중에)
+           ========================================================= */
+        .mr-timeline {
+            --mr-col-min: 220px;          /* 컬럼 최소 너비 (좁으면 가로 스크롤) */
+            --mr-bar-h: 16px;             /* 가운데 두꺼운 회색 바 두께 */
+            --mr-zone-h: 360px;           /* 바 위/아래 콘텐츠 영역 높이 (고정 = 바 정렬 기준) */
+            --mr-gut: 22px;               /* 컬럼 좌우 여백 */
+            --mr-stem: 22px;              /* 카드와 바를 잇는 연결선 길이 */
+            position: relative;
+            margin-top: var(--space-lg);
+            overflow-x: auto;             /* 넓으면 한 화면, 좁으면 가로 스크롤 */
+            padding-bottom: 8px;
+        }
+        .mr-track { display: flex; align-items: stretch; position: relative; }
+
+        /* 가운데 두꺼운 회색 가로 바 */
+        .mr-bar {
+            position: absolute;
+            left: 0; right: 0;
+            top: var(--mr-zone-h);
+            height: var(--mr-bar-h);
+            background: color-mix(in srgb, var(--vb-line) 55%, #fff);
+            border-radius: 4px;
+            z-index: 0;
+        }
+
+        /* 컬럼: 위 영역 / 바 / 아래 영역 3단 그리드 */
+        .mr-col {
+            position: relative;
+            flex: 1 1 0;
+            min-width: var(--mr-col-min);
+            padding: 0 var(--mr-gut);
+            display: grid;
+            grid-template-rows: var(--mr-zone-h) var(--mr-bar-h) var(--mr-zone-h);
+        }
+
+        /* 바 위 노드(점) */
+        .mr-col__node {
+            grid-row: 2;
+            justify-self: center;
+            align-self: center;
+            width: 13px; height: 13px;
+            border-radius: 50%;
+            background: var(--vb-bg);
+            border: 2px solid var(--vb-muted);
+            box-shadow: 0 0 0 3px var(--vb-bg);
+            z-index: 2;
+        }
+
+        /* 카드 — 번호 → 날짜 → 제목 → 카테고리 → 이미지 → 설명 */
+        .mr-col__card { position: relative; display: flex; flex-direction: column; }
+        .mr-col--up .mr-col__card   { grid-row: 1; align-self: end;   padding-bottom: var(--mr-stem); }
+        .mr-col--down .mr-col__card { grid-row: 3; align-self: start; padding-top: var(--mr-stem); }
+        /* 카드 ↔ 바 연결선 */
+        .mr-col__card::after {
+            content: "";
+            position: absolute;
+            left: 50%;
+            width: 1px;
+            height: var(--mr-stem);
+            background: var(--vb-line);
+        }
+        .mr-col--up .mr-col__card::after   { bottom: 0; }
+        .mr-col--down .mr-col__card::after { top: 0; }
+
+        .mr-col__num {
+            font-size: 3rem;
+            font-weight: 400;
+            line-height: 1;
+            letter-spacing: -0.02em;
+            color: var(--gray-300);       /* 연한 회색 앵커 숫자 */
+            font-variant-numeric: tabular-nums;
+        }
+        .mr-col__date {
+            display: block;
+            font-size: var(--fs-caption);
+            color: var(--vb-muted);
+            letter-spacing: 0.02em;
+            margin-top: 10px;
+        }
+        .mr-col__title {
+            margin: 6px 0 0;
+            font-size: var(--fs-h3);
+            font-weight: 600;
+            line-height: 1.3;
+            color: var(--vb-text);
+            word-break: keep-all;
+        }
+        .mr-col__cat {
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--vb-text);
+            margin-top: 14px;
+        }
+        .mr-col__media { margin-top: 14px; max-width: 160px; }
+        .mr-col__desc {
+            margin: 12px 0 0;
+            font-size: var(--fs-caption);
+            line-height: 1.7;
+            color: var(--vb-body);
+            word-break: keep-all;
+        }
+
+        /* XR — 마지막 클라이맥스 강조 (VIBRA) */
+        .mr-col--xr { min-width: 280px; flex-grow: 1.35; }
+        .mr-col--xr .mr-col__num { color: var(--accent-color); font-size: 3.6rem; }
+        .mr-col--xr .mr-col__title { color: var(--accent-color); font-size: var(--fs-h2); }
+        .mr-col--xr .mr-col__cat { color: var(--accent-color); }
+        .mr-col--xr .mr-col__media { max-width: 210px; }
+        .mr-col--xr .mr-col__node {
+            width: 16px; height: 16px;
+            background: var(--accent-color);
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 3px var(--vb-bg),
+                        0 0 0 6px color-mix(in srgb, var(--accent-color) 22%, transparent);
+        }
+        .mr-col--xr .mr-col__card::after { background: color-mix(in srgb, var(--accent-color) 50%, var(--vb-line)); }
+        .mr-col--xr .mr-col__media .ph {
+            border-style: solid;
+            border-color: var(--accent-color);
+            background-color: color-mix(in srgb, var(--accent-color) 7%, var(--vb-panel));
+        }
+        .mr-col--xr .mr-col__desc { font-size: var(--fs-body); color: var(--vb-text); }
+
+        /* 전환기 — 큰 번호 대신 "—"(순서 없음), 본문은 순서 없는 태그 묶음 */
+        .mr-col--transition .mr-col__num { color: var(--gray-300); }
+        .mr-col--transition .mr-col__node {
+            width: 9px; height: 9px;
+            border-style: dashed;
+        }
+        .mr-tags {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px;
+            margin-top: 14px;
+        }
+        .mr-tag {
+            padding: 5px 12px;
+            border-radius: 99px;
+            background: var(--vb-panel);            /* 다른 컬럼과 같은 톤으로 자연스럽게 */
+            font-size: 0.76rem;
+            color: var(--vb-body);
+            word-break: keep-all;
+        }
+        .mr-tags__etc { font-size: 0.74rem; color: var(--vb-muted); }
+
+        /* =========================================================
+           하단 네비
+           ========================================================= */
+        .vb-footer { text-align: center; padding-block: clamp(80px, 10vw, 140px); }
+        .vb-back-btn {
+            display: inline-block;
+            padding: 16px 44px;
+            border: 1px solid var(--vb-line);
+            border-radius: 99px;
+            color: var(--vb-text);
+            text-decoration: none;
+            font-weight: 500;
+            transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+        }
+        .vb-back-btn:hover { background: var(--vb-text); border-color: var(--vb-text); color: var(--vb-bg); }
+
+        /* =========================================================
+           스크롤 등장 애니메이션 초기값
+           ========================================================= */
+        .reveal { opacity: 0; transform: translateY(40px); will-change: opacity, transform; }
+
+        /* =========================================================
+           반응형 (뼈대만 — 추후 확장 지점)
+           ========================================================= */
+        @media (max-width: 768px) {
+            .vb-info-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 커스텀 젤리 커서 (common.js에서 작동) -->
+    <div id="cursor-bg-layer"><div id="cursor-circle"></div></div>
+    <div id="cursor-text-layer"><span id="cursor-text"></span></div>
+
+    <!-- 전역 헤더 (common.css 스타일 사용, 경로는 상위 2단계) -->
+    <header id="global-header" class="at-top">
+        <div class="header-inner">
+            <div class="header-left">
+                <a href="../../../index.html" class="header-logo hover-trigger">
+                    <img src="../../../assets/logo.svg" alt="HANUK Logo">
+                </a>
+                <nav class="header-nav">
+                    <a href="../../../about.html" class="nav-link hover-trigger">About</a>
+                    <a href="../../../works.html" class="nav-link active hover-trigger">Works</a>
+                </nav>
+            </div>
+            <div class="header-right">
+                <button class="lang-btn active hover-trigger">KR</button>
+                <span class="lang-divider">/</span>
+                <button class="lang-btn hover-trigger">EN</button>
+            </div>
+        </div>
+    </header>
+
+    <main>
+
+        <!-- ====================================================
+             1. HERO STAGE (pin + 레이어 슬라이드업)
+             ==================================================== -->
+        <div class="vb-stage">
+            <!-- 풀스크린 키비주얼 (더미 그라데이션 — 실제 이미지로 교체 예정) -->
+            <div class="vb-hero vb-hero--dummy">
+                <div class="ph ph--fill" style="background:transparent;border:none;">
+                    <span class="ph__label">키비주얼 이미지 (더미)</span>
+                </div>
+            </div>
+
+            <!-- 아래에서 위로 덮는 반투명 텍스트 레이어 (Background / Overview 만) -->
+            <div class="vb-cover">
+                <div class="vb-cover__inner">
+                    <h3 class="vb-subtitle">Background</h3>
+                    <p class="vb-body">[배경 텍스트 자리] 기존 축구 중계가 가진 일방향적 시청 경험의 한계와, XR 기술이 열어주는 능동적 관람 가능성에 대한 문제 정의를 서술합니다.</p>
+                    <p class="vb-body">[배경 보충 자리] 팬덤·몰입·데이터 소비 맥락 등 프로젝트의 출발점이 된 인사이트를 정리합니다.</p>
+
+                    <h3 class="vb-subtitle" style="margin-top:32px;">Overview</h3>
+                    <p class="vb-body">[개요 텍스트 자리] VIBRA가 제안하는 XR 축구 중계 플랫폼의 핵심 컨셉과, 개인 공간(Skybox)과 경기장(In Stadium)을 오가는 전체 경험 구조를 요약합니다.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ====================================================
+             2. INFO
+             ==================================================== -->
+        <section class="vb-section">
+            <div class="vb-wrap">
+                <span class="vb-eyebrow reveal">Project Info</span>
+                <h2 class="vb-title reveal">새로운 차원의<br>축구 중계 경험</h2>
+
+                <div class="vb-info-grid">
+                    <!-- 메타 + Role (Background/Overview·크레딧은 상단 레이어로 이동) -->
+                    <div class="vb-meta reveal">
+                        <div class="vb-meta__row">
+                            <span class="vb-meta__key">Type</span>
+                            <span class="vb-meta__val">Team Project</span>
+                        </div>
+                        <div class="vb-meta__row">
+                            <span class="vb-meta__key">Duration</span>
+                            <span class="vb-meta__val">2024.03 – 2024.11</span>
+                        </div>
+                        <div class="vb-meta__row">
+                            <span class="vb-meta__key">Members</span>
+                            <span class="vb-meta__val">2</span>
+                        </div>
+                        <div class="vb-meta__row">
+                            <span class="vb-meta__key">Contribution</span>
+                            <span class="vb-meta__val">70%
+                                <button type="button" class="vb-toggle-btn hover-trigger"
+                                        id="vb-contrib-toggle" aria-expanded="false" aria-controls="vb-roles"
+                                        aria-label="역할별 기여도 보기">
+                                    <span class="vb-toggle__icon" aria-hidden="true">▾</span>
+                                </button>
+                            </span>
+                        </div>
+
+                        <div class="vb-roles-wrap" id="vb-roles" role="region" aria-label="역할별 기여도">
+                            <div class="vb-roles-inner">
+                                <div class="vb-roles">
+                                    <div class="vb-role">
+                                        <div class="vb-role__head"><span class="vb-role__name">Research</span><span class="vb-role__pct">50%</span></div>
+                                        <div class="vb-bar"><div class="vb-bar__fill" data-pct="50"></div></div>
+                                    </div>
+                                    <div class="vb-role">
+                                        <div class="vb-role__head"><span class="vb-role__name">UX · UI</span><span class="vb-role__pct">70%</span></div>
+                                        <div class="vb-bar"><div class="vb-bar__fill" data-pct="70"></div></div>
+                                    </div>
+                                    <div class="vb-role">
+                                        <div class="vb-role__head"><span class="vb-role__name">Interaction</span><span class="vb-role__pct">70%</span></div>
+                                        <div class="vb-bar"><div class="vb-bar__fill" data-pct="70"></div></div>
+                                    </div>
+                                    <div class="vb-role">
+                                        <div class="vb-role__head"><span class="vb-role__name">Modeling</span><span class="vb-role__pct">90%</span></div>
+                                        <div class="vb-bar"><div class="vb-bar__fill" data-pct="90"></div></div>
+                                    </div>
+                                    <div class="vb-role">
+                                        <div class="vb-role__head"><span class="vb-role__name">Rendering</span><span class="vb-role__pct">90%</span></div>
+                                        <div class="vb-bar"><div class="vb-bar__fill" data-pct="90"></div></div>
+                                    </div>
+                                    <div class="vb-role">
+                                        <div class="vb-role__head"><span class="vb-role__name">Prototyping</span><span class="vb-role__pct">100%</span></div>
+                                        <div class="vb-bar"><div class="vb-bar__fill" data-pct="100"></div></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 우: 크레딧 (Produced with / Featured by) — 로고 PNG -->
+                    <div class="vb-credits reveal">
+                        <div class="vb-credit">
+                            <div class="vb-credit__label">Produced with</div>
+                            <div class="vb-logos">
+                                <img class="vb-logo" src="media/logos/gangwonfc.png" alt="강원 FC"
+                                     onerror="this.outerHTML='&lt;span class=&quot;vb-chip&quot;&gt;강원 FC&lt;/span&gt;'">
+                                <img class="vb-logo" src="media/logos/kleague.png" alt="K리그"
+                                     onerror="this.outerHTML='&lt;span class=&quot;vb-chip&quot;&gt;K리그&lt;/span&gt;'">
+                            </div>
+                        </div>
+                        <div class="vb-credit">
+                            <div class="vb-credit__label">Featured by</div>
+                            <div class="vb-logos">
+                                <img class="vb-logo" src="media/logos/designboom.png" alt="designboom"
+                                     onerror="this.outerHTML='&lt;span class=&quot;vb-chip&quot;&gt;designboom&lt;/span&gt;'">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ====================================================
+             MARKET RESEARCH — Football Broadcast Paradigm (가로 타임라인 / Norgram 스타일)
+             큰 연한 회색 번호 + 세로 구분선 + 가로 축선. 1단계: 정적 배치. 스크롤 등장은 나중에.
+             ==================================================== -->
+        <section class="vb-section">
+            <div class="vb-wrap">
+                <span class="vb-eyebrow reveal">Market Research</span>
+                <h2 class="vb-title reveal">Football Broadcast Paradigm</h2>
+
+                <div class="mr-timeline reveal">
+                    <div class="mr-track">
+                        <!-- 가운데 두꺼운 회색 바 -->
+                        <div class="mr-bar"></div>
+
+                        <!-- 01 — Print (위) -->
+                        <div class="mr-col mr-col--up">
+                            <div class="mr-col__card">
+                                <span class="mr-col__num">01</span>
+                                <span class="mr-col__date">1862</span>
+                                <h3 class="mr-col__title">Print (Paper)</h3>
+                                <span class="mr-col__cat">Paradigm · 1st</span>
+                                <div class="mr-col__media"><div class="ph ph--3x2"><span class="ph__label">Print 이미지</span></div></div>
+                                <p class="mr-col__desc">과거 이벤트 요약, 텍스트로만 구성</p>
+                            </div>
+                            <span class="mr-col__node"></span>
+                        </div>
+
+                        <!-- 02 — Radio (아래) -->
+                        <div class="mr-col mr-col--down">
+                            <div class="mr-col__card">
+                                <span class="mr-col__num">02</span>
+                                <span class="mr-col__date">1927</span>
+                                <h3 class="mr-col__title">Radio (Audio)</h3>
+                                <span class="mr-col__cat">Paradigm · 2nd</span>
+                                <div class="mr-col__media"><div class="ph ph--3x2"><span class="ph__label">Radio 이미지</span></div></div>
+                                <p class="mr-col__desc">실시간성, 해설 도입, 청각을 통한 상상</p>
+                            </div>
+                            <span class="mr-col__node"></span>
+                        </div>
+
+                        <!-- 03 — TV (위) -->
+                        <div class="mr-col mr-col--up">
+                            <div class="mr-col__card">
+                                <span class="mr-col__num">03</span>
+                                <span class="mr-col__date">1937</span>
+                                <h3 class="mr-col__title">TV (Video)</h3>
+                                <span class="mr-col__cat">Paradigm · 3rd</span>
+                                <div class="mr-col__media"><div class="ph ph--3x2"><span class="ph__label">TV 이미지</span></div></div>
+                                <p class="mr-col__desc">더 강한 몰입, 라이브 시청, 해설+리플레이+2D 그래픽</p>
+                            </div>
+                            <span class="mr-col__node"></span>
+                        </div>
+
+                        <!-- 전환기 — 순서 없는 묶음 (큰 번호 대신 "—", 점선 노드 / 아래) -->
+                        <div class="mr-col mr-col--down mr-col--transition">
+                            <div class="mr-col__card">
+                                <span class="mr-col__num">—</span>
+                                <span class="mr-col__date">3rd → 4th</span>
+                                <h3 class="mr-col__title">Technology Adoption</h3>
+                                <span class="mr-col__cat">Transition</span>
+                                <div class="mr-tags">
+                                    <span class="mr-tag">스파이더캠</span>
+                                    <span class="mr-tag">오프사이드 라인 · VAR</span>
+                                    <span class="mr-tag">플랫폼 진입 (아마존 · 쿠팡)</span>
+                                    <span class="mr-tag">AI · 빅데이터</span>
+                                    <span class="mr-tags__etc">등 주요 사례</span>
+                                </div>
+                                <p class="mr-col__desc">전환기에 중계 기술이 동시다발적으로 등장했습니다.</p>
+                            </div>
+                            <span class="mr-col__node"></span>
+                        </div>
+
+                        <!-- 04 — XR (클라이맥스 / VIBRA / 위) -->
+                        <div class="mr-col mr-col--up mr-col--xr">
+                            <div class="mr-col__card">
+                                <span class="mr-col__num">04</span>
+                                <span class="mr-col__date">21C</span>
+                                <h3 class="mr-col__title">XR Experience</h3>
+                                <span class="mr-col__cat">Paradigm · 4th</span>
+                                <div class="mr-col__media"><div class="ph ph--3x2"><span class="ph__label">XR Experience 이미지</span></div></div>
+                                <p class="mr-col__desc">압도적 몰입, 현장 재현, 3D 360도, 시각+청각+촉각, 탈일방향성, 소통</p>
+                            </div>
+                            <span class="mr-col__node"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ====================================================
+             3. QUANTITATIVE RESEARCH
+             ==================================================== -->
+        <section class="vb-section">
+            <div class="vb-wrap">
+                <span class="vb-eyebrow reveal">01 — Research</span>
+                <h2 class="vb-title reveal">Quantitative Research</h2>
+
+                <!-- Desk Research -->
+                <div class="vb-group">
+                    <div class="vb-group__head reveal">
+                        <span class="vb-group__num">A</span>
+                        <span class="vb-group__name">Desk Research</span>
+                    </div>
+
+                    <!-- 두괄식 결론: 도출한 인사이트 3가지 (아래 카드 01·02·03이 근거) -->
+                    <div class="qr-insights reveal">
+                        <p class="qr-insights__intro">데스크 리서치를 통해 다음 인사이트를 도출했습니다.</p>
+                        <ol class="qr-insights__list">
+                            <li class="qr-insights__item">
+                                <span class="qr-insights__num">1</span>
+                                <span class="qr-insights__text">K리그 팬들은 <em class="qr-insights__key">라이브로 보는 경험</em>을 중요하게 생각하며,</span>
+                            </li>
+                            <li class="qr-insights__item">
+                                <span class="qr-insights__num">2</span>
+                                <span class="qr-insights__text"><em class="qr-insights__key">물리적 제약</em>을 기술이나 서비스로 극복하길 기대하고,</span>
+                            </li>
+                            <li class="qr-insights__item">
+                                <span class="qr-insights__num">3</span>
+                                <span class="qr-insights__text">“<em class="qr-insights__key">축구 경기를 더 잘 이해</em>하고 싶다”는 니즈가 있다.</span>
+                            </li>
+                        </ol>
+                    </div>
+
+                    <div class="qr-grid">
+                        <!-- Desk Research 01 — 도넛 2개 카드 -->
+                        <article class="qr-card reveal">
+                            <span class="qr-card__num">01</span>
+                            <blockquote class="qr-card__quote">"많은 K리그 팬들은 시간이 부족해서, 직관 대신 중계방송 시청을 선택해요."</blockquote>
+                            <cite class="qr-card__source">한국프로스포츠협회, 2022 KOREA PROSPORTS FAN SURVEY</cite>
+                            <div class="qr-card__data">
+                                <!-- 재사용 단위: 도넛(좌) + 범례(우) -->
+                                <div class="qr-stat">
+                                    <div class="qr-donut">
+                                        <svg viewBox="0 0 36 36">
+                                            <circle class="qr-donut__track" cx="18" cy="18" r="15.9155"></circle>
+                                            <circle class="qr-donut__arc" cx="18" cy="18" r="15.9155" style="--seg:95;"></circle>
+                                        </svg>
+                                        <span class="qr-donut__val">95%</span>
+                                    </div>
+                                    <div class="qr-legend">
+                                        <p class="qr-legend__title">최근 5년 중 K리그 <br> 중계 방송시청 경험</p>
+                                        <p class="qr-legend__item"><span class="qr-legend__dot"></span>중계방송 시청경험 있음</p>
+                                    </div>
+                                </div>
+                                <div class="qr-stat">
+                                    <div class="qr-donut">
+                                        <svg viewBox="0 0 36 36">
+                                            <circle class="qr-donut__track" cx="18" cy="18" r="15.9155"></circle>
+                                            <circle class="qr-donut__arc" cx="18" cy="18" r="15.9155" style="--seg:46;"></circle>
+                                        </svg>
+                                        <span class="qr-donut__val">46%</span>
+                                    </div>
+                                    <div class="qr-legend">
+                                        <p class="qr-legend__title">중계방송 시청 이유</p>
+                                        <p class="qr-legend__item"><span class="qr-legend__dot"></span>직관할 시간 부족</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </article>
+
+                        <!-- Desk Research 02 — 도넛 1개 카드 -->
+                        <article class="qr-card qr-card--single reveal">
+                            <span class="qr-card__num">02</span>
+                            <blockquote class="qr-card__quote">"한국의 해외 축구 팬들은 응원하는 팀<br>경기를 시차 없이 라이브로 보고 싶어해요."</blockquote>
+                            <cite class="qr-card__source">Chiliz, 2024, The Global Fan Report</cite>
+                            <div class="qr-card__data">
+                                <div class="qr-stat">
+                                    <div class="qr-donut">
+                                        <svg viewBox="0 0 36 36">
+                                            <circle class="qr-donut__track" cx="18" cy="18" r="15.9155"></circle>
+                                            <!-- 진한 파랑 46% -->
+                                            <circle class="qr-donut__arc" cx="18" cy="18" r="15.9155" style="--seg:46; --start:0;"></circle>
+                                            <!-- 연한 파랑 11% (46% 끝에 바로 이어 붙음) -->
+                                            <circle class="qr-donut__arc qr-donut__arc--2" cx="18" cy="18" r="15.9155" style="--seg:11; --start:46;"></circle>
+                                        </svg>
+                                        <span class="qr-donut__val">57%</span>
+                                    </div>
+                                    <div class="qr-legend">
+                                        <p class="qr-legend__title">응원하는 해외팀 경기 시청 빈도</p>
+                                        <p class="qr-legend__item"><span class="qr-legend__dot" style="--dot:var(--accent-color);"></span>거의 모든 경기 46%</p>
+                                        <p class="qr-legend__item"><span class="qr-legend__dot" style="--dot:color-mix(in srgb, var(--accent-color) 40%, #fff);"></span>모든 경기 11%</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </article>
+
+                        <!-- Desk Research 03 — 가로 막대그래프 카드 (전체 너비) -->
+                        <article class="qr-card qr-card--wide reveal">
+                            <span class="qr-card__num">03</span>
+                            <blockquote class="qr-card__quote">"남성 팬과 여성 팬이 더 선호하는 콘텐츠가 달라요. 하지만 분석 콘텐츠에 대한 니즈는 분명해요."</blockquote>
+                            <cite class="qr-card__source">한국프로스포츠협회, 2022</cite>
+                            <div class="qr-bars-wrap">
+                                <!-- 그룹 1: 흥행을 위해 필요한 온라인 콘텐츠 (% 기준 그대로) -->
+                                <div class="qr-bar-group">
+                                    <p class="qr-bar-group__title">흥행을 위해 필요한 온라인 콘텐츠</p>
+                                    <p class="qr-bar-group__sub">남성팬</p>
+                                    <div class="qr-bars">
+                                        <div class="qr-bar"><span class="qr-bar__label">경기분석</span><div class="qr-bar__track"><div class="qr-bar__fill" style="--w:27%;"></div></div><span class="qr-bar__val">27%</span></div>
+                                        <div class="qr-bar"><span class="qr-bar__label">하이라이트</span><div class="qr-bar__track"><div class="qr-bar__fill" style="--w:16%;"></div></div><span class="qr-bar__val">16%</span></div>
+                                    </div>
+                                    <p class="qr-bar-group__sub">여성팬</p>
+                                    <div class="qr-bars">
+                                        <div class="qr-bar"><span class="qr-bar__label">비시즌·일상영상</span><div class="qr-bar__track"><div class="qr-bar__fill" style="--w:34%;"></div></div><span class="qr-bar__val">34%</span></div>
+                                        <div class="qr-bar"><span class="qr-bar__label">경기분석</span><div class="qr-bar__track"><div class="qr-bar__fill" style="--w:28%;"></div></div><span class="qr-bar__val">28%</span></div>
+                                    </div>
+                                </div>
+                                <!-- 그룹 2: 리그 경기 키워드 검색량 (최댓값 67,509 = 100% 기준 스케일) -->
+                                <div class="qr-bar-group">
+                                    <p class="qr-bar-group__title">리그 경기 키워드 검색량</p>
+                                    <div class="qr-bars">
+                                        <div class="qr-bar"><span class="qr-bar__label">좋다</span><div class="qr-bar__track"><div class="qr-bar__fill" style="--w:100%;"></div></div><span class="qr-bar__val">67,509</span></div>
+                                        <div class="qr-bar qr-bar--accent"><span class="qr-bar__label">분석하다</span><div class="qr-bar__track"><div class="qr-bar__fill" style="--w:65.8%;"></div></div><span class="qr-bar__val">44,412</span></div>
+                                        <div class="qr-bar"><span class="qr-bar__label">받다</span><div class="qr-bar__track"><div class="qr-bar__fill" style="--w:51.7%;"></div></div><span class="qr-bar__val">34,877</span></div>
+                                        <div class="qr-bar"><span class="qr-bar__label">득점</span><div class="qr-bar__track"><div class="qr-bar__fill" style="--w:49.8%;"></div></div><span class="qr-bar__val">33,593</span></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </article>
+                    </div>
+                </div>
+
+                <!-- Field Research -->
+                <div class="vb-group">
+                    <div class="vb-group__head reveal">
+                        <span class="vb-group__num">B</span>
+                        <span class="vb-group__name">Field Research</span>
+                    </div>
+                    <div class="vb-grid vb-grid--2">
+                        <div class="reveal">
+                            <div class="ph ph--4x3"><span class="ph__label">설문 결과 차트</span></div>
+                            <p class="vb-caption">[캡션 자리] 관람객 대상 설문 정량 결과</p>
+                        </div>
+                        <div class="reveal">
+                            <div class="ph ph--4x3"><span class="ph__label">현장 관찰 데이터</span></div>
+                            <p class="vb-caption">[캡션 자리] 경기장 현장 행동 관찰 데이터</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ====================================================
+             4. QUALITATIVE RESEARCH + SERVICE FLOW
+             ==================================================== -->
+        <section class="vb-section">
+            <div class="vb-wrap">
+                <span class="vb-eyebrow reveal">02 — Research &amp; Flow</span>
+                <h2 class="vb-title reveal">Qualitative Research<br>&amp; Service Flow</h2>
+
+                <!-- 가설 검증 3블록 -->
+                <div class="vb-group">
+                    <div class="vb-group__head reveal">
+                        <span class="vb-group__num">A</span>
+                        <span class="vb-group__name">가설 검증</span>
+                    </div>
+                    <div class="vb-grid vb-grid--3">
+                        <div class="vb-card reveal">
+                            <span class="vb-card__tag">HYPOTHESIS 01</span>
+                            <h3>[가설 1 제목]</h3>
+                            <p>[가설 1 검증 내용 자리] 인터뷰·관찰을 통해 확인한 사용자 니즈와 검증 결과를 서술합니다.</p>
+                        </div>
+                        <div class="vb-card reveal">
+                            <span class="vb-card__tag">HYPOTHESIS 02</span>
+                            <h3>[가설 2 제목]</h3>
+                            <p>[가설 2 검증 내용 자리] 두 번째 가설과 그 근거를 정리합니다.</p>
+                        </div>
+                        <div class="vb-card reveal">
+                            <span class="vb-card__tag">HYPOTHESIS 03</span>
+                            <h3>[가설 3 제목]</h3>
+                            <p>[가설 3 검증 내용 자리] 세 번째 가설과 검증 결론을 정리합니다.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- UX Direction 6키워드 -->
+                <div class="vb-group">
+                    <div class="vb-group__head reveal">
+                        <span class="vb-group__num">B</span>
+                        <span class="vb-group__name">UX Direction</span>
+                    </div>
+                    <div class="vb-grid vb-grid--3">
+                        <div class="vb-keyword reveal"><div class="vb-keyword__idx">01</div><div class="vb-keyword__name">Immersion</div></div>
+                        <div class="vb-keyword reveal"><div class="vb-keyword__idx">02</div><div class="vb-keyword__name">Understanding</div></div>
+                        <div class="vb-keyword reveal"><div class="vb-keyword__idx">03</div><div class="vb-keyword__name">Social Experience</div></div>
+                        <div class="vb-keyword reveal"><div class="vb-keyword__idx">04</div><div class="vb-keyword__name">Multi-tasking</div></div>
+                        <div class="vb-keyword reveal"><div class="vb-keyword__idx">05</div><div class="vb-keyword__name">Customizable</div></div>
+                        <div class="vb-keyword reveal"><div class="vb-keyword__idx">06</div><div class="vb-keyword__name">Fandom</div></div>
+                    </div>
+                </div>
+
+                <!-- Service Flow: Pre / In / Post-Match -->
+                <div class="vb-group">
+                    <div class="vb-group__head reveal">
+                        <span class="vb-group__num">C</span>
+                        <span class="vb-group__name">Service Flow</span>
+                    </div>
+                    <div class="vb-flow">
+                        <div class="vb-flow__step reveal">
+                            <span class="vb-flow__phase">Pre-Match</span>
+                            <div class="ph ph--3x2"><span class="ph__label">경기 전 플로우 다이어그램</span></div>
+                            <p class="vb-caption">[설명 자리] 입장·세팅·개인 공간 진입 단계</p>
+                        </div>
+                        <div class="vb-flow__step reveal">
+                            <span class="vb-flow__phase">In-Match</span>
+                            <div class="ph ph--3x2"><span class="ph__label">경기 중 플로우 다이어그램</span></div>
+                            <p class="vb-caption">[설명 자리] 관람·인터랙션·소셜 단계</p>
+                        </div>
+                        <div class="vb-flow__step reveal">
+                            <span class="vb-flow__phase">Post-Match</span>
+                            <div class="ph ph--3x2"><span class="ph__label">경기 후 플로우 다이어그램</span></div>
+                            <p class="vb-caption">[설명 자리] 하이라이트·기록·공유 단계</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ====================================================
+             5. SKYBOX
+             ==================================================== -->
+        <section class="vb-section">
+            <div class="vb-wrap">
+                <span class="vb-eyebrow reveal">03 — Solution</span>
+                <h2 class="vb-title reveal">Skybox<br><span style="color:var(--vb-muted);font-weight:500;">나만의 개인 관람 공간</span></h2>
+
+                <p class="vb-body reveal" style="margin-bottom:clamp(32px,4vw,56px);">[Skybox 소개 자리] 사용자가 경기를 관람하는 개인 가상 공간 'Skybox'의 컨셉과 역할을 설명합니다.</p>
+
+                <div class="reveal">
+                    <div class="ph ph--21x9"><span class="ph__label">Skybox 메인 렌더 영상</span></div>
+                </div>
+
+                <!-- Key Features 4개 -->
+                <div class="vb-group">
+                    <div class="vb-group__head reveal">
+                        <span class="vb-group__num">A</span>
+                        <span class="vb-group__name">Key Features</span>
+                    </div>
+                    <div class="vb-grid vb-grid--4">
+                        <div class="vb-card reveal"><span class="vb-card__tag">FEATURE 01</span><h3>[기능 1]</h3><p>[설명 자리]</p></div>
+                        <div class="vb-card reveal"><span class="vb-card__tag">FEATURE 02</span><h3>[기능 2]</h3><p>[설명 자리]</p></div>
+                        <div class="vb-card reveal"><span class="vb-card__tag">FEATURE 03</span><h3>[기능 3]</h3><p>[설명 자리]</p></div>
+                        <div class="vb-card reveal"><span class="vb-card__tag">FEATURE 04</span><h3>[기능 4]</h3><p>[설명 자리]</p></div>
+                    </div>
+                </div>
+
+                <!-- 3D 에셋 + 인터랙션 가이드 -->
+                <div class="vb-group">
+                    <div class="vb-grid vb-grid--2">
+                        <div class="reveal">
+                            <div class="ph ph--4x3"><span class="ph__label">3D 에셋 렌더</span></div>
+                            <p class="vb-caption">[캡션 자리] Skybox를 구성하는 3D 에셋</p>
+                        </div>
+                        <div class="reveal">
+                            <div class="ph ph--4x3"><span class="ph__label">인터랙션 가이드</span></div>
+                            <p class="vb-caption">[캡션 자리] 공간 내 조작 방식 가이드</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ====================================================
+             6. IN STADIUM
+             ==================================================== -->
+        <section class="vb-section">
+            <div class="vb-wrap">
+                <span class="vb-eyebrow reveal">04 — Solution</span>
+                <h2 class="vb-title reveal">In Stadium<br><span style="color:var(--vb-muted);font-weight:500;">경기장 한가운데로</span></h2>
+
+                <!-- 360 VR 경기장 -->
+                <div class="reveal">
+                    <div class="ph ph--21x9"><span class="ph__label">360° VR 경기장 영상</span></div>
+                    <p class="vb-caption">[캡션 자리] 360도로 둘러보는 실제 경기장 뷰</p>
+                </div>
+
+                <!-- Broadcast Screen + Quick Menu -->
+                <div class="vb-group">
+                    <div class="vb-grid vb-grid--2">
+                        <div class="reveal">
+                            <div class="ph ph--16x9"><span class="ph__label">Broadcast Screen Interaction</span></div>
+                            <p class="vb-caption">[캡션 자리] 중계 화면 인터랙션</p>
+                        </div>
+                        <div class="reveal">
+                            <div class="ph ph--16x9"><span class="ph__label">Quick Menu</span></div>
+                            <p class="vb-caption">[캡션 자리] 빠른 메뉴 호출</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 하단 기능 4컷 -->
+                <div class="vb-group">
+                    <div class="vb-group__head reveal">
+                        <span class="vb-group__num">A</span>
+                        <span class="vb-group__name">Functions</span>
+                    </div>
+                    <div class="vb-grid vb-grid--4">
+                        <div class="reveal"><div class="ph ph--1x1"><span class="ph__label">기능 컷 1</span></div></div>
+                        <div class="reveal"><div class="ph ph--1x1"><span class="ph__label">기능 컷 2</span></div></div>
+                        <div class="reveal"><div class="ph ph--1x1"><span class="ph__label">기능 컷 3</span></div></div>
+                        <div class="reveal"><div class="ph ph--1x1"><span class="ph__label">기능 컷 4</span></div></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ====================================================
+             7. INTERACTION & AI
+             ==================================================== -->
+        <section class="vb-section">
+            <div class="vb-wrap">
+                <span class="vb-eyebrow reveal">05 — Interaction</span>
+                <h2 class="vb-title reveal">Interaction &amp; AI</h2>
+
+                <div class="vb-grid vb-grid--2">
+                    <div class="reveal">
+                        <div class="ph ph--16x9"><span class="ph__label">제스처 / 컨트롤러</span></div>
+                        <h3 class="vb-subtitle" style="margin-top:20px;">제스처 &amp; 컨트롤러</h3>
+                        <p class="vb-body">[설명 자리] 손 제스처와 컨트롤러를 활용한 조작 방식을 설명합니다.</p>
+                    </div>
+                    <div class="reveal">
+                        <div class="ph ph--16x9"><span class="ph__label">이모지 슈팅</span></div>
+                        <h3 class="vb-subtitle" style="margin-top:20px;">이모지 슈팅</h3>
+                        <p class="vb-body">[설명 자리] 응원 감정을 이모지로 발사하는 소셜 인터랙션입니다.</p>
+                    </div>
+                    <div class="reveal">
+                        <div class="ph ph--16x9"><span class="ph__label">캡처</span></div>
+                        <h3 class="vb-subtitle" style="margin-top:20px;">순간 캡처</h3>
+                        <p class="vb-body">[설명 자리] 명장면을 캡처하고 보관·공유하는 기능입니다.</p>
+                    </div>
+                    <div class="reveal">
+                        <div class="ph ph--16x9"><span class="ph__label">VIVA AI</span></div>
+                        <h3 class="vb-subtitle" style="margin-top:20px;">VIVA AI</h3>
+                        <p class="vb-body">[설명 자리] 경기 정보·데이터를 대화로 안내하는 AI 어시스턴트 'VIVA'입니다.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ====================================================
+             FOOTER
+             ==================================================== -->
+        <div class="vb-footer">
+            <a href="../../../works.html" class="vb-back-btn hover-trigger">Back to Works</a>
+        </div>
+
+    </main>
+
+    <!-- 공통 스크립트 (전역 헤더 + 젤리 커서) -->
+    <script src="../../../common.js"></script>
+
+    <!-- 스크롤 등장 애니메이션 (IntersectionObserver + GSAP) -->
+    <script>
+        window.addEventListener('DOMContentLoaded', () => {
+            const reveals = document.querySelectorAll('.reveal');
+            const io = new IntersectionObserver((entries, obs) => {
+                entries.forEach(entry => {
+                    if (!entry.isIntersecting) return;
+                    gsap.to(entry.target, { opacity: 1, y: 0, duration: 1.0, ease: 'power3.out' });
+                    obs.unobserve(entry.target);
+                });
+            }, { threshold: 0.15 });
+            reveals.forEach(el => io.observe(el));
+
+            // 도넛·막대 차오름: 화면에 들어오면 is-filled 추가 → 0에서 목표값으로 채워짐
+            const fillers = document.querySelectorAll('.qr-donut, .qr-bar');
+            if (fillers.length) {
+                const dio = new IntersectionObserver((entries, obs) => {
+                    entries.forEach(e => {
+                        if (!e.isIntersecting) return;
+                        e.target.classList.add('is-filled');
+                        obs.unobserve(e.target);
+                    });
+                }, { threshold: 0.4 });
+                fillers.forEach(el => dio.observe(el));
+            }
+
+            // ── Apple Vision Pro 스타일 레이어 ──
+            // 슬라이드업/덮기는 CSS sticky가 담당(JS 없어도 동작).
+            // ScrollTrigger는 "레이어 진입 시 페이드인"만 얹는 보조 (pin 미사용 → 안 깨짐).
+            const cover = document.querySelector('.vb-cover');
+            const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+            if (cover && window.gsap && window.ScrollTrigger && !reduceMotion) {
+                gsap.registerPlugin(ScrollTrigger);
+                gsap.from('.vb-cover__inner', {
+                    opacity: 0,
+                    y: 50,
+                    ease: 'none',
+                    scrollTrigger: {
+                        trigger: cover,
+                        start: 'top bottom',   // 레이어가 화면 하단에 들어올 때 시작
+                        end: 'top 35%',        // 화면 상단부에 닿을 때 완료
+                        scrub: true
+                    }
+                });
+            }
+            // (실패 시에도 .vb-cover는 CSS 기본값으로 항상 보임)
+
+            // Contribution 토글: 클릭 시 Role 상세 펼침/접힘 + 막대 차오름
+            const toggle = document.getElementById('vb-contrib-toggle');
+            const wrap = document.getElementById('vb-roles');
+            if (toggle && wrap) {
+                const fills = wrap.querySelectorAll('.vb-bar__fill');
+                toggle.addEventListener('click', () => {
+                    const willOpen = !wrap.classList.contains('is-open');
+                    wrap.classList.toggle('is-open', willOpen);
+                    toggle.setAttribute('aria-expanded', String(willOpen));
+                    fills.forEach((f, i) => {
+                        f.style.transitionDelay = willOpen ? (i * 70) + 'ms' : '0ms';
+                        f.style.width = willOpen ? f.dataset.pct + '%' : '0';
+                    });
+                });
+            }
+        });
+    </script>
+
+    <!-- ============================================================
+         조절 패널 - 작업용 (DEV ONLY)
+         이 블록(스타일 + div#qr-tuner + script) 통째로 지우면 완전히 제거됨.
+         값 확정 후 '현재값 CSS 복사' 눌러 .qr-card 기본값에 박으면 됨.
+         ============================================================ -->
+    <style>
+        #qr-tuner {
+            position: fixed; top: 16px; right: 16px; z-index: 99999;
+            width: 280px; max-height: calc(100vh - 32px); overflow: auto;
+            background: rgba(20,20,22,0.92); color: #fff;
+            border: 1px solid rgba(255,255,255,0.15); border-radius: 12px;
+            padding: 14px; font-family: 'Pretendard', sans-serif; font-size: 12px;
+            -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+            box-shadow: 0 10px 40px rgba(0,0,0,0.45);
+        }
+        #qr-tuner h4 {
+            margin: 0 0 12px; font-size: 12px; font-weight: 700;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        #qr-tuner button {
+            font-family: inherit; cursor: pointer; color: #fff;
+            background: rgba(255,255,255,0.12); border: none; border-radius: 6px;
+        }
+        #qr-tuner-toggle { width: 22px; height: 22px; font-size: 11px; }
+        #qr-tuner.is-collapsed #qr-tuner-rows,
+        #qr-tuner.is-collapsed #qr-tuner-copy { display: none; }
+        .qr-tuner__row { display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; }
+        .qr-tuner__top { display: flex; justify-content: space-between; align-items: baseline; }
+        .qr-tuner__top output { color: #2997ff; font-weight: 700; }
+        .qr-tuner__row input[type=range] { width: 100%; accent-color: #2997ff; margin: 0; }
+        #qr-tuner-copy { width: 100%; padding: 8px; font-weight: 600; }
+    </style>
+
+    <div id="qr-tuner">
+        <h4>🛠 카드 조절 (작업용)<button id="qr-tuner-toggle" type="button" aria-label="접기/펴기">▾</button></h4>
+        <div id="qr-tuner-rows"></div>
+        <button id="qr-tuner-copy" type="button">현재값 CSS 복사</button>
+    </div>
+
+    <script>
+        (function () {
+            const card = document.querySelector('.qr-card');
+            if (!card) return;
+
+            // [name, CSS변수, 최소, 최대, 기본값]  ← .qr-card 기본값과 동일하게 유지
+            const controls = [
+                { var: '--qr-gap-num',    label: '번호 → 인용문',  min: 0,   max: 60,  def: 24 },
+                { var: '--qr-gap-quote',  label: '인용문 → 출처',  min: 0,   max: 40,  def: 4 },
+                { var: '--qr-gap-source', label: '출처 → 도넛',    min: 0,   max: 80,  def: 64 },
+                { var: '--qr-donut-size', label: '도넛 지름',          min: 80,  max: 220, def: 181 },
+                { var: '--qr-donut-legend-gap', label: '도넛 ↔ 범례 간격', min: 0, max: 60, def: 20 },
+                { var: '--qr-legend-item-gap', label: '범례 줄 간격', min: 0, max: 30, def: 4 },
+                { var: '--qr-legend-offset', label: '범례 세로 위치(−위/+아래)', min: -40, max: 40, def: 0 },
+                { var: '--qr-donut-gap',  label: '도넛 쌍 세로 간격',  min: 8,   max: 120, def: 35 },
+                { var: '--qr-pad',        label: '카드 안쪽 여백', min: 12,  max: 80,  def: 40 },
+                { var: '--qr-maxw',       label: '카드 최대 너비', min: 320, max: 960, def: 658 }
+            ];
+
+            const host = document.getElementById('qr-tuner-rows');
+            controls.forEach(c => {
+                const row = document.createElement('div');
+                row.className = 'qr-tuner__row';
+                row.innerHTML =
+                    '<span class="qr-tuner__top"><span>' + c.label + '</span><output>' + c.def + 'px</output></span>' +
+                    '<input type="range" min="' + c.min + '" max="' + c.max + '" value="' + c.def + '" step="1">';
+                const input = row.querySelector('input');
+                const out = row.querySelector('output');
+                input.addEventListener('input', () => {
+                    card.style.setProperty(c.var, input.value + 'px');
+                    out.textContent = input.value + 'px';
+                });
+                host.appendChild(row);
+            });
+
+            // 현재값을 .qr-card CSS 형태로 클립보드 복사
+            const copyBtn = document.getElementById('qr-tuner-copy');
+            copyBtn.addEventListener('click', () => {
+                const body = controls.map(c => {
+                    const v = (card.style.getPropertyValue(c.var).trim()) || (c.def + 'px');
+                    return '    ' + c.var + ': ' + v + ';';
+                }).join('\n');
+                const text = '.qr-card {\n' + body + '\n}';
+                if (navigator.clipboard) navigator.clipboard.writeText(text);
+                console.log(text);
+                copyBtn.textContent = '복사됨! (콘솔에도 출력)';
+                setTimeout(() => { copyBtn.textContent = '현재값 CSS 복사'; }, 1400);
+            });
+
+            // 접기/펴기
+            document.getElementById('qr-tuner-toggle').addEventListener('click', () => {
+                document.getElementById('qr-tuner').classList.toggle('is-collapsed');
+            });
+        })();
+    </script>
+    <!-- ===== 조절 패널 - 작업용 끝 ===== -->
+</body>
+</html>

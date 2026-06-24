@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VIBRA - Project Detail</title>
+    <title>REST MODE - Project Detail</title>
     
     <!-- Pretendard Font -->
     <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.8/dist/web/static/pretendard.css" />
     
     <!-- [연결] 공통 스타일 (루트 폴더의 common.css) -->
-    <link rel="stylesheet" href="../../common.css">
+    <link rel="stylesheet" href="../../../common.css">
     
     <!-- Tailwind & GSAP -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -101,13 +101,13 @@
     <header id="global-header" class="at-top fixed top-0 left-0 w-full z-50 transition-all duration-300">
         <div class="header-inner flex justify-between items-center px-6 py-4 md:px-10 md:py-6">
             <div class="header-left flex items-center gap-10">
-                <a href="../../about.html" class="header-logo hover-trigger">
+                <a href="../../../about.html" class="header-logo hover-trigger">
                     <!-- 로고 이미지 반전(invert) 제거 -->
-                    <img src="../../assets/logo.svg" alt="HANUK Logo" class="h-6">
+                    <img src="../../../assets/logo.svg" alt="HANUK Logo" class="h-6">
                 </a>
                 <nav class="header-nav hidden md:flex gap-6">
-                    <a href="../../about.html" class="nav-link text-gray-500 hover:text-black transition-colors hover-trigger">About</a>
-                    <a href="../../works.html" class="nav-link text-black font-semibold hover-trigger">Works</a>
+                    <a href="../../../about.html" class="nav-link text-gray-500 hover:text-black transition-colors hover-trigger">About</a>
+                    <a href="../../../works.html" class="nav-link text-black font-semibold hover-trigger">Works</a>
                 </nav>
             </div>
             <div class="header-right text-sm font-medium">
@@ -122,27 +122,26 @@
         <!-- 프로젝트 타이틀 영역 -->
         <section class="detail-header">
             <!-- 텍스트 영역 임시 주석 처리 (나중에 텍스트 추가 시 아래 주석 해제)
-            <div class="project-category" id="anim-cat">XR, UX, INTERACTION</div>
-            <h1 class="project-title" id="anim-title">VIBRA: XR FOOTBALL<br>BROADCASTING SERVICE</h1>
+            <div class="project-category" id="anim-cat">Mobility, UX, UI</div>
+            <h1 class="project-title" id="anim-title">REST MODE</h1>
             <p class="project-desc" id="anim-desc">
-                이 프로젝트는 XR 기술을 활용하여 기존의 축구 중계를 완전히 새로운 차원의 인터랙티브 경험으로 탈바꿈시킵니다. 사용자는 단순히 경기를 보는 것을 넘어 가상 환경 속에서 데이터를 확인하고 능동적으로 참여할 수 있습니다.
+                이 프로젝트는 미래 모빌리티 환경에서의 사용자 경험을 제안합니다. 휴식 모드에 진입할 때 공간이 어떻게 변하고 사용자와 상호작용하는지를 다룹니다.
             </p>
             -->
         </section>
 
-        <!-- 프로젝트 본문 (이미지 1~6 순차 렌더링) -->
+        <!-- 프로젝트 본문 (이미지 1~5 순차 렌더링) -->
         <section class="content-area">
-            <!-- 이미지 경로: 현재 vibra.html 위치 기준 Images/VIBRA/ -->
-            <img src="Images/VIBRA/1.jpg" class="content-image hover-trigger" alt="VIBRA Board 1">
-            <img src="Images/VIBRA/2.jpg" class="content-image hover-trigger" alt="VIBRA Board 2">
-            <img src="Images/VIBRA/3.jpg" class="content-image hover-trigger" alt="VIBRA Board 3">
-            <img src="Images/VIBRA/4.jpg" class="content-image hover-trigger" alt="VIBRA Board 4">
-            <img src="Images/VIBRA/5.jpg" class="content-image hover-trigger" alt="VIBRA Board 5">
-            <img src="Images/VIBRA/6.jpg" class="content-image hover-trigger" alt="VIBRA Board 6">
+            <!-- 이미지 경로: 현재 restmode.html 위치 기준 media/ -->
+            <img src="media/1.jpg" class="content-image hover-trigger" alt="REST MODE Board 1">
+            <img src="media/2.jpg" class="content-image hover-trigger" alt="REST MODE Board 2">
+            <img src="media/3.jpg" class="content-image hover-trigger" alt="REST MODE Board 3">
+            <img src="media/4.jpg" class="content-image hover-trigger" alt="REST MODE Board 4">
+            <img src="media/5.jpg" class="content-image hover-trigger" alt="REST MODE Board 5">
             
             <!-- 하단 뒤로가기 버튼 -->
             <div class="text-center">
-                <a href="../../works.html" class="bottom-back-btn hover-trigger">
+                <a href="../../../works.html" class="bottom-back-btn hover-trigger">
                     Back to Works
                 </a>
             </div>
@@ -150,7 +149,7 @@
     </main>
 
     <!-- [연결] 공통 스크립트 -->
-    <script src="../../common.js"></script>
+    <script src="../../../common.js"></script>
     
     <!-- 상세 페이지 등장 및 스크롤 애니메이션 -->
     <script>
