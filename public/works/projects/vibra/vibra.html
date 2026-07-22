@@ -25,6 +25,7 @@
         :root {
             /* 색은 디자인 시스템 토큰으로 매핑 (기본 라이트 = 흰 배경 + 검정 글씨) */
             --vb-bg: #ffffff;                 /* 페이지 베이스 흰색 */
+            --vb-bg-tint: #f9f6ff;            /* 디자인 시스템 배경 틴트 (Figma: 흰색→옅은 라벤더) */
             --vb-panel: var(--gray-50);       /* 면·카드  (다크: #1C1C1E) */
             --vb-line: var(--gray-300);       /* 테두리   (다크: #3A3A3C) */
             --vb-text: var(--gray-ink);       /* 제목·강조 (다크: #F5F5F7) */
@@ -36,11 +37,20 @@
             --vb-pad-inline: clamp(24px, 6vw, 100px);
             --vb-maxw: 1280px;
             --vb-gap: var(--space-md);        /* 그리드 기본 간격 = 32px */
+            --vb-eyebrow-gap: 14px;            /* 작은 라벨(eyebrow) ↔ 큰 제목(title) 간격 */
+
+            /* 타이포 스케일 — common.css 기본값보다 페이지 전역에서 살짝 키움 */
+            --fs-caption: 14px;   /* 13 → 14 (eyebrow·캡션·라벨) */
+            --fs-body: 18px;      /* 17 → 18 (본문·설명) */
+            --fs-h3: 22px;        /* 20 → 22 (소제목·카드 제목) */
         }
 
         /* common.css의 main 기본 패딩 무력화 (히어로 풀스크린을 위해) */
         body {
-            background-color: var(--vb-bg);
+            /* Figma 배경 토큰: 위 흰색 → 48% 지점부터 옅은 라벤더로, 이후 라벤더 유지 */
+            background-color: var(--vb-bg-tint);
+            background-image: linear-gradient(to bottom, var(--vb-bg) 0%, var(--vb-bg-tint) 48.3%);
+            background-repeat: no-repeat;
             color: var(--vb-text);
             font-family: 'Pretendard', sans-serif;
             /* overflow-x 미설정: body에 overflow를 주면 sticky/스크롤 기준이 꼬여
@@ -67,7 +77,7 @@
             font-size: var(--fs-caption);
             letter-spacing: 0.14em;
             text-transform: uppercase;
-            margin: 0 0 var(--space-sm);
+            margin: 0 0 var(--vb-eyebrow-gap);
         }
         .vb-title {           /* 섹션 메인 제목 = h1 스케일 */
             font-size: var(--fs-h1);
@@ -159,7 +169,7 @@
            (디테일이 있어야 프로스티드 블러가 어떻게 들어가는지 구분됨)
            → 나중에 url(...) 부분만 실제 키비주얼 경로로 교체 */
         .vb-hero--dummy {
-            background: #1a1a1a url("https://picsum.photos/seed/vibra/1920/1080") center / cover no-repeat;
+            background: #1a1a1a url("media/hero.jpg") center / cover no-repeat;
         }
         .vb-hero--dummy .ph__label {
             color: rgba(255, 255, 255, 0.9);
@@ -184,9 +194,24 @@
         .vb-cover__inner {
             width: 100%;
             max-width: 820px;
+            margin-inline: auto;
             padding: clamp(40px, 7vh, 96px) var(--vb-pad-inline);
+            text-align: center;          /* Overview 가운데 정렬 */
         }
-        .vb-cover__inner .vb-subtitle + .vb-body { margin-top: 12px; }
+        .vb-cover__inner .vb-body { margin-inline: auto; }   /* 60ch 본문 박스도 가운데로 */
+        .vb-cover__inner .vb-subtitle + .vb-body { margin-top: 16px; }
+        /* Overview 텍스트만 전반적으로 1.5배 키우고 굵기도 올림 */
+        .vb-cover__inner .vb-subtitle {
+            font-size: calc(var(--fs-h3) * 1.5);
+            font-weight: 700;
+            margin-bottom: 24px;
+        }
+        .vb-cover__inner .vb-body {
+            font-size: calc(var(--fs-body) * 1.5);
+            font-weight: 500;
+            line-height: 1.6;
+            max-width: none;
+        }
 
         /* =========================================================
            2. INFO
@@ -197,6 +222,7 @@
             gap: clamp(40px, 6vw, 96px);
             align-items: start;
         }
+        /* 프로젝트 인포 — Frame 38 참고: 좌(라벨+메타) / 우(크레딧), 왼쪽 정렬 */
         .vb-meta { display: flex; flex-direction: column; gap: 22px; }
         .vb-meta__row {
             display: flex;
@@ -248,10 +274,13 @@
             transition: width 0.7s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
-        .vb-credits { display: flex; flex-direction: column; gap: var(--space-md); }
+        .vb-credits { display: flex; flex-direction: column; gap: clamp(36px, 4vw, 52px); }
+        /* 세 라벨(PROJECT INFO · PRODUCED WITH · FEATURED BY) 동일 스타일 + 라벨↔내용 간격 통일 */
+        .vb-info-label,
         .vb-credit__label {
+            display: block;
             font-size: 0.78rem; text-transform: uppercase;
-            letter-spacing: 0.1em; color: var(--vb-muted); margin-bottom: 10px;
+            letter-spacing: 0.1em; color: var(--vb-muted); margin-bottom: 28px;
         }
         /* 크레딧 로고 (PNG) */
         .vb-logos { display: flex; flex-wrap: wrap; align-items: center; gap: 20px; }
@@ -315,6 +344,84 @@
         .vb-keyword__idx { color: var(--vb-muted); font-size: 0.8rem; font-weight: 700; }
         .vb-keyword__name { margin-top: 10px; font-size: var(--fs-body); font-weight: 600; color: var(--vb-text); }
 
+        /* =========================================================
+           QUALITATIVE — 리서치 방법 카드 · 가설의 진화 · XR 디바이스 문제
+           (Qualitative Research 섹션 전용, vb-group 안에서 사용)
+           ========================================================= */
+        /* 헤더 (가운데 정렬) */
+        .ql-head { text-align: center; max-width: 700px; margin: 0 auto clamp(48px, 6vw, 80px); }
+        .ql-head .vb-title { margin-inline: auto; }
+        .ql-head .ql-intro { margin: clamp(16px, 2vw, 22px) auto 0; max-width: 620px; }
+
+        /* Qualitative 섹션 전체 가운데 정렬 + 그룹 간 간격 확대 */
+        #qualitative .vb-group { margin-top: clamp(72px, 9vw, 120px); }
+        #qualitative .vb-group__head { justify-content: center; text-align: center; }
+        .ql-group-intro { text-align: center; max-width: 640px; margin: 0 auto var(--space-md); }
+
+        /* 리서치 방법 3개 (이미지 온전하게 + 아래 텍스트 분리, 박스로 안 감쌈, 가운데 정렬) */
+        .ql-method-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: clamp(28px, 3.5vw, 44px); }
+        .ql-method-card { text-align: center; }
+        .ql-method-card__img { width: 100%; height: auto; display: block; border-radius: 16px; border: 1px solid var(--vb-line); }
+        .ql-method-card__body { padding: 16px 6px 0; }
+        .ql-method-card__tag { display: block; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent-color); margin-bottom: 8px; }
+        .ql-method-card__title { margin: 0 0 6px; font-size: var(--fs-body); font-weight: 700; color: var(--vb-text); word-break: keep-all; }
+        .ql-method-card__desc { margin: 0; font-size: var(--fs-caption); line-height: 1.65; color: var(--vb-muted); word-break: keep-all; }
+
+        /* B. 가설의 진화 (세로 흐름) */
+        .ql-flow { max-width: 640px; margin-inline: auto; display: flex; flex-direction: column; align-items: center; gap: clamp(28px, 4vw, 44px); }
+        .ql-connector { width: 1px; height: clamp(36px, 5vw, 56px); background: var(--vb-line); }
+        .ql-connector--accent { background: color-mix(in srgb, var(--accent-color) 45%, var(--vb-line)); }
+        .ql-step { width: 100%; text-align: center; }
+        .ql-step__tag { display: block; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--vb-muted); margin-bottom: 14px; }
+        /* 가설 = 살짝 눌러둔 톤 / 결과 = 가설과 같은 크기로 또렷하게 (박스 없음) */
+        .ql-step__q { margin: 0; font-size: var(--fs-h3); font-weight: 600; line-height: 1.5; color: var(--vb-body); word-break: keep-all; }
+        .ql-result { margin-top: clamp(18px, 2.4vw, 26px); }
+        .ql-result__tag { display: block; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent-color); margin-bottom: 10px; }
+        .ql-result__title { margin: 0 0 10px; font-size: var(--fs-h3); font-weight: 700; color: var(--vb-text); line-height: 1.45; word-break: keep-all; }
+        .ql-result__desc { margin: 0; font-size: var(--fs-body); line-height: 1.75; color: var(--vb-body); word-break: keep-all; }
+        .ql-final { width: 100%; text-align: center; }
+        .ql-final__tag { display: block; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent-color); margin-bottom: 16px; }
+        .ql-final__q { margin: 0 0 20px; font-size: var(--fs-h2); font-weight: 700; color: var(--vb-text); line-height: 1.4; word-break: keep-all; }
+        .ql-final__answer { max-width: 600px; margin: 0 auto; font-size: var(--fs-h3); font-weight: 600; line-height: 1.7; color: var(--vb-text); word-break: keep-all; }
+        .ql-final__answer strong { color: var(--accent-color); font-weight: 800; }
+
+        /* C. XR 디바이스 문제 정의 / 지향 경험 2단 */
+        .ql-xr-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--vb-gap); }
+        @media (max-width: 720px) { .ql-xr-grid { grid-template-columns: 1fr; } }
+        .ql-xr-card { padding: clamp(28px, 3.4vw, 40px); border-radius: 18px; background: var(--vb-panel); border-top: 3px solid var(--vb-line); text-align: center; }
+        .ql-xr-card--solution { border-top-color: var(--accent-color); }
+        .ql-xr-card__title { margin: 0 0 16px; font-size: var(--fs-h3); font-weight: 700; color: var(--vb-text); word-break: keep-all; }
+        .ql-xr-card--solution .ql-xr-card__title { color: var(--accent-color); }
+        .ql-xr-card__desc { margin: 0; font-size: var(--fs-body); line-height: 1.8; color: var(--vb-body); word-break: keep-all; }
+        .ql-xr-card__desc strong { color: var(--vb-text); font-weight: 700; }
+
+        /* UX Direction — 어피니티 다이어그램을 배경으로, 키워드를 그 위에 오버레이 */
+        .ql-ux-hero {
+            position: relative; overflow: hidden; border-radius: 24px;
+            min-height: clamp(420px, 62vh, 640px);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            text-align: center; padding: clamp(40px, 6vw, 64px) clamp(24px, 4vw, 48px);
+        }
+        .ql-ux-hero__bg { position: absolute; inset: 0; z-index: 0; }
+        .ql-ux-hero__bg img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .ql-ux-hero__overlay {
+            position: absolute; inset: 0; z-index: 1;
+            background: linear-gradient(180deg, rgba(10, 10, 14, 0.55) 0%, rgba(10, 10, 14, 0.78) 100%);
+        }
+        .ql-ux-hero__content { position: relative; z-index: 2; max-width: 720px; }
+        .ql-ux-hero__eyebrow { display: block; font-size: 0.78rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(255, 255, 255, 0.75); margin-bottom: 14px; }
+        .ql-ux-hero__title { margin: 0; font-size: var(--fs-h2); font-weight: 700; color: #fff; word-break: keep-all; }
+        .ql-ux-hero__desc { margin: 16px 0 0; font-size: var(--fs-body); line-height: 1.8; color: rgba(255, 255, 255, 0.82); word-break: keep-all; }
+        .ql-ux-chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin-top: clamp(32px, 4vw, 48px); }
+        .ql-ux-chip {
+            padding: 13px 24px; border-radius: 14px;
+            background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.18);
+            -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+            color: #fff; font-weight: 700; font-size: var(--fs-body);
+            transition: background 0.25s ease, transform 0.25s ease;
+        }
+        .ql-ux-chip:hover { background: var(--accent-color); transform: translateY(-2px); }
+
         /* Service Flow */
         .vb-flow {
             display: grid;
@@ -325,6 +432,334 @@
         .vb-flow__phase {
             display: inline-block; color: var(--vb-text); font-weight: 700;
             font-size: 0.8rem; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 14px;
+        }
+
+        /* =========================================================
+           리서치 서술형 (Quantitative Research) — reference 카드 구조
+           (알약 태그 + 인용형 제목 + <br><br> 문단 + strong 강조, 가운데 정렬)
+           ========================================================= */
+        .rn { max-width: 860px; margin-inline: auto; }
+        .rn-card {                               /* reference: 어두운 카드 */
+            background: #17171a;
+            border: 1px solid #2a2a2e;
+            border-radius: 22px;
+            padding: clamp(32px, 4.5vw, 56px);
+            text-align: center;                 /* reference: 가운데 정렬 */
+            transition: transform .3s ease, box-shadow .3s ease;
+            will-change: transform;
+        }
+        .rn-card:hover { transform: scale(1.02); box-shadow: 0 22px 48px rgba(0,0,0,.35); }
+        @media (hover: none) { .rn-card:hover { transform: none; box-shadow: none; } }
+        .rn-card + .rn-card { margin-top: clamp(20px, 3vw, 32px); }
+        .rn-card__tag {                          /* reference: NEXT STEP 알약 (bg-gray-800) */
+            display: inline-block;
+            font-size: var(--fs-caption);
+            font-weight: 700;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            color: #d4d4d8;
+            background: #27272a;
+            padding: 6px 15px;
+            border: 1px solid #3f3f46;
+            border-radius: 999px;
+            margin-bottom: 20px;
+        }
+        .rn-card__title {                        /* reference: text-2xl font-bold text-white, 인용형 */
+            margin: 0 0 20px;
+            font-size: clamp(1.5rem, 2.6vw, 2rem);
+            font-weight: 700;
+            line-height: 1.35;
+            letter-spacing: -0.015em;
+            color: #ffffff;
+            word-break: keep-all;
+        }
+        .rn-card__body {                         /* reference: text-gray-300, leading-relaxed, max-w-2xl, mx-auto, text-lg */
+            max-width: 42rem;
+            margin-inline: auto;
+            font-size: calc(var(--fs-body) * 1.12);
+            line-height: 1.8;
+            color: #d4d4d8;
+            word-break: keep-all;
+        }
+        .rn-card__body strong { font-weight: 700; color: #ffffff; }
+        .rn-card__body strong.rn-accent { color: #fb7185; }   /* reference: text-rose-400 */
+
+        /* =========================================================
+           QUANTITATIVE RESEARCH (참고 코드 → vibra 톤 변환)
+           Desk Research 세로 스토리텔링 + Field Research 데이터 카드.
+           참고 코드의 rose 포인트 → vibra 파랑(--accent-color),
+           클라이맥스 69% 스탯은 페이지 XR 그라데이션으로 통일.
+           ========================================================= */
+        .qr2 { --qr2-accent: var(--accent-color); }
+
+        html { scroll-behavior: smooth; }
+        @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+        #qualitative { scroll-margin-top: 90px; }
+
+        /* 섹션 헤더 (참고 코드 hero → 결론 먼저) — 가운데 정렬 */
+        .qr2-head { text-align: center; max-width: 760px; margin-inline: auto; }
+        .qr2-head .vb-title { margin-top: 0; }
+        /* 하위 섹션 소제목 (Desk Research / Field Research) — eyebrow와 큰 제목 사이 층위 */
+        .qr2-subhead {
+            margin: clamp(30px, 4vw, 44px) auto clamp(22px, 2.8vw, 30px);
+            text-align: center; font-size: var(--fs-h3); font-weight: 700;
+            color: var(--vb-text); letter-spacing: -0.01em;
+        }
+        .qr2-lead {
+            margin: clamp(16px, 2vw, 22px) auto 0; max-width: 620px;
+            font-size: var(--fs-body); line-height: 1.85; color: var(--vb-body); word-break: keep-all;
+        }
+        .qr2-lead strong { color: var(--vb-text); font-weight: 700; }
+
+        /* STEP 라벨 헤더 */
+        .qr2-step { text-align: center; margin-top: clamp(72px, 10vw, 128px); margin-bottom: clamp(48px, 6vw, 88px); }
+        .qr2-pill {
+            display: inline-block; font-size: var(--fs-caption); font-weight: 700;
+            letter-spacing: 0.12em; text-transform: uppercase;
+            color: var(--vb-muted); background: var(--vb-panel);
+            border: 1px solid var(--vb-line); padding: 6px 14px; border-radius: 999px; margin-bottom: 18px;
+        }
+        .qr2-pill--accent {
+            color: var(--qr2-accent);
+            background: color-mix(in srgb, var(--qr2-accent) 12%, transparent);
+            border-color: color-mix(in srgb, var(--qr2-accent) 30%, transparent);
+        }
+        .qr2-step__title { margin: 0; font-size: var(--fs-h2); font-weight: 800; color: var(--vb-text); word-break: keep-all; }
+        .qr2-step__sub { margin: 10px 0 0; font-size: var(--fs-body); color: var(--vb-muted); }
+
+        /* Desk Research 세로 스토리텔링 플로우 */
+        .qr2-flow { max-width: 880px; margin: 0 auto; display: flex; flex-direction: column; align-items: center; gap: clamp(24px, 3.5vw, 44px); }
+        /* 출처 캡션 (데이터/인용 근거) */
+        .qr2-source { margin: 14px 0 0; font-size: var(--fs-caption); color: var(--vb-muted); letter-spacing: 0.01em; word-break: keep-all; }
+        .qr2-node { display: flex; flex-direction: column; align-items: center; text-align: center; width: 100%; }
+        .qr2-connector { width: 1px; height: 48px; background: var(--vb-line); }
+        .qr2-connector--accent { background: color-mix(in srgb, var(--qr2-accent) 45%, var(--vb-line)); }
+
+        /* 배경 노드 (일부러 눌러둔 '당연한 현상') */
+        .qr2-icon {
+            width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center;
+            background: var(--vb-panel); border: 1px solid var(--vb-line);
+            box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.05); margin-bottom: 22px; color: var(--vb-muted);
+        }
+        .qr2-icon svg { width: 26px; height: 26px; }
+        .qr2-node__title { margin: 0 0 14px; font-size: var(--fs-h2); font-weight: 700; line-height: 1.4; color: var(--vb-text); word-break: keep-all; }
+        .qr2-node__desc { margin: 0; max-width: 34rem; font-size: var(--fs-body); line-height: 1.75; color: var(--vb-body); word-break: keep-all; }
+        .qr2-tag {
+            display: inline-block; margin-top: 14px; font-size: var(--fs-caption); color: var(--vb-muted);
+            background: var(--vb-panel); border: 1px solid var(--vb-line); padding: 5px 12px; border-radius: 8px;
+        }
+
+        /* 질문 던지기 */
+        .qr2-q { margin: 0 0 28px; font-size: var(--fs-h2); font-weight: 700; color: var(--qr2-accent); word-break: keep-all; }
+
+        /* 검색량 데이터 카드 */
+        .qr2-search {
+            width: 100%; max-width: 620px; text-align: left;
+            background: var(--vb-panel); border: 1px solid var(--vb-line);
+            border-radius: 20px; padding: clamp(24px, 3vw, 40px);
+        }
+        .qr2-search__label { margin: 0 0 22px; font-size: var(--fs-caption); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--vb-muted); }
+        .qr2-srow { margin-bottom: 20px; }
+        .qr2-srow:last-of-type { margin-bottom: 0; }
+        .qr2-srow__head { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; margin-bottom: 8px; }
+        .qr2-srow__name { font-size: var(--fs-caption); color: var(--vb-muted); }
+        .qr2-srow__val { font-size: var(--fs-body); font-weight: 700; color: var(--vb-text); }
+        .qr2-track { width: 100%; height: 8px; background: var(--gray-300); border-radius: 99px; overflow: hidden; }
+        .qr2-track__fill { height: 100%; border-radius: 99px; background: var(--gray-500); }
+        /* 하이라이트 (2위 '분석하다' = 핵심 발견) */
+        .qr2-srow--hi { padding: 0; background: none; border: none; }
+        .qr2-srow--hi .qr2-srow__name,
+        .qr2-srow--hi .qr2-srow__val { color: var(--qr2-accent); font-weight: 700; }
+        .qr2-srow--hi .qr2-track { background: color-mix(in srgb, var(--qr2-accent) 14%, transparent); }
+        .qr2-srow--hi .qr2-track__fill { background: var(--qr2-accent); }
+        .qr2-note {
+            margin: 22px 0 0; text-align: center; font-size: var(--fs-caption); color: var(--vb-body);
+            background: var(--vb-bg); border: 1px solid var(--vb-line); border-radius: 10px; padding: 14px;
+        }
+        .qr2-note strong { color: var(--vb-text); font-weight: 700; }
+        /* Desk 데이터 2단 (검색량 · 흥행 콘텐츠) — 한 줄 배치 */
+        .qr2-deskdata { display: grid; grid-template-columns: 2fr 3fr; gap: var(--vb-gap); align-items: stretch; width: 100%; }
+        @media (max-width: 720px) { .qr2-deskdata { grid-template-columns: 1fr; } }
+        .qr2-deskdata .qr2-search { width: auto; max-width: none; min-width: 0; box-sizing: border-box; display: flex; flex-direction: column; }
+        /* 오른쪽 박스 데이터를 바닥 정렬 → 왼쪽 박스의 마지막 행('받다')과 하단 라인 일치 */
+        .qr2-content2col { margin-top: auto; }
+        .qr2-search__note { margin: 0 0 18px; font-size: 11px; letter-spacing: 0.01em; color: var(--vb-muted); }
+        .qr2-bar-group__label { margin: 18px 0 10px; font-size: var(--fs-caption); font-weight: 700; color: var(--vb-muted); }
+        .qr2-search__label + .qr2-bar-group__label { margin-top: 4px; }
+        /* 흥행 콘텐츠 두 열 (남성팬 | 여성팬) */
+        .qr2-content2col { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(14px, 2vw, 22px); }
+        .qr2-content2col .qr2-bar-group__label { margin-top: 4px; }
+        @media (max-width: 460px) { .qr2-content2col { grid-template-columns: 1fr; } }
+        /* 박스 밖으로 뺀 인사이트 */
+        .qr2-insight-out {
+            max-width: 700px; margin: 0 auto clamp(30px, 4vw, 44px); text-align: center;
+            font-size: var(--fs-h2); font-weight: 700; line-height: 1.45; color: var(--vb-text); word-break: keep-all;
+        }
+        .qr2-insight-out strong { color: var(--qr2-accent); font-weight: 700; }
+
+        /* 가설 다크 박스 */
+        .qr2-hypo {
+            display: inline-block; max-width: 440px; background: #1d1d1f; color: #fff;
+            padding: 16px 24px; border-radius: 14px; box-shadow: 0 12px 30px rgba(0, 0, 0, 0.18);
+            font-size: var(--fs-h3); font-weight: 600; line-height: 1.5; word-break: keep-all;
+        }
+        .qr2-hypo-cap { margin: 16px 0 0; font-size: var(--fs-caption); color: var(--vb-muted); }
+
+        /* Field Research — 큰 스탯 카드 (XR 그라데이션 클라이맥스) */
+        .qr2-stat-hero {
+            text-align: center; color: #fff; border-radius: 32px;
+            padding: clamp(48px, 7vw, 80px) clamp(24px, 4vw, 40px);
+            background: linear-gradient(135deg, #7B5EE6 0%, #4F7BF0 55%, #2997ff 100%);
+            box-shadow: 0 24px 60px rgba(70, 110, 230, 0.32);
+            margin-bottom: clamp(56px, 7vw, 96px);
+            transition: transform 0.32s cubic-bezier(0.2, 0.7, 0.3, 1);
+        }
+        .qr2-stat-hero:hover { transform: translateY(-8px); }
+        @media (hover: none) { .qr2-stat-hero:hover { transform: none; } }
+        .qr2-stat-hero__label { margin: 0 0 14px; font-size: var(--fs-h3); font-weight: 500; color: rgba(255, 255, 255, 0.8); letter-spacing: 0.02em; }
+        .qr2-stat-hero__num { font-size: clamp(72px, 14vw, 150px); font-weight: 900; line-height: 1; margin-bottom: 22px; }
+        .qr2-stat-hero__quote { margin: 0; font-size: clamp(1.25rem, 3vw, 2rem); font-weight: 700; line-height: 1.3; word-break: keep-all; }
+
+        /* Insight 02 헤딩 */
+        .qr2-ins-head { margin: 0 0 40px; }
+        .qr2-ins-head__title {
+            margin: 0; font-size: var(--fs-h2); font-weight: 700; color: var(--vb-text);
+            border-left: 4px solid var(--qr2-accent); padding-left: 16px; word-break: keep-all;
+        }
+        .qr2-ins-head__desc { margin: 12px 0 0 20px; font-size: var(--fs-body); color: var(--vb-body); word-break: keep-all; }
+
+        /* 행동 카드 그리드 (2fr : 3fr) */
+        .qr2-behav { display: grid; grid-template-columns: 2fr 3fr; gap: var(--vb-gap); margin-bottom: clamp(56px, 7vw, 88px); }
+        @media (max-width: 820px) { .qr2-behav { grid-template-columns: 1fr; } }
+        .qr2-card {
+            background: var(--vb-panel); border: 1px solid var(--vb-line); border-radius: 20px;
+            padding: clamp(24px, 3vw, 36px); transition: box-shadow 0.25s ease;
+        }
+        .qr2-card:hover { box-shadow: 0 14px 32px rgba(0, 0, 0, 0.08); }
+        .qr2-card--center { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+        .qr2-card__title { margin: 0 0 8px; font-size: var(--fs-h3); font-weight: 700; color: var(--vb-text); word-break: keep-all; }
+        .qr2-card__sub { margin: 0 0 24px; font-size: var(--fs-caption); color: var(--vb-muted); word-break: keep-all; }
+        .qr2-card__desc { margin: 0; font-size: var(--fs-caption); line-height: 1.7; color: var(--vb-body); word-break: keep-all; }
+        .qr2-card__desc strong { color: var(--vb-text); font-weight: 700; }
+
+        /* 원형 차트 (conic-gradient) */
+        .qr2-donut { width: 112px; height: 112px; border-radius: 50%; display: grid; place-items: center; position: relative; margin-bottom: 22px; }
+        .qr2-donut::before { content: ""; position: absolute; inset: 9px; background: var(--vb-panel); border-radius: 50%; }
+        .qr2-donut__val { position: relative; font-size: var(--fs-h2); font-weight: 800; color: var(--vb-text); }
+        .qr2-donut--64 { background: conic-gradient(var(--qr2-accent) 0 64%, var(--gray-300) 64% 100%); }
+
+        /* 파편화 막대 */
+        .qr2-bars { display: flex; flex-direction: column; gap: 18px; }
+        .qr2-bar__head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--fs-caption); margin-bottom: 7px; }
+        .qr2-bar__name { color: var(--vb-body); font-weight: 500; }
+        .qr2-bar__pct { font-weight: 700; color: var(--vb-muted); }
+        .qr2-bar--hi .qr2-bar__pct { color: var(--qr2-accent); }
+        .qr2-bar__track { height: 10px; background: var(--gray-300); border-radius: 99px; overflow: hidden; }
+        .qr2-bar__fill { height: 100%; border-radius: 99px; background: var(--gray-500); }
+        .qr2-bar--hi .qr2-bar__fill { background: var(--qr2-accent); }
+
+        /* 페인포인트 경고 박스 */
+        .qr2-warn {
+            margin-top: 24px; text-align: center; font-size: var(--fs-caption); font-weight: 500;
+            color: color-mix(in srgb, var(--qr2-accent) 72%, var(--vb-text));
+            background: color-mix(in srgb, var(--qr2-accent) 8%, transparent);
+            border: 1px solid color-mix(in srgb, var(--qr2-accent) 22%, transparent);
+            border-radius: 12px; padding: 14px;
+        }
+
+        /* NEXT STEP 다크 카드 */
+        .qr2-next {
+            text-align: center; color: #fff; background: #1d1d1f; border-radius: 32px;
+            padding: clamp(40px, 5vw, 60px) clamp(24px, 4vw, 40px);
+            box-shadow: 0 22px 48px rgba(0, 0, 0, 0.22); transition: transform 0.3s ease;
+        }
+        .qr2-next:hover { transform: scale(1.02); }
+        @media (hover: none) { .qr2-next:hover { transform: none; } }
+        .qr2-next__pill {
+            display: inline-block; font-size: var(--fs-caption); font-weight: 700; letter-spacing: 0.14em;
+            text-transform: uppercase; color: #d4d4d8; background: #2a2a2e; border: 1px solid #3f3f46;
+            padding: 6px 15px; border-radius: 999px; margin-bottom: 20px;
+        }
+        .qr2-next__title { margin: 0 0 18px; font-size: clamp(1.5rem, 2.6vw, 2rem); font-weight: 700; color: #fff; line-height: 1.35; word-break: keep-all; }
+        .qr2-next__body { max-width: 42rem; margin: 0 auto; font-size: calc(var(--fs-body) * 1.05); line-height: 1.8; color: #d4d4d8; word-break: keep-all; }
+        .qr2-next__body strong { color: #fff; font-weight: 700; }
+        .qr2-next__body strong.qr2-accent { color: var(--qr2-accent); }
+        .qr2-cta {
+            display: inline-flex; align-items: center; gap: 8px; margin-top: 32px;
+            padding: 14px 28px; border-radius: 999px; background: var(--qr2-accent); color: #fff;
+            font-weight: 700; text-decoration: none; transition: background 0.2s ease, transform 0.2s ease;
+        }
+        .qr2-cta:hover { background: color-mix(in srgb, var(--qr2-accent) 85%, #fff); transform: translateY(-2px); }
+        .qr2-cta svg { width: 20px; height: 20px; }
+
+        /* Field Research — 번호 데이터 카드 (덱 구조) */
+        .qr2-fhead { text-align: center; margin-top: clamp(72px, 10vw, 128px); }
+        .qr2-fintro { max-width: 640px; margin: 6px auto 0; font-size: var(--fs-body); line-height: 1.8; color: var(--vb-body); word-break: keep-all; }
+        .qr2-fhead .qr2-source { text-align: center; }
+        .qr2-fconc {
+            max-width: 800px; margin: clamp(32px, 4vw, 48px) auto clamp(40px, 5vw, 60px);
+            text-align: center; font-size: var(--fs-h2); font-weight: 700; line-height: 1.45;
+            color: var(--vb-text); word-break: keep-all;
+        }
+        .qr2-fconc strong { color: var(--qr2-accent); }
+        /* 도넛 카드(01·03) 작게 : 막대 카드(02·04) 크게 */
+        .qr2-fgrid { display: grid; grid-template-columns: 2fr 3fr; gap: var(--vb-gap); align-items: stretch; max-width: 880px; margin: 0 auto clamp(56px, 7vw, 96px); }
+        @media (max-width: 820px) { .qr2-fgrid { grid-template-columns: 1fr; } }
+        /* Field 카드 2개 그룹 (각 그룹 위 결론 헤더) */
+        .qr2-fgroup { max-width: 880px; margin-inline: auto; }
+        .qr2-fgroup + .qr2-fgroup { margin-top: clamp(48px, 6vw, 80px); }
+        .qr2-fgroup:last-of-type { margin-bottom: clamp(56px, 7vw, 96px); }
+        .qr2-fgroup__head { margin: 0 0 clamp(20px, 2.5vw, 28px); font-size: var(--fs-h3); font-weight: 700; color: var(--vb-text); text-align: left; line-height: 1.4; word-break: keep-all; }
+        .qr2-fgroup .qr2-fgrid { max-width: none; margin: 0; }
+
+        /* =========================================================
+           DESK RESEARCH — FINDING 카드 (이미지 레이아웃 · 라이트 톤)
+           ========================================================= */
+        .dk-lead { margin: clamp(6px, 1.5vw, 12px) auto 0; text-align: center; font-size: var(--fs-h2); font-weight: 700; color: var(--vb-text); line-height: 1.4; word-break: keep-all; }
+        .dk-findings { display: grid; grid-template-columns: 1fr 1fr; gap: var(--vb-gap); max-width: 880px; margin: clamp(40px, 5vw, 64px) auto 0; }
+        @media (max-width: 760px) { .dk-findings { grid-template-columns: 1fr; } }
+        .dk-find { display: flex; flex-direction: column; padding: clamp(24px, 3vw, 34px); border-radius: 18px; background: var(--vb-panel); border: 1px solid var(--vb-line); text-align: left; }
+        .dk-find__label { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent-color); margin-bottom: 12px; }
+        .dk-find__title { margin: 0 0 22px; font-size: var(--fs-h3); font-weight: 700; color: var(--vb-text); line-height: 1.4; word-break: keep-all; }
+        .dk-find__stats { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .dk-stat { padding: 18px 16px; border-radius: 12px; background: var(--vb-bg); border: 1px solid var(--vb-line); }
+        .dk-stat__num { font-size: var(--fs-h2); font-weight: 800; color: var(--vb-text); line-height: 1; }
+        .dk-stat__cap { margin: 8px 0 0; font-size: var(--fs-caption); line-height: 1.5; color: var(--vb-muted); word-break: keep-all; }
+        .dk-find__source { margin: 16px 0 0; font-size: var(--fs-caption); color: var(--vb-muted); }
+        .dk-bridge { max-width: 640px; margin: clamp(32px, 4vw, 48px) auto 0; text-align: center; font-size: var(--fs-body); color: var(--vb-muted); word-break: keep-all; }
+
+        /* =========================================================
+           FIELD RESEARCH — BEAT 그룹 (수치 카드 + 텍스트 카드 · 중앙정렬)
+           ========================================================= */
+        .fd-beat { max-width: 880px; margin-inline: auto; text-align: center; }
+        .fd-beat + .fd-beat { margin-top: clamp(48px, 6vw, 80px); }
+        .fd-beat__label { display: block; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent-color); margin-bottom: 12px; }
+        .fd-beat__title { margin: 0 0 clamp(22px, 3vw, 30px); font-size: var(--fs-h2); font-weight: 700; color: var(--vb-text); line-height: 1.4; word-break: keep-all; }
+        .fd-beat__cards { display: grid; grid-template-columns: 1fr 1.4fr; gap: var(--vb-gap); }
+        @media (max-width: 760px) { .fd-beat__cards { grid-template-columns: 1fr; } }
+        .fd-card { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: clamp(28px, 3.4vw, 40px); border-radius: 18px; background: var(--vb-panel); border: 1px solid var(--vb-line); }
+        .fd-card__num { font-size: clamp(44px, 6vw, 60px); font-weight: 800; color: var(--vb-text); line-height: 1; }
+        .fd-card__cap { margin: 12px 0 0; font-size: var(--fs-body); color: var(--vb-muted); word-break: keep-all; }
+        .fd-card__txt { margin: 0; font-size: var(--fs-h3); font-weight: 600; line-height: 1.6; color: var(--vb-text); word-break: keep-all; }
+        .fd-card__txt strong { font-weight: 800; color: var(--vb-text); }
+        .qr2-fcard {
+            background: var(--vb-panel); border: 1px solid var(--vb-line); border-radius: 20px;
+            padding: clamp(24px, 3vw, 36px); display: flex; flex-direction: column;
+            transition: box-shadow 0.25s ease;
+        }
+        .qr2-fcard:hover { box-shadow: 0 14px 32px rgba(0, 0, 0, 0.08); }
+        .qr2-fcard__title { margin: 0 0 8px; font-size: var(--fs-h3); font-weight: 700; color: var(--vb-text); line-height: 1.45; word-break: keep-all; }
+        .qr2-fcard__sub { margin: 2px 0 24px; font-size: var(--fs-caption); color: var(--vb-muted); line-height: 1.6; word-break: keep-all; }
+        .qr2-fcard__desc { margin: 16px 0 0; font-size: var(--fs-caption); color: var(--vb-muted); line-height: 1.6; word-break: keep-all; }
+        /* 차트(도넛·막대)를 카드 바닥으로 정렬 → 데이터 바닥선 일치, 위쪽 여백만 차이 */
+        .qr2-fcard .qr2-bars { margin-top: auto; }
+        /* 도넛 카드(01·03): 도넛+서브텍스트를 묶어 바닥 정렬, 가운데 정렬 */
+        .qr2-fcard--donut { align-items: flex-start; text-align: left; }
+        .qr2-donut-group { margin-top: auto; display: flex; flex-direction: column; align-items: center; }
+        .qr2-donut--63 { background: conic-gradient(var(--qr2-accent) 0 63%, var(--gray-300) 63% 100%); }
+
+        @media (max-width: 640px) {
+            .qr2-q { font-size: var(--fs-h3); }
         }
 
         /* =========================================================
@@ -599,152 +1034,326 @@
            번호 → 날짜 → 제목 → 카테고리 → 이미지 → 설명 으로 쌓는 에디토리얼 컬럼.
            1단계: 정적 배치 (스크롤 등장 애니메이션은 나중에)
            ========================================================= */
-        .mr-timeline {
-            --mr-col-min: 220px;          /* 컬럼 최소 너비 (좁으면 가로 스크롤) */
-            --mr-bar-h: 16px;             /* 가운데 두꺼운 회색 바 두께 */
-            --mr-zone-h: 360px;           /* 바 위/아래 콘텐츠 영역 높이 (고정 = 바 정렬 기준) */
-            --mr-gut: 22px;               /* 컬럼 좌우 여백 */
-            --mr-stem: 22px;              /* 카드와 바를 잇는 연결선 길이 */
-            position: relative;
-            margin-top: var(--space-lg);
-            overflow-x: auto;             /* 넓으면 한 화면, 좁으면 가로 스크롤 */
-            padding-bottom: 8px;
-        }
-        .mr-track { display: flex; align-items: stretch; position: relative; }
-
-        /* 가운데 두꺼운 회색 가로 바 */
-        .mr-bar {
-            position: absolute;
-            left: 0; right: 0;
-            top: var(--mr-zone-h);
-            height: var(--mr-bar-h);
-            background: color-mix(in srgb, var(--vb-line) 55%, #fff);
-            border-radius: 4px;
-            z-index: 0;
+        /* 섹션을 화면 높이에 고정 · 제목은 위, 타임라인은 남는 높이에 맞춰 자동 축소 */
+        .mr-section {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            padding-block: var(--space-lg);
         }
 
-        /* 컬럼: 위 영역 / 바 / 아래 영역 3단 그리드 */
-        .mr-col {
-            position: relative;
-            flex: 1 1 0;
-            min-width: var(--mr-col-min);
-            padding: 0 var(--mr-gut);
-            display: grid;
-            grid-template-rows: var(--mr-zone-h) var(--mr-bar-h) var(--mr-zone-h);
-        }
-
-        /* 바 위 노드(점) */
-        .mr-col__node {
-            grid-row: 2;
-            justify-self: center;
-            align-self: center;
-            width: 13px; height: 13px;
-            border-radius: 50%;
-            background: var(--vb-bg);
-            border: 2px solid var(--vb-muted);
-            box-shadow: 0 0 0 3px var(--vb-bg);
-            z-index: 2;
-        }
-
-        /* 카드 — 번호 → 날짜 → 제목 → 카테고리 → 이미지 → 설명 */
-        .mr-col__card { position: relative; display: flex; flex-direction: column; }
-        .mr-col--up .mr-col__card   { grid-row: 1; align-self: end;   padding-bottom: var(--mr-stem); }
-        .mr-col--down .mr-col__card { grid-row: 3; align-self: start; padding-top: var(--mr-stem); }
-        /* 카드 ↔ 바 연결선 */
-        .mr-col__card::after {
-            content: "";
-            position: absolute;
-            left: 50%;
-            width: 1px;
-            height: var(--mr-stem);
-            background: var(--vb-line);
-        }
-        .mr-col--up .mr-col__card::after   { bottom: 0; }
-        .mr-col--down .mr-col__card::after { top: 0; }
-
-        .mr-col__num {
-            font-size: 3rem;
-            font-weight: 400;
-            line-height: 1;
-            letter-spacing: -0.02em;
-            color: var(--gray-300);       /* 연한 회색 앵커 숫자 */
-            font-variant-numeric: tabular-nums;
-        }
-        .mr-col__date {
-            display: block;
-            font-size: var(--fs-caption);
-            color: var(--vb-muted);
-            letter-spacing: 0.02em;
-            margin-top: 10px;
-        }
-        .mr-col__title {
-            margin: 6px 0 0;
+        /* 제목 아래 두괄식 설명 — 결론 먼저, 부연 뒤 (읽기 좋은 폭 유지) */
+        .mr-lead { max-width: 760px; margin-top: 20px; }
+        .mr-lead__point {
+            margin: 0 0 12px;
             font-size: var(--fs-h3);
             font-weight: 600;
-            line-height: 1.3;
+            line-height: 1.5;
+            letter-spacing: -0.01em;
             color: var(--vb-text);
             word-break: keep-all;
         }
-        .mr-col__cat {
-            font-size: 0.72rem;
+        .mr-lead__desc {
+            margin: 0;
+            font-size: var(--fs-body);
+            line-height: 1.8;
+            color: var(--vb-body);
+            word-break: keep-all;
+        }
+
+        .mr-timeline {
+            --mr-bar-h: 40px;             /* 가운데 두꺼운 회색 바 */
+            --mr-gut: 30px;               /* 컬럼 좌우 여백 */
+            --mr-gap: 22px;               /* 순번과 바 사이 간격 */
+            position: relative;
+            margin-top: var(--space-lg);
+            overflow: hidden;             /* 스크롤바 없음 — 가로 이동은 스크롤 이펙트가 담당 */
+            display: flex;
+            align-items: center;          /* 축소된 타임라인을 남는 세로 공간 가운데에 */
+            /* 시작(왼쪽)은 위 텍스트와 같은 위치에 맞추고, 오른쪽으로만 화면 끝까지 확장
+               transform 대신 마진으로 처리 → .reveal 애니메이션(transform)과 충돌 없음 */
+            width: auto;
+            margin-left: 0;
+            margin-right: calc(50% - 50vw + clamp(24px, 5vw, 72px));
+        }
+        /* 세로 높이에 맞춰 통째로 축소되는 래퍼 (배율은 JS가 계산) */
+        .mr-fit {
+            transform-origin: left center;
+            width: max-content;
+            will-change: transform;
+        }
+        /* 컬럼은 고정폭(줄어들지 않음) · 위/아래 영역은 내용에 맞춰 auto (한 화면에 맞게 압축) */
+        .mr-track {
+            display: grid;
+            grid-template-columns: 300px 300px 340px 1150px 520px;
+            grid-template-rows: auto var(--mr-bar-h) auto;
+            align-items: stretch;
+            width: max-content;
+        }
+
+        /* 가운데 두꺼운 회색 바 */
+        .mr-bar {
+            grid-column: 1 / -1;
+            grid-row: 2;
+            background: color-mix(in srgb, var(--vb-line) 75%, #fff);
+            z-index: 2;
+        }
+        /* 세로 구분선 (전체 높이) */
+        .mr-vline { grid-row: 1 / -1; border-left: 1px solid var(--vb-line); z-index: 0; }
+
+        /* 카드 — 순번은 바 쪽, 이미지는 바깥 끝 (space-between) */
+        .mr-card {
+            padding: 0 var(--mr-gut);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            z-index: 1;
+        }
+        .mr-card--up   { grid-row: 1; padding-bottom: var(--mr-gap); }
+        .mr-card--down { grid-row: 3; padding-top: var(--mr-gap); }
+
+        .mr-card__text { display: flex; flex-direction: column; }
+        .mr-card__num {
+            font-size: var(--fs-h1);
             font-weight: 700;
-            letter-spacing: 0.08em;
+            line-height: 1;
+            letter-spacing: -0.01em;
+            color: var(--vb-text);
+        }
+        .mr-card--down .mr-card__num { margin-bottom: 6px; }  /* 아래 카드: 순번↔연도 간격 */
+        .mr-card__meta { font-size: var(--fs-caption); color: var(--vb-text); margin: 0 0 16px; }
+        .mr-card--up .mr-card__meta { margin: 16px 0 6px; }   /* 위 카드: 설명↑ / 순번↓ */
+        .mr-card__desc { margin: 0; font-size: var(--fs-caption); line-height: 1.9; color: var(--vb-body); word-break: keep-all; }
+        .mr-card__media .ph { max-width: 220px; }
+
+        /* Technology Adoption — 순서 없는 그룹 (바 위 패널 + 바 아래 라벨 밴드) */
+        .mr-tech {
+            grid-column: 4;
+            grid-row: 1;
+            align-self: end;                                  /* 바 가까이(아래쪽) 정렬 */
+            margin: 0 var(--mr-gut) var(--mr-gap);
+            padding: 22px;
+            background: color-mix(in srgb, var(--vb-line) 28%, #fff);
+            z-index: 1;
+        }
+        .mr-tech__grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 18px; }
+        .mr-tech__item { position: relative; display: flex; flex-direction: column; }
+        .mr-tech__title {
+            margin: 0 0 8px; font-size: var(--fs-body); font-weight: 600; color: var(--vb-text);
+            word-break: keep-all; display: flex; align-items: baseline; gap: 6px;
+        }
+        /* 호버 힌트 아이콘 (이미지 있음 표시) */
+        .mr-tech__cue { flex: none; font-size: 11px; line-height: 1; color: var(--vb-muted); transition: color .18s ease; }
+        .mr-tech__item:hover .mr-tech__cue,
+        .mr-tech__item:focus-within .mr-tech__cue { color: var(--vb-text); }
+        .mr-tech__sub { margin: 0; font-size: var(--fs-caption); line-height: 1.7; color: var(--vb-body); word-break: keep-all; }
+        /* 평소엔 숨김 · 호버(또는 포커스) 시 아이템 위로 이미지 팝업 */
+        .mr-tech__pop {
+            position: absolute;
+            left: 0;
+            bottom: calc(100% + 12px);
+            width: 200px;
+            max-width: 240px;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(8px);
+            transition: opacity .2s ease, transform .2s ease, visibility .2s;
+            pointer-events: none;
+            z-index: 6;
+            filter: drop-shadow(0 10px 26px rgba(0, 0, 0, .14));
+        }
+        .mr-tech__pop .ph { margin: 0; }
+        .mr-tech__item:hover .mr-tech__pop,
+        .mr-tech__item:focus-within .mr-tech__pop {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+        .mr-tech__band {
+            grid-column: 4;
+            grid-row: 3;
+            align-self: start;                                /* 바 바로 아래 */
+            margin: 0 var(--mr-gut);
+            padding: 16px;
+            text-align: center;
+            background: color-mix(in srgb, var(--vb-line) 16%, #fff);
+            z-index: 1;
+        }
+        .mr-tech__band strong { display: block; font-size: var(--fs-body); font-weight: 600; color: var(--vb-text); }
+        .mr-tech__band span { display: block; margin-top: 4px; font-size: var(--fs-caption); color: var(--vb-muted); }
+
+        /* =========================================================
+           BACKGROUND — 매체 진화 카드 + XR 가설 카드 (가로 타임라인 대체)
+           ========================================================= */
+        /* 헤더: 타이틀 → 설명, 전부 가운데 정렬 (흑백) */
+        .bg-head { text-align: center; max-width: 720px; margin-inline: auto; }
+        .bg-head .vb-eyebrow { color: var(--vb-muted); }
+        .bg-head .vb-title { margin-top: 0; }
+        .bg-desc {
+            margin: clamp(16px, 2vw, 22px) auto 0;
+            max-width: 600px;
+            font-size: var(--fs-body);
+            line-height: 1.85;
+            color: var(--vb-body);
+            word-break: keep-all;
+        }
+        .bg-desc strong { color: var(--vb-text); font-weight: 700; }
+
+        /* Print → Radio → TV → XR : 가운데 정렬된 흐름 */
+        .bg-flow {
+            margin-top: clamp(40px, 6vw, 76px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: clamp(8px, 1.4vw, 18px);
+            flex-wrap: wrap;
+        }
+
+        /* Print/Radio/TV — 동일 사이즈 · 흑백 */
+        .bg-step {
+            flex: 0 0 auto;
+            width: clamp(160px, 17vw, 212px);
+            aspect-ratio: 1 / 1;              /* 정방형 */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 12px 12px;
+            border: 1px solid var(--vb-line);
+            border-radius: 20px;
+            background: var(--vb-panel);
+        }
+        .bg-step__year { font-size: var(--fs-caption); color: var(--vb-muted); }
+        .bg-step__icon { margin: 6px 0; color: var(--vb-text); }
+        .bg-step__icon svg,
+        .bg-step__icon img { width: clamp(88px, 10vw, 120px); height: auto; object-fit: contain; display: block; }
+        .bg-step__label { font-size: var(--fs-body); font-weight: 700; color: var(--vb-text); }
+
+        /* 흐름 화살표 — 흑백 (마지막 XR 앞은 살짝 진하게) */
+        .bg-arrow { flex: 0 0 auto; align-self: center; display: flex; color: var(--vb-line); }
+        .bg-arrow svg { width: 22px; height: 22px; display: block; }
+        .bg-arrow--key { color: var(--vb-muted); }
+
+        /* XR — 클라이맥스: 약 2배 크기 + 키컬러 그라데이션 (여기에만 컬러) */
+        .bg-xr {
+            flex: 0 0 auto;
+            width: clamp(240px, 25.5vw, 318px);   /* 스텝 박스의 약 1.5배 */
+            aspect-ratio: 1 / 1;                  /* 정방형 */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: clamp(24px, 3vw, 40px) 26px;
+            border-radius: 24px;
+            color: #fff;
+            background: linear-gradient(135deg, #7B5EE6 0%, #4F7BF0 55%, #2997ff 100%);
+            box-shadow: 0 18px 46px rgba(70, 110, 230, .32);
+        }
+        .bg-xr__year { font-size: var(--fs-caption); color: rgba(255, 255, 255, .85); letter-spacing: 0.02em; }
+        .bg-xr__icon { margin: clamp(16px, 2vw, 24px) 0; color: #fff; }
+        .bg-xr__icon svg,
+        .bg-xr__icon img { width: clamp(140px, 15vw, 188px); height: auto; object-fit: contain; display: block; }
+        .bg-xr__label { font-size: var(--fs-h2); font-weight: 800; letter-spacing: -0.01em; color: #fff; }
+
+        /* 마우스 호버 — 살짝 떠오르는 효과 */
+        .bg-step, .bg-xr { transition: transform .32s cubic-bezier(.2,.7,.3,1), box-shadow .32s ease; will-change: transform; }
+        .bg-step:hover { transform: translateY(-8px); box-shadow: 0 16px 34px rgba(0,0,0,.10); }
+        .bg-xr:hover { transform: translateY(-8px); box-shadow: 0 30px 60px rgba(70,110,230,.42); }
+        @media (hover: none) { .bg-step:hover, .bg-xr:hover { transform: none; } }
+
+        /* 모바일: 세로로 쌓고 화살표는 아래 방향 느낌으로 숨김 */
+        @media (max-width: 720px) {
+            .bg-flow { flex-direction: column; align-items: center; gap: 14px; }
+            .bg-step, .bg-xr { width: min(320px, 80vw); }
+            .bg-arrow svg { transform: rotate(90deg); }
+        }
+
+        /* =========================================================
+           VIDEO — 프로젝트 인포 다음 영상 자리 (공간만 확보, 추후 삽입)
+           ========================================================= */
+        .vb-video { max-width: var(--vb-maxw); margin-inline: auto; }
+        .vb-video__frame {
+            position: relative;
+            aspect-ratio: 16 / 9;          /* 화면 크기에 맞게 16:9 유지 */
+            border-radius: 20px;
+            overflow: hidden;
+            border: 1px solid var(--vb-line);
+            background: var(--vb-panel);
+        }
+        .vb-video__frame iframe {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            border: 0;
+            display: block;
+        }
+
+        /* =========================================================
+           PROCESS TIMELINE — 리서치 → 비주얼라이제이션 프로세스
+           (헤더 가운데 정렬 / 4단계 가로 흐름)
+           ========================================================= */
+        .tl-head { text-align: center; max-width: 720px; margin-inline: auto; }
+        .tl-head .vb-eyebrow { color: var(--vb-muted); }
+        .tl-head .vb-title { margin-top: 0; }
+        .tl-grid {
+            margin-top: clamp(56px, 7vw, 96px);
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: clamp(16px, 2vw, 32px);
+            text-align: left;
+        }
+        .tl-col__head {
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            margin-bottom: 30px;
+        }
+        .tl-col__title {
+            font-size: var(--fs-body);
+            font-weight: 700;
+            letter-spacing: 0.02em;
             text-transform: uppercase;
             color: var(--vb-text);
-            margin-top: 14px;
+            word-break: keep-all;
+            margin-bottom: 14px;
         }
-        .mr-col__media { margin-top: 14px; max-width: 160px; }
-        .mr-col__desc {
-            margin: 12px 0 0;
-            font-size: var(--fs-caption);
-            line-height: 1.7;
+        /* 제목 아래 가로선 + 끝에 이어지는 화살촉 — 선·화살촉 모두 SVG stroke(1.5px)로 통일 */
+        .tl-col__rule { display: flex; align-items: center; height: 12px; color: var(--vb-text); }
+        .tl-col__line { flex: 1 1 auto; height: 12px; }
+        .tl-col__line svg { display: block; width: 100%; height: 12px; overflow: visible; }
+        .tl-col__tip { flex: 0 0 auto; display: flex; margin-left: -1px; }   /* 선과 살짝 겹쳐 이음새 제거 */
+        .tl-col__tip svg { display: block; width: 10px; height: 12px; overflow: visible; }
+        .tl-col:last-child .tl-col__tip { display: none; }
+        .tl-item { margin-bottom: 24px; }
+        .tl-item:last-child { margin-bottom: 0; }
+        .tl-item__name { font-size: var(--fs-h3); font-weight: 700; color: var(--vb-text); line-height: 1.3; word-break: keep-all; }
+        .tl-item__desc { margin-top: 1px; font-size: var(--fs-caption); line-height: 1.5; color: var(--vb-muted); word-break: keep-all; }
+
+        @media (max-width: 900px) {
+            .tl-grid { grid-template-columns: repeat(2, 1fr); gap: 34px 28px; }
+            .tl-col__arrow { display: none; }
+        }
+        @media (max-width: 520px) {
+            .tl-grid { grid-template-columns: 1fr; }
+        }
+
+        /* =========================================================
+           TASK & GOAL — 가운데 정렬 (Background와 동일 톤)
+           ========================================================= */
+        .tg-head { text-align: center; max-width: 760px; margin-inline: auto; }
+        .tg-head .vb-eyebrow { color: var(--vb-muted); }
+        .tg-head .vb-title { margin-top: 0; }
+        .tg-desc {
+            margin: clamp(16px, 2vw, 22px) auto 0;
+            max-width: 640px;
+            font-size: var(--fs-body);
+            line-height: 1.85;
             color: var(--vb-body);
             word-break: keep-all;
         }
-
-        /* XR — 마지막 클라이맥스 강조 (VIBRA) */
-        .mr-col--xr { min-width: 280px; flex-grow: 1.35; }
-        .mr-col--xr .mr-col__num { color: var(--accent-color); font-size: 3.6rem; }
-        .mr-col--xr .mr-col__title { color: var(--accent-color); font-size: var(--fs-h2); }
-        .mr-col--xr .mr-col__cat { color: var(--accent-color); }
-        .mr-col--xr .mr-col__media { max-width: 210px; }
-        .mr-col--xr .mr-col__node {
-            width: 16px; height: 16px;
-            background: var(--accent-color);
-            border-color: var(--accent-color);
-            box-shadow: 0 0 0 3px var(--vb-bg),
-                        0 0 0 6px color-mix(in srgb, var(--accent-color) 22%, transparent);
-        }
-        .mr-col--xr .mr-col__card::after { background: color-mix(in srgb, var(--accent-color) 50%, var(--vb-line)); }
-        .mr-col--xr .mr-col__media .ph {
-            border-style: solid;
-            border-color: var(--accent-color);
-            background-color: color-mix(in srgb, var(--accent-color) 7%, var(--vb-panel));
-        }
-        .mr-col--xr .mr-col__desc { font-size: var(--fs-body); color: var(--vb-text); }
-
-        /* 전환기 — 큰 번호 대신 "—"(순서 없음), 본문은 순서 없는 태그 묶음 */
-        .mr-col--transition .mr-col__num { color: var(--gray-300); }
-        .mr-col--transition .mr-col__node {
-            width: 9px; height: 9px;
-            border-style: dashed;
-        }
-        .mr-tags {
-            display: flex;
-            flex-wrap: wrap;
-            align-items: center;
-            gap: 8px;
-            margin-top: 14px;
-        }
-        .mr-tag {
-            padding: 5px 12px;
-            border-radius: 99px;
-            background: var(--vb-panel);            /* 다른 컬럼과 같은 톤으로 자연스럽게 */
-            font-size: 0.76rem;
-            color: var(--vb-body);
-            word-break: keep-all;
-        }
-        .mr-tags__etc { font-size: 0.74rem; color: var(--vb-muted); }
 
         /* =========================================================
            하단 네비
@@ -808,21 +1417,13 @@
              ==================================================== -->
         <div class="vb-stage">
             <!-- 풀스크린 키비주얼 (더미 그라데이션 — 실제 이미지로 교체 예정) -->
-            <div class="vb-hero vb-hero--dummy">
-                <div class="ph ph--fill" style="background:transparent;border:none;">
-                    <span class="ph__label">키비주얼 이미지 (더미)</span>
-                </div>
-            </div>
+            <div class="vb-hero vb-hero--dummy"></div>
 
-            <!-- 아래에서 위로 덮는 반투명 텍스트 레이어 (Background / Overview 만) -->
+            <!-- 아래에서 위로 덮는 반투명 텍스트 레이어 (Overview 만) -->
             <div class="vb-cover">
                 <div class="vb-cover__inner">
-                    <h3 class="vb-subtitle">Background</h3>
-                    <p class="vb-body">[배경 텍스트 자리] 기존 축구 중계가 가진 일방향적 시청 경험의 한계와, XR 기술이 열어주는 능동적 관람 가능성에 대한 문제 정의를 서술합니다.</p>
-                    <p class="vb-body">[배경 보충 자리] 팬덤·몰입·데이터 소비 맥락 등 프로젝트의 출발점이 된 인사이트를 정리합니다.</p>
-
-                    <h3 class="vb-subtitle" style="margin-top:32px;">Overview</h3>
-                    <p class="vb-body">[개요 텍스트 자리] VIBRA가 제안하는 XR 축구 중계 플랫폼의 핵심 컨셉과, 개인 공간(Skybox)과 경기장(In Stadium)을 오가는 전체 경험 구조를 요약합니다.</p>
+                    <h3 class="vb-subtitle">Overview</h3>
+                    <p class="vb-body" data-en="VIBRA is a football broadcasting service that combines XR and interactive AI. It goes beyond simply watching matches — connecting viewers in real time, deepening their understanding of the game, and creating a tailored, immersive experience for every fan.">VIBRA는 XR과 인터랙티브 AI를 결합한 축구 중계 서비스입니다.<br>단순히 경기를 보는 것을 넘어, 시청자를 실시간으로 연결하고 경기에 대한<br>이해를 넓히며, 모든 팬에게 맞춤화된 몰입 경험을 제공합니다.</p>
                 </div>
             </div>
         </div>
@@ -830,14 +1431,16 @@
         <!-- ====================================================
              2. INFO
              ==================================================== -->
-        <section class="vb-section">
+        <section class="vb-section vb-info-section">
             <div class="vb-wrap">
-                <span class="vb-eyebrow reveal">Project Info</span>
+                <!-- 오버뷰와 중복되어 숨김 처리 (필요 시 주석 해제)
                 <h2 class="vb-title reveal">새로운 차원의<br>축구 중계 경험</h2>
-
+                -->
                 <div class="vb-info-grid">
-                    <!-- 메타 + Role (Background/Overview·크레딧은 상단 레이어로 이동) -->
-                    <div class="vb-meta reveal">
+                    <!-- 좌: PROJECT INFO 라벨 + 메타 + Role -->
+                    <div class="vb-info-col reveal">
+                        <span class="vb-info-label">Project Info</span>
+                        <div class="vb-meta">
                         <div class="vb-meta__row">
                             <span class="vb-meta__key">Type</span>
                             <span class="vb-meta__val">Team Project</span>
@@ -892,6 +1495,7 @@
                             </div>
                         </div>
                     </div>
+                    </div>
 
                     <!-- 우: 크레딧 (Produced with / Featured by) — 로고 PNG -->
                     <div class="vb-credits reveal">
@@ -917,88 +1521,180 @@
         </section>
 
         <!-- ====================================================
-             MARKET RESEARCH — Football Broadcast Paradigm (가로 타임라인 / Norgram 스타일)
-             큰 연한 회색 번호 + 세로 구분선 + 가로 축선. 1단계: 정적 배치. 스크롤 등장은 나중에.
+             CONCEPT FILM — 프로젝트 인포 다음 유튜브 영상 (반응형 16:9)
+             ==================================================== -->
+        <section class="vb-section vb-video-section">
+            <div class="vb-wrap">
+                <div class="vb-video reveal">
+                    <div class="vb-video__frame">
+                        <iframe src="https://www.youtube.com/embed/XS2WC5XNIWU" title="VIBRA" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ====================================================
+             BACKGROUND — 축구 중계, 그 다음은?
+             매체 진화(신문·라디오·TV) + XR 강조 카드
+             ==================================================== -->
+        <section class="vb-section bg-section">
+            <div class="vb-wrap">
+                <!-- 타이틀 → 설명 → 타임라인 (전부 가운데 정렬) -->
+                <div class="bg-head">
+                    <span class="vb-eyebrow reveal">Background</span>
+                    <h2 class="vb-title reveal">축구 중계, 그 다음은?</h2>
+                    <p class="bg-desc reveal">축구 중계는 신문에서 라디오, 그리고 TV로 이어지며 늘 더 깊은 몰입을 향해 진화해 왔습니다. 우리는 그 다음 단계가 <strong>XR</strong>이라고 봤습니다.</p>
+                </div>
+
+                <!-- Print → Radio → TV → XR (몰입도 진화 라인) -->
+                <div class="bg-flow reveal">
+                    <div class="bg-step">
+                        <span class="bg-step__year">1862</span>
+                        <span class="bg-step__icon"><img src="media/icons/print.png" alt="Print"></span>
+                        <span class="bg-step__label">신문</span>
+                    </div>
+                    <span class="bg-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+                    <div class="bg-step">
+                        <span class="bg-step__year">1927</span>
+                        <span class="bg-step__icon"><img src="media/icons/radio.png" alt="Radio"></span>
+                        <span class="bg-step__label">라디오</span>
+                    </div>
+                    <span class="bg-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+                    <div class="bg-step">
+                        <span class="bg-step__year">1937</span>
+                        <span class="bg-step__icon"><img src="media/icons/tv.png" alt="TV"></span>
+                        <span class="bg-step__label">TV</span>
+                    </div>
+                    <span class="bg-arrow bg-arrow--key" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+                    <!-- XR — 클라이맥스 (2배 크기 · 키컬러 그라데이션) -->
+                    <div class="bg-xr">
+                        <span class="bg-xr__year">Next</span>
+                        <span class="bg-xr__icon"><img src="media/icons/xr.png" alt="XR"></span>
+                        <span class="bg-xr__label">XR</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ====================================================
+             TASK & GOAL — 그렇다면, 무엇을 제공해야 하는가?
+             (Background 타임라인 바로 다음, 가운데 정렬)
+             ==================================================== -->
+        <section class="vb-section tg-section">
+            <div class="vb-wrap">
+                <div class="tg-head">
+                    <span class="vb-eyebrow reveal">Task &amp; Project Goal</span>
+                    <h2 class="vb-title reveal">그렇다면, 무엇을 제공해야 하는가?</h2>
+                    <p class="tg-desc reveal">XR 기반 중계는 압도적인 현장감과 몰입을 약속합니다. 하지만 경쟁력 있고 지속 가능한 서비스가 되려면 그 이상이 필요합니다. 이 프로젝트는 미래의 XR 축구 중계 플랫폼이 제공해야 할 가치와 기능을 사용자 니즈 중심으로 탐구했습니다.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ====================================================
+             PROCESS TIMELINE — 리서치 → 비주얼라이제이션 프로세스
+             (백그라운드 다음, 4단계 가로 흐름 / 헤더 가운데 정렬)
              ==================================================== -->
         <section class="vb-section">
             <div class="vb-wrap">
-                <span class="vb-eyebrow reveal">Market Research</span>
-                <h2 class="vb-title reveal">Football Broadcast Paradigm</h2>
+                <div class="tl-head">
+                    <span class="vb-eyebrow reveal">Process</span>
+                    <h2 class="vb-title reveal">프로젝트 진행 과정</h2>
+                </div>
 
-                <div class="mr-timeline reveal">
-                    <div class="mr-track">
-                        <!-- 가운데 두꺼운 회색 바 -->
-                        <div class="mr-bar"></div>
-
-                        <!-- 01 — Print (위) -->
-                        <div class="mr-col mr-col--up">
-                            <div class="mr-col__card">
-                                <span class="mr-col__num">01</span>
-                                <span class="mr-col__date">1862</span>
-                                <h3 class="mr-col__title">Print (Paper)</h3>
-                                <span class="mr-col__cat">Paradigm · 1st</span>
-                                <div class="mr-col__media"><div class="ph ph--3x2"><span class="ph__label">Print 이미지</span></div></div>
-                                <p class="mr-col__desc">과거 이벤트 요약, 텍스트로만 구성</p>
-                            </div>
-                            <span class="mr-col__node"></span>
+                <div class="tl-grid reveal">
+                    <!-- 1. PRE-RESEARCH -->
+                    <div class="tl-col">
+                        <div class="tl-col__head">
+                            <span class="tl-col__title">Pre-Research</span>
+                            <span class="tl-col__rule" aria-hidden="true"><span class="tl-col__line"><svg width="100%" height="12" viewBox="0 0 100 12" preserveAspectRatio="none"><line x1="0" y1="6" x2="100" y2="6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" vector-effect="non-scaling-stroke"/></svg></span><span class="tl-col__tip"><svg width="10" height="12" viewBox="0 0 10 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"><path d="M0 6h8.5M5.5 3 8.5 6 5.5 9"/></svg></span></span>
                         </div>
-
-                        <!-- 02 — Radio (아래) -->
-                        <div class="mr-col mr-col--down">
-                            <div class="mr-col__card">
-                                <span class="mr-col__num">02</span>
-                                <span class="mr-col__date">1927</span>
-                                <h3 class="mr-col__title">Radio (Audio)</h3>
-                                <span class="mr-col__cat">Paradigm · 2nd</span>
-                                <div class="mr-col__media"><div class="ph ph--3x2"><span class="ph__label">Radio 이미지</span></div></div>
-                                <p class="mr-col__desc">실시간성, 해설 도입, 청각을 통한 상상</p>
-                            </div>
-                            <span class="mr-col__node"></span>
+                        <div class="tl-item">
+                            <div class="tl-item__name">Market Research</div>
+                            <div class="tl-item__desc">Trend &amp; Competitor Analysis · Positioning Map</div>
                         </div>
-
-                        <!-- 03 — TV (위) -->
-                        <div class="mr-col mr-col--up">
-                            <div class="mr-col__card">
-                                <span class="mr-col__num">03</span>
-                                <span class="mr-col__date">1937</span>
-                                <h3 class="mr-col__title">TV (Video)</h3>
-                                <span class="mr-col__cat">Paradigm · 3rd</span>
-                                <div class="mr-col__media"><div class="ph ph--3x2"><span class="ph__label">TV 이미지</span></div></div>
-                                <p class="mr-col__desc">더 강한 몰입, 라이브 시청, 해설+리플레이+2D 그래픽</p>
-                            </div>
-                            <span class="mr-col__node"></span>
+                        <div class="tl-item">
+                            <div class="tl-item__name">Research Design</div>
+                            <div class="tl-item__desc">Questionnaire Design<br>Interview Methods Design<br>Interviewee Recruitment</div>
                         </div>
+                    </div>
 
-                        <!-- 전환기 — 순서 없는 묶음 (큰 번호 대신 "—", 점선 노드 / 아래) -->
-                        <div class="mr-col mr-col--down mr-col--transition">
-                            <div class="mr-col__card">
-                                <span class="mr-col__num">—</span>
-                                <span class="mr-col__date">3rd → 4th</span>
-                                <h3 class="mr-col__title">Technology Adoption</h3>
-                                <span class="mr-col__cat">Transition</span>
-                                <div class="mr-tags">
-                                    <span class="mr-tag">스파이더캠</span>
-                                    <span class="mr-tag">오프사이드 라인 · VAR</span>
-                                    <span class="mr-tag">플랫폼 진입 (아마존 · 쿠팡)</span>
-                                    <span class="mr-tag">AI · 빅데이터</span>
-                                    <span class="mr-tags__etc">등 주요 사례</span>
-                                </div>
-                                <p class="mr-col__desc">전환기에 중계 기술이 동시다발적으로 등장했습니다.</p>
-                            </div>
-                            <span class="mr-col__node"></span>
+                    <!-- 2. USER RESEARCH -->
+                    <div class="tl-col">
+                        <div class="tl-col__head">
+                            <span class="tl-col__title">User Research</span>
+                            <span class="tl-col__rule" aria-hidden="true"><span class="tl-col__line"><svg width="100%" height="12" viewBox="0 0 100 12" preserveAspectRatio="none"><line x1="0" y1="6" x2="100" y2="6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" vector-effect="non-scaling-stroke"/></svg></span><span class="tl-col__tip"><svg width="10" height="12" viewBox="0 0 10 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"><path d="M0 6h8.5M5.5 3 8.5 6 5.5 9"/></svg></span></span>
                         </div>
+                        <div class="tl-item">
+                            <div class="tl-item__name">Questionnaire</div>
+                            <div class="tl-item__desc">Conducted with 102 participants</div>
+                        </div>
+                        <div class="tl-item">
+                            <div class="tl-item__name">Interview</div>
+                            <div class="tl-item__desc">8 Users · 2 Experts</div>
+                        </div>
+                        <div class="tl-item">
+                            <div class="tl-item__name">Participant Observation</div>
+                            <div class="tl-item__desc">Fly on the Wall · Shadowing</div>
+                        </div>
+                        <div class="tl-item">
+                            <div class="tl-item__name">Deriving Insight</div>
+                            <div class="tl-item__desc">How Might We? · Affinity Diagram</div>
+                        </div>
+                    </div>
 
-                        <!-- 04 — XR (클라이맥스 / VIBRA / 위) -->
-                        <div class="mr-col mr-col--up mr-col--xr">
-                            <div class="mr-col__card">
-                                <span class="mr-col__num">04</span>
-                                <span class="mr-col__date">21C</span>
-                                <h3 class="mr-col__title">XR Experience</h3>
-                                <span class="mr-col__cat">Paradigm · 4th</span>
-                                <div class="mr-col__media"><div class="ph ph--3x2"><span class="ph__label">XR Experience 이미지</span></div></div>
-                                <p class="mr-col__desc">압도적 몰입, 현장 재현, 3D 360도, 시각+청각+촉각, 탈일방향성, 소통</p>
-                            </div>
-                            <span class="mr-col__node"></span>
+                    <!-- 3. IDEATION -->
+                    <div class="tl-col">
+                        <div class="tl-col__head">
+                            <span class="tl-col__title">Ideation</span>
+                            <span class="tl-col__rule" aria-hidden="true"><span class="tl-col__line"><svg width="100%" height="12" viewBox="0 0 100 12" preserveAspectRatio="none"><line x1="0" y1="6" x2="100" y2="6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" vector-effect="non-scaling-stroke"/></svg></span><span class="tl-col__tip"><svg width="10" height="12" viewBox="0 0 10 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"><path d="M0 6h8.5M5.5 3 8.5 6 5.5 9"/></svg></span></span>
+                        </div>
+                        <div class="tl-item">
+                            <div class="tl-item__name">Ideation</div>
+                            <div class="tl-item__desc">Idea Grouping · 6 Concept Keywords</div>
+                        </div>
+                    </div>
+
+                    <!-- 4. PRODUCTION -->
+                    <div class="tl-col">
+                        <div class="tl-col__head">
+                            <span class="tl-col__title">Production</span>
+                            <span class="tl-col__rule" aria-hidden="true"><span class="tl-col__line"><svg width="100%" height="12" viewBox="0 0 100 12" preserveAspectRatio="none"><line x1="0" y1="6" x2="100" y2="6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" vector-effect="non-scaling-stroke"/></svg></span><span class="tl-col__tip"><svg width="10" height="12" viewBox="0 0 10 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"><path d="M0 6h8.5M5.5 3 8.5 6 5.5 9"/></svg></span></span>
+                        </div>
+                        <div class="tl-item">
+                            <div class="tl-item__name">Match Filming</div>
+                            <div class="tl-item__desc">On-site Multi-cam Shooting</div>
+                        </div>
+                        <div class="tl-item">
+                            <div class="tl-item__name">Screen Design</div>
+                            <div class="tl-item__desc">UX Flow · Wireframe</div>
+                        </div>
+                    </div>
+
+                    <!-- 5. VISUALIZATION (마지막 — 화살표 없음) -->
+                    <div class="tl-col">
+                        <div class="tl-col__head">
+                            <span class="tl-col__title">Visualization</span>
+                            <span class="tl-col__rule" aria-hidden="true"><span class="tl-col__line"><svg width="100%" height="12" viewBox="0 0 100 12" preserveAspectRatio="none"><line x1="0" y1="6" x2="100" y2="6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" vector-effect="non-scaling-stroke"/></svg></span><span class="tl-col__tip"><svg width="10" height="12" viewBox="0 0 10 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"><path d="M0 6h8.5M5.5 3 8.5 6 5.5 9"/></svg></span></span>
+                        </div>
+                        <div class="tl-item">
+                            <div class="tl-item__name">UI Design</div>
+                            <div class="tl-item__desc">UI · Icon · Screen</div>
+                        </div>
+                        <div class="tl-item">
+                            <div class="tl-item__name">Interaction Design</div>
+                            <div class="tl-item__desc">Gesture · Controller · AI</div>
+                        </div>
+                        <div class="tl-item">
+                            <div class="tl-item__name">3D Production</div>
+                            <div class="tl-item__desc">Modeling · Rendering</div>
+                        </div>
+                        <div class="tl-item">
+                            <div class="tl-item__name">Prototype</div>
+                            <div class="tl-item__desc">Unity Development</div>
+                        </div>
+                        <div class="tl-item">
+                            <div class="tl-item__name">Concept Film</div>
+                            <div class="tl-item__desc">Editing · Motion Graphics</div>
                         </div>
                     </div>
                 </div>
@@ -1009,148 +1705,85 @@
              3. QUANTITATIVE RESEARCH
              ==================================================== -->
         <section class="vb-section">
-            <div class="vb-wrap">
-                <span class="vb-eyebrow reveal">01 — Research</span>
-                <h2 class="vb-title reveal">Quantitative Research</h2>
+            <div class="vb-wrap qr2">
+                <!-- 섹션 헤더 (결론 먼저) -->
+                <div class="qr2-head">
+                    <span class="vb-eyebrow reveal">01 — Research</span>
+                    <h2 class="vb-title reveal">Quantitative Research</h2>
+                    <div class="qr2-subhead reveal">Desk Research</div>
+                    <p class="dk-lead reveal">정기 시청자는 이미 두 가지를 원하고 있었어요</p>
+                </div>
 
-                <!-- Desk Research -->
-                <div class="vb-group">
-                    <div class="vb-group__head reveal">
-                        <span class="vb-group__num">A</span>
-                        <span class="vb-group__name">Desk Research</span>
+                <div class="dk-findings">
+                    <!-- FINDING 01 -->
+                    <div class="dk-find reveal">
+                        <span class="dk-find__label">Finding 01</span>
+                        <h4 class="dk-find__title">라이브 시청은 이미 당연해졌어요</h4>
+                        <div class="dk-find__stats">
+                            <div class="dk-stat">
+                                <div class="dk-stat__num">95%</div>
+                                <p class="dk-stat__cap">K리그 팬 라이브 중계 시청 경험</p>
+                            </div>
+                            <div class="dk-stat">
+                                <div class="dk-stat__num">57%</div>
+                                <p class="dk-stat__cap">해외 리그 팬, 시차 감수하고 라이브 경기 시청하는 비율</p>
+                            </div>
+                        </div>
+                        <p class="dk-find__source">*한국프로스포츠협회 2022 · Chiliz 2024</p>
                     </div>
 
-                    <!-- 두괄식 결론: 도출한 인사이트 3가지 (아래 카드 01·02·03이 근거) -->
-                    <div class="qr-insights reveal">
-                        <p class="qr-insights__intro">데스크 리서치를 통해 다음 인사이트를 도출했습니다.</p>
-                        <ol class="qr-insights__list">
-                            <li class="qr-insights__item">
-                                <span class="qr-insights__num">1</span>
-                                <span class="qr-insights__text">K리그 팬들은 <em class="qr-insights__key">라이브로 보는 경험</em>을 중요하게 생각하며,</span>
-                            </li>
-                            <li class="qr-insights__item">
-                                <span class="qr-insights__num">2</span>
-                                <span class="qr-insights__text"><em class="qr-insights__key">물리적 제약</em>을 기술이나 서비스로 극복하길 기대하고,</span>
-                            </li>
-                            <li class="qr-insights__item">
-                                <span class="qr-insights__num">3</span>
-                                <span class="qr-insights__text">“<em class="qr-insights__key">축구 경기를 더 잘 이해</em>하고 싶다”는 니즈가 있다.</span>
-                            </li>
-                        </ol>
-                    </div>
-
-                    <div class="qr-grid">
-                        <!-- Desk Research 01 — 도넛 2개 카드 -->
-                        <article class="qr-card reveal">
-                            <span class="qr-card__num">01</span>
-                            <blockquote class="qr-card__quote">"많은 K리그 팬들은 시간이 부족해서, 직관 대신 중계방송 시청을 선택해요."</blockquote>
-                            <cite class="qr-card__source">한국프로스포츠협회, 2022 KOREA PROSPORTS FAN SURVEY</cite>
-                            <div class="qr-card__data">
-                                <!-- 재사용 단위: 도넛(좌) + 범례(우) -->
-                                <div class="qr-stat">
-                                    <div class="qr-donut">
-                                        <svg viewBox="0 0 36 36">
-                                            <circle class="qr-donut__track" cx="18" cy="18" r="15.9155"></circle>
-                                            <circle class="qr-donut__arc" cx="18" cy="18" r="15.9155" style="--seg:95;"></circle>
-                                        </svg>
-                                        <span class="qr-donut__val">95%</span>
-                                    </div>
-                                    <div class="qr-legend">
-                                        <p class="qr-legend__title">최근 5년 중 K리그 <br> 중계 방송시청 경험</p>
-                                        <p class="qr-legend__item"><span class="qr-legend__dot"></span>중계방송 시청경험 있음</p>
-                                    </div>
-                                </div>
-                                <div class="qr-stat">
-                                    <div class="qr-donut">
-                                        <svg viewBox="0 0 36 36">
-                                            <circle class="qr-donut__track" cx="18" cy="18" r="15.9155"></circle>
-                                            <circle class="qr-donut__arc" cx="18" cy="18" r="15.9155" style="--seg:46;"></circle>
-                                        </svg>
-                                        <span class="qr-donut__val">46%</span>
-                                    </div>
-                                    <div class="qr-legend">
-                                        <p class="qr-legend__title">중계방송 시청 이유</p>
-                                        <p class="qr-legend__item"><span class="qr-legend__dot"></span>직관할 시간 부족</p>
-                                    </div>
-                                </div>
+                    <!-- FINDING 02 -->
+                    <div class="dk-find reveal">
+                        <span class="dk-find__label">Finding 02</span>
+                        <h4 class="dk-find__title">보는 것 다음은, 이해하는 것</h4>
+                        <div class="dk-find__stats">
+                            <div class="dk-stat">
+                                <div class="dk-stat__num">분석하다<br> 2위</div>
+                                <p class="dk-stat__cap"> 리그 경기 관련 키워드 검색량 순위, 44k </p>
                             </div>
-                        </article>
-
-                        <!-- Desk Research 02 — 도넛 1개 카드 -->
-                        <article class="qr-card qr-card--single reveal">
-                            <span class="qr-card__num">02</span>
-                            <blockquote class="qr-card__quote">"한국의 해외 축구 팬들은 응원하는 팀<br>경기를 시차 없이 라이브로 보고 싶어해요."</blockquote>
-                            <cite class="qr-card__source">Chiliz, 2024, The Global Fan Report</cite>
-                            <div class="qr-card__data">
-                                <div class="qr-stat">
-                                    <div class="qr-donut">
-                                        <svg viewBox="0 0 36 36">
-                                            <circle class="qr-donut__track" cx="18" cy="18" r="15.9155"></circle>
-                                            <!-- 진한 파랑 46% -->
-                                            <circle class="qr-donut__arc" cx="18" cy="18" r="15.9155" style="--seg:46; --start:0;"></circle>
-                                            <!-- 연한 파랑 11% (46% 끝에 바로 이어 붙음) -->
-                                            <circle class="qr-donut__arc qr-donut__arc--2" cx="18" cy="18" r="15.9155" style="--seg:11; --start:46;"></circle>
-                                        </svg>
-                                        <span class="qr-donut__val">57%</span>
-                                    </div>
-                                    <div class="qr-legend">
-                                        <p class="qr-legend__title">응원하는 해외팀 경기 시청 빈도</p>
-                                        <p class="qr-legend__item"><span class="qr-legend__dot" style="--dot:var(--accent-color);"></span>거의 모든 경기 46%</p>
-                                        <p class="qr-legend__item"><span class="qr-legend__dot" style="--dot:color-mix(in srgb, var(--accent-color) 40%, #fff);"></span>모든 경기 11%</p>
-                                    </div>
-                                </div>
+                            <div class="dk-stat">
+                                <div class="dk-stat__num">경기 분석<br> 1위</div>
+                                <p class="dk-stat__cap">원하는 온라인 콘텐츠 종류 (남 27% · 여 28%)</p>
                             </div>
-                        </article>
-
-                        <!-- Desk Research 03 — 가로 막대그래프 카드 (전체 너비) -->
-                        <article class="qr-card qr-card--wide reveal">
-                            <span class="qr-card__num">03</span>
-                            <blockquote class="qr-card__quote">"남성 팬과 여성 팬이 더 선호하는 콘텐츠가 달라요. 하지만 분석 콘텐츠에 대한 니즈는 분명해요."</blockquote>
-                            <cite class="qr-card__source">한국프로스포츠협회, 2022</cite>
-                            <div class="qr-bars-wrap">
-                                <!-- 그룹 1: 흥행을 위해 필요한 온라인 콘텐츠 (% 기준 그대로) -->
-                                <div class="qr-bar-group">
-                                    <p class="qr-bar-group__title">흥행을 위해 필요한 온라인 콘텐츠</p>
-                                    <p class="qr-bar-group__sub">남성팬</p>
-                                    <div class="qr-bars">
-                                        <div class="qr-bar"><span class="qr-bar__label">경기분석</span><div class="qr-bar__track"><div class="qr-bar__fill" style="--w:27%;"></div></div><span class="qr-bar__val">27%</span></div>
-                                        <div class="qr-bar"><span class="qr-bar__label">하이라이트</span><div class="qr-bar__track"><div class="qr-bar__fill" style="--w:16%;"></div></div><span class="qr-bar__val">16%</span></div>
-                                    </div>
-                                    <p class="qr-bar-group__sub">여성팬</p>
-                                    <div class="qr-bars">
-                                        <div class="qr-bar"><span class="qr-bar__label">비시즌·일상영상</span><div class="qr-bar__track"><div class="qr-bar__fill" style="--w:34%;"></div></div><span class="qr-bar__val">34%</span></div>
-                                        <div class="qr-bar"><span class="qr-bar__label">경기분석</span><div class="qr-bar__track"><div class="qr-bar__fill" style="--w:28%;"></div></div><span class="qr-bar__val">28%</span></div>
-                                    </div>
-                                </div>
-                                <!-- 그룹 2: 리그 경기 키워드 검색량 (최댓값 67,509 = 100% 기준 스케일) -->
-                                <div class="qr-bar-group">
-                                    <p class="qr-bar-group__title">리그 경기 키워드 검색량</p>
-                                    <div class="qr-bars">
-                                        <div class="qr-bar"><span class="qr-bar__label">좋다</span><div class="qr-bar__track"><div class="qr-bar__fill" style="--w:100%;"></div></div><span class="qr-bar__val">67,509</span></div>
-                                        <div class="qr-bar qr-bar--accent"><span class="qr-bar__label">분석하다</span><div class="qr-bar__track"><div class="qr-bar__fill" style="--w:65.8%;"></div></div><span class="qr-bar__val">44,412</span></div>
-                                        <div class="qr-bar"><span class="qr-bar__label">받다</span><div class="qr-bar__track"><div class="qr-bar__fill" style="--w:51.7%;"></div></div><span class="qr-bar__val">34,877</span></div>
-                                        <div class="qr-bar"><span class="qr-bar__label">득점</span><div class="qr-bar__track"><div class="qr-bar__fill" style="--w:49.8%;"></div></div><span class="qr-bar__val">33,593</span></div>
-                                    </div>
-                                </div>
-                            </div>
-                        </article>
+                        </div>
+                        <p class="dk-find__source">*한국프로스포츠협회 2022</p>
                     </div>
                 </div>
 
-                <!-- Field Research -->
-                <div class="vb-group">
-                    <div class="vb-group__head reveal">
-                        <span class="vb-group__num">B</span>
-                        <span class="vb-group__name">Field Research</span>
-                    </div>
-                    <div class="vb-grid vb-grid--2">
-                        <div class="reveal">
-                            <div class="ph ph--4x3"><span class="ph__label">설문 결과 차트</span></div>
-                            <p class="vb-caption">[캡션 자리] 관람객 대상 설문 정량 결과</p>
+                <p class="dk-bridge reveal">이 니즈가 실제 시청자에게도 유효한지, 정기 시청자 대상 설문으로 확인했어요 ↓</p>
+
+                <!-- FIELD RESEARCH -->
+                <div class="qr2-fhead reveal">
+                    <div class="qr2-subhead">Field Research</div>
+                    <p class="qr2-source">*자체 설문조사 · 온·오프라인 축구 커뮤니티 회원 102명 · 2024.03.31 – 04.09</p>
+                </div>
+
+                <!-- BEAT 01 · 니즈 -->
+                <div class="fd-beat reveal">
+                    <span class="fd-beat__label">Beat 01 · 니즈</span>
+                    <h3 class="fd-beat__title">아는 만큼 보이니까, 더 알고 싶어져요</h3>
+                    <div class="fd-beat__cards">
+                        <div class="fd-card">
+                            <div class="fd-card__num">63%</div>
+                            <p class="fd-card__cap">경기를 이해하면서 보고싶어해요</p>
                         </div>
-                        <div class="reveal">
-                            <div class="ph ph--4x3"><span class="ph__label">현장 관찰 데이터</span></div>
-                            <p class="vb-caption">[캡션 자리] 경기장 현장 행동 관찰 데이터</p>
+                        <div class="fd-card">
+                            <p class="fd-card__txt">이유 1위는 <strong>‘경기 재미’ 69%</strong> — 의무가 아니라 즐거움으로 이해해요</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- BEAT 02 · 페인포인트 -->
+                <div class="fd-beat reveal">
+                    <span class="fd-beat__label">Beat 02 · 페인포인트</span>
+                    <h3 class="fd-beat__title">그런데 그 이해는 중계 밖에 흩어져 있어요</h3>
+                    <div class="fd-beat__cards">
+                        <div class="fd-card">
+                            <div class="fd-card__num">64%</div>
+                            <p class="fd-card__cap">경기를 보다가도, 다른 서비스를 켜요</p>
+                        </div>
+                        <div class="fd-card">
+                            <p class="fd-card__txt">커뮤니티 62% · 분석 사이트 49% · SNS 41% — <strong>평균 2개 이상</strong>을 오가요</p>
                         </div>
                     </div>
                 </div>
@@ -1160,56 +1793,130 @@
         <!-- ====================================================
              4. QUALITATIVE RESEARCH + SERVICE FLOW
              ==================================================== -->
-        <section class="vb-section">
+        <section class="vb-section" id="qualitative">
             <div class="vb-wrap">
-                <span class="vb-eyebrow reveal">02 — Research &amp; Flow</span>
-                <h2 class="vb-title reveal">Qualitative Research<br>&amp; Service Flow</h2>
+                <div class="ql-head">
+                    <span class="vb-eyebrow reveal">02 — Research</span>
+                    <h2 class="vb-title reveal">Qualitative Research</h2>
+                    <p class="vb-body ql-intro reveal">설문을 기반으로 세운 가설을 인터뷰, 참여 관찰(섀도잉), 그리고 온라인 행태 관찰을 통해 검증·수정·재확인하며 인사이트를 도출했습니다.</p>
+                </div>
 
-                <!-- 가설 검증 3블록 -->
+                <!-- 리서치 방법 3개 (라벨 없이, 인트로 바로 아래) -->
+                <div class="vb-group">
+                    <div class="ql-method-grid">
+                        <div class="ql-method-card reveal">
+                            <img class="ql-method-card__img" src="media/qualitative/interview.jpg" alt="심층 인터뷰">
+                            <div class="ql-method-card__body">
+                                <span class="ql-method-card__tag">In-depth Interview</span>
+                                <h3 class="ql-method-card__title">심층 인터뷰</h3>
+                                <p class="ql-method-card__desc">축구 전문가 2명, 일반 유저 8명</p>
+                            </div>
+                        </div>
+                        <div class="ql-method-card reveal">
+                            <img class="ql-method-card__img" src="media/qualitative/observation.jpg" alt="참여 관찰">
+                            <div class="ql-method-card__body">
+                                <span class="ql-method-card__tag">In-Situ Observation</span>
+                                <h3 class="ql-method-card__title">참여 관찰 (섀도잉)</h3>
+                                <p class="ql-method-card__desc">경기장 현장 관람 유저 1명, 중계 방송 시청 유저 1명</p>
+                            </div>
+                        </div>
+                        <div class="ql-method-card reveal">
+                            <img class="ql-method-card__img" src="media/qualitative/ethnography.jpg" alt="온라인 행태 관찰">
+                            <div class="ql-method-card__body">
+                                <span class="ql-method-card__tag">Online Ethnography</span>
+                                <h3 class="ql-method-card__title">온라인 행태 관찰</h3>
+                                <p class="ql-method-card__desc">경기가 진행되는 동안 구단 팬 커뮤니티에 올라온 실시간 댓글 약 4,000건</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- A. 가설의 진화 (가설01 → 기각 → 가설02 → 기각 → 새 질문 → 관찰 결과) -->
                 <div class="vb-group">
                     <div class="vb-group__head reveal">
                         <span class="vb-group__num">A</span>
                         <span class="vb-group__name">가설 검증</span>
                     </div>
-                    <div class="vb-grid vb-grid--3">
-                        <div class="vb-card reveal">
-                            <span class="vb-card__tag">HYPOTHESIS 01</span>
-                            <h3>[가설 1 제목]</h3>
-                            <p>[가설 1 검증 내용 자리] 인터뷰·관찰을 통해 확인한 사용자 니즈와 검증 결과를 서술합니다.</p>
+                    <div class="ql-flow">
+                        <div class="ql-step reveal">
+                            <span class="ql-step__tag">가설 01</span>
+                            <p class="ql-step__q">경기의 재미를 높이는 여러 요소 중, 경기 관련 추가 정보와 분석 데이터에 대한 니즈가 가장 클 것이다.</p>
+                            <div class="ql-result">
+                                <span class="ql-result__tag">검증 결과</span>
+                                <h4 class="ql-result__title">데이터는 오히려 몰입을 방해함</h4>
+                                <p class="ql-result__desc">보조 정보, 분석 데이터는 생각만큼 중요하지 않았고, 오히려 경기 몰입을 방해하는 요소로 작용하기도 했어요.</p>
+                            </div>
                         </div>
-                        <div class="vb-card reveal">
-                            <span class="vb-card__tag">HYPOTHESIS 02</span>
-                            <h3>[가설 2 제목]</h3>
-                            <p>[가설 2 검증 내용 자리] 두 번째 가설과 그 근거를 정리합니다.</p>
+
+                        <div class="ql-connector reveal"></div>
+
+                        <div class="ql-step reveal">
+                            <span class="ql-step__tag">가설 02</span>
+                            <p class="ql-step__q">경기의 재미를 높이는 여러 요소 중 특히, 온전히 몰입해 경기를 보는 경험에 대한 니즈가 가장 클 것이다.</p>
+                            <div class="ql-result">
+                                <span class="ql-result__tag">검증 결과</span>
+                                <h4 class="ql-result__title">온전히 몰입하는 시간은 매우 짧음</h4>
+                                <p class="ql-result__desc">사용자가 경기에 온전히 몰입할 수 있는 시간은 예상보다 훨씬 짧았어요. 대부분은 경기를 보며 지속적으로 다른 행동을 했어요.</p>
+                            </div>
                         </div>
-                        <div class="vb-card reveal">
-                            <span class="vb-card__tag">HYPOTHESIS 03</span>
-                            <h3>[가설 3 제목]</h3>
-                            <p>[가설 3 검증 내용 자리] 세 번째 가설과 검증 결론을 정리합니다.</p>
+
+                        <div class="ql-connector ql-connector--accent reveal"></div>
+
+                        <div class="ql-final reveal">
+                            <span class="ql-final__tag">새로운 질문</span>
+                            <p class="ql-final__q">그렇다면 실제로 가장 큰 니즈는 무엇일까?</p>
+                            <p class="ql-final__answer">경기 중 가장 빈번하게 관찰된 공통적인 행동은, 경기를 함께 시청하는 사람들과의 <strong>소통</strong>과 <strong>감정의 표현·공유</strong>였어요.</p>
                         </div>
                     </div>
                 </div>
 
-                <!-- UX Direction 6키워드 -->
+                <!-- B. XR 디바이스 환경에서 생기는 추가 문제 -->
                 <div class="vb-group">
                     <div class="vb-group__head reveal">
                         <span class="vb-group__num">B</span>
+                        <span class="vb-group__name">XR 디바이스 환경</span>
+                    </div>
+                    <p class="vb-body ql-group-intro reveal">XR 디바이스를 착용하면서 발생할 수 있는 추가적인 문제를 발견하고 정의했어요.</p>
+                    <div class="ql-xr-grid">
+                        <div class="ql-xr-card reveal">
+                            <h4 class="ql-xr-card__title">문제 정의</h4>
+                            <p class="ql-xr-card__desc">현재 XR 디바이스는 대부분 고글 형태로, 착용 시 외부 채널이 차단되는 한계가 있어요. 이 때문에 <strong>정보 확인이나 소통을 위해서는 반드시 디바이스를 벗어야</strong> 해요.</p>
+                        </div>
+                        <div class="ql-xr-card ql-xr-card--solution reveal">
+                            <h4 class="ql-xr-card__title">지향하는 경험</h4>
+                            <p class="ql-xr-card__desc"><strong>디바이스를 벗지 않고도</strong> 정보 확인, 소통 등 경기 중 자주 하는 다른 활동까지 <strong>XR 환경 안에서 자연스럽게</strong> 이어질 수 있어야 해요.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- C. UX Direction — 어피니티 다이어그램 배경 위에 6키워드 오버레이 -->
+                <div class="vb-group">
+                    <div class="vb-group__head reveal">
+                        <span class="vb-group__num">C</span>
                         <span class="vb-group__name">UX Direction</span>
                     </div>
-                    <div class="vb-grid vb-grid--3">
-                        <div class="vb-keyword reveal"><div class="vb-keyword__idx">01</div><div class="vb-keyword__name">Immersion</div></div>
-                        <div class="vb-keyword reveal"><div class="vb-keyword__idx">02</div><div class="vb-keyword__name">Understanding</div></div>
-                        <div class="vb-keyword reveal"><div class="vb-keyword__idx">03</div><div class="vb-keyword__name">Social Experience</div></div>
-                        <div class="vb-keyword reveal"><div class="vb-keyword__idx">04</div><div class="vb-keyword__name">Multi-tasking</div></div>
-                        <div class="vb-keyword reveal"><div class="vb-keyword__idx">05</div><div class="vb-keyword__name">Customizable</div></div>
-                        <div class="vb-keyword reveal"><div class="vb-keyword__idx">06</div><div class="vb-keyword__name">Fandom</div></div>
+                    <div class="ql-ux-hero reveal">
+                        <div class="ql-ux-hero__bg"><img src="media/qualitative/affinity-diagram.jpg" alt="어피니티 다이어그램"></div>
+                        <div class="ql-ux-hero__overlay"></div>
+                        <div class="ql-ux-hero__content">
+                            <span class="ql-ux-hero__eyebrow">Affinity Diagram</span>
+                            <p class="ql-ux-hero__desc">리서치 과정에서 확인한 여러 페인 포인트와 인사이트를 종합해 유저 페르소나, 저니맵, 어피니티 다이어그램을 작성했고, 이를 통해 서비스의 6가지 컨셉 키워드를 도출했어요.</p>
+                            <div class="ql-ux-chips">
+                                <span class="ql-ux-chip">Immersion</span>
+                                <span class="ql-ux-chip">Understanding</span>
+                                <span class="ql-ux-chip">Social Experience</span>
+                                <span class="ql-ux-chip">Multi-tasking</span>
+                                <span class="ql-ux-chip">Customizable</span>
+                                <span class="ql-ux-chip">Fandom</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
                 <!-- Service Flow: Pre / In / Post-Match -->
                 <div class="vb-group">
                     <div class="vb-group__head reveal">
-                        <span class="vb-group__num">C</span>
+                        <span class="vb-group__num">D</span>
                         <span class="vb-group__name">Service Flow</span>
                     </div>
                     <div class="vb-flow">
@@ -1414,6 +2121,67 @@
             }
             // (실패 시에도 .vb-cover는 CSS 기본값으로 항상 보임)
 
+            // ── Market Research 타임라인 ──
+            // 1) 화면 높이에 맞춰 타임라인 전체를 자동 축소(fit) → 어떤 해상도든 안 잘림
+            // 2) 세로 스크롤 → 가로 이동 (섹션 고정), 이동 거리는 축소 배율에 맞춰 보정
+            const mrSection = document.querySelector('.mr-section');
+            const mrTimeline = mrSection && mrSection.querySelector('.mr-timeline');
+            const mrFit = mrSection && mrSection.querySelector('.mr-fit');
+            const mrTrack = mrSection && mrSection.querySelector('.mr-track');
+            let mrScale = 1;
+
+            // 남는 세로 공간을 재서 타임라인이 딱 맞을 배율을 계산·적용
+            const fitMR = () => {
+                if (!mrSection || !mrTimeline || !mrFit || !mrTrack) return 1;
+                mrFit.style.transform = 'none';
+                mrTimeline.style.height = 'auto';
+                const secTop = mrSection.getBoundingClientRect().top;
+                const tlTop = mrTimeline.getBoundingClientRect().top;
+                const reservedTop = tlTop - secTop;   // 제목 + 설명 문단이 차지하는 높이(자동 반영)
+                const bottomPad = 40;                 // 아래 여백
+                const avail = Math.max(220, window.innerHeight - reservedTop - bottomPad);
+                const trackH = mrTrack.scrollHeight;
+                let s = trackH > 0 ? Math.min(1, avail / trackH) : 1;
+                s = Math.max(0.35, s);
+                mrScale = s;
+                mrTimeline.style.height = avail + 'px';
+                mrFit.style.transform = 'scale(' + s + ')';
+                return s;
+            };
+
+            if (mrSection && mrTimeline && mrFit && mrTrack && window.gsap && window.ScrollTrigger && !reduceMotion) {
+                gsap.registerPlugin(ScrollTrigger);
+                // 화면에 보이는 가로 초과분(= 스크롤로 넘겨야 할 실제 거리)
+                const visualOverflow = () => Math.max(0, mrScale * mrTrack.scrollWidth - mrTimeline.clientWidth);
+                gsap.to(mrTrack, {
+                    // 트랙은 축소 래퍼 안이라 이동값에 배율이 곱해짐 → 배율로 나눠 보정
+                    x: () => -(visualOverflow() / mrScale),
+                    ease: 'none',
+                    scrollTrigger: {
+                        trigger: mrSection,
+                        start: 'top top',
+                        end: () => '+=' + visualOverflow(),
+                        pin: true,
+                        scrub: 1,
+                        anticipatePin: 1,
+                        invalidateOnRefresh: true,
+                        onRefreshInit: fitMR   // 측정 전에 먼저 배율을 맞춰 x/end가 같은 값을 쓰게
+                    }
+                });
+                fitMR();
+                // 폰트 로딩 뒤 높이가 바뀔 수 있어 다시 계산
+                if (document.fonts && document.fonts.ready) {
+                    document.fonts.ready.then(() => ScrollTrigger.refresh());
+                }
+                window.addEventListener('load', () => ScrollTrigger.refresh());
+            } else if (mrTimeline && mrFit && mrTrack) {
+                // 모션 최소화 설정: 고정 효과 없이, 세로 축소 + 가로는 직접 스크롤
+                fitMR();
+                mrTimeline.style.overflowX = 'auto';
+                mrTimeline.style.overflowY = 'hidden';
+                window.addEventListener('resize', fitMR);
+            }
+
             // Contribution 토글: 클릭 시 Role 상세 펼침/접힘 + 막대 차오름
             const toggle = document.getElementById('vb-contrib-toggle');
             const wrap = document.getElementById('vb-roles');
@@ -1465,11 +2233,6 @@
         #qr-tuner-copy { width: 100%; padding: 8px; font-weight: 600; }
     </style>
 
-    <div id="qr-tuner">
-        <h4>🛠 카드 조절 (작업용)<button id="qr-tuner-toggle" type="button" aria-label="접기/펴기">▾</button></h4>
-        <div id="qr-tuner-rows"></div>
-        <button id="qr-tuner-copy" type="button">현재값 CSS 복사</button>
-    </div>
 
     <script>
         (function () {
