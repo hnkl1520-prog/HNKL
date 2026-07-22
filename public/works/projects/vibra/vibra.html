@@ -18,19 +18,19 @@
     <style>
         /* =========================================================
            VIBRA Detail — 디자인 시스템 적용
-           검정 배경 + 흑백(회색 스케일). 색/타이포/간격은 common.css의
-           --gray-* / --fs-* / --space-* 토큰을 참조. (핑크 포인트 제거)
-           남은 --vb-* 는 이 페이지 고유의 레이아웃 리듬값(폭/패딩)만.
+           첫 번째 코드의 톤앤매너(무채색 기반, 블루 포인트)로 컬러 업데이트
            ========================================================= */
         :root {
-            /* 색은 디자인 시스템 토큰으로 매핑 (기본 라이트 = 흰 배경 + 검정 글씨) */
-            --vb-bg: #ffffff;                 /* 페이지 베이스 흰색 */
-            --vb-bg-tint: #f9f6ff;            /* 디자인 시스템 배경 틴트 (Figma: 흰색→옅은 라벤더) */
-            --vb-panel: var(--gray-50);       /* 면·카드  (다크: #1C1C1E) */
-            --vb-line: var(--gray-300);       /* 테두리   (다크: #3A3A3C) */
-            --vb-text: var(--gray-ink);       /* 제목·강조 (다크: #F5F5F7) */
-            --vb-body: var(--gray-700);       /* 본문 보조 (다크: #A1A1A6) */
-            --vb-muted: var(--gray-500);      /* 캡션·라벨 (다크: #8E8E93) */
+            /* 색상 토큰을 첫 번째 코드의 무채색/블루 포인트로 교체 */
+            --vb-bg: #FAFAFB;                 /* 페이지 베이스 연회색 */
+            --vb-bg-tint: #FAFAFB;            /* 디자인 시스템 배경 틴트 */
+            --vb-panel: #F4F4F5;              /* 면·카드 배경 */
+            --vb-line: #E5E7EB;               /* 테두리 연회색 */
+            --vb-text: #111827;               /* 제목·강조 (다크 그레이) */
+            --vb-body: #4B5563;               /* 본문 보조 (회색) */
+            --vb-muted: #9CA3AF;              /* 캡션·라벨 (연한 회색) */
+            --accent-color: #3B82F6;          /* 메인 블루 포인트 컬러 */
+            --qr2-accent: #3B82F6;            /* 차트 블루 컬러 */
 
             /* 페이지 고유 레이아웃 리듬 (반응형 대비 clamp) */
             --vb-pad-block: clamp(80px, 11vw, 180px);
@@ -47,15 +47,30 @@
 
         /* common.css의 main 기본 패딩 무력화 (히어로 풀스크린을 위해) */
         body {
-            /* Figma 배경 토큰: 위 흰색 → 48% 지점부터 옅은 라벤더로, 이후 라벤더 유지 */
-            background-color: var(--vb-bg-tint);
-            background-image: linear-gradient(to bottom, var(--vb-bg) 0%, var(--vb-bg-tint) 48.3%);
+            /* 스크롤 배경: 화이트 → 은은하게 회색 → (UX Direction 히어로 뒤에서, 배경이 이미지에 가려지는 구간) 다크로 전환 → 검정.
+               색 정지점 %는 문서 전체 높이 기준(측정값 반영). UX Direction 히어로는 자체 이미지+오버레이라 그 구간 배경색은 안 보임 → 급격한 전환을 숨기고 여유 있게 늘림.
+               Service Flow 그룹부터 .sec-dark로 글자색도 반전(배경이 이미 충분히 어두워진 뒤). */
+            background-color: #0b0b0d;
+            background-image: linear-gradient(to bottom,
+                #ffffff 0%,
+                #ffffff 50%,
+                #fafafc 53%,
+                #f0f0f4 56%,
+                #dcdde3 58%,
+                #a8a9b1 59%,
+                #6c6d74 59.8%,
+                #3a3b40 60.5%,
+                #1c1d22 61%,
+                #17181d 61.3%,
+                #101115 100%);
             background-repeat: no-repeat;
+            background-attachment: scroll;
             color: var(--vb-text);
             font-family: 'Pretendard', sans-serif;
-            /* overflow-x 미설정: body에 overflow를 주면 sticky/스크롤 기준이 꼬여
-               히어로 sticky가 깨짐. 이 레이아웃은 가로 넘침이 없어 불필요. */
+            /* body에 직접 overflow를 주면 sticky/스크롤 기준이 꼬여 히어로 sticky가 깨짐
+               → 가로 넘침 방지는 html에서 처리 (.vb-fullbleed의 100vw가 스크롤바 폭만큼 넘치는 것 차단) */
         }
+        html { overflow-x: hidden; }
         main { padding: 0; min-height: auto; }
 
         /* =========================================================
@@ -65,10 +80,26 @@
             padding-block: var(--vb-pad-block);
             padding-inline: var(--vb-pad-inline);
         }
+        /* 다크 구간(Skybox~): 배경 그라데이션이 어두워지는 구역의 섹션 — 색 토큰을 다크로 반전해 글자·카드가 밝게 나오도록 */
+        .sec-dark {
+            --vb-bg: #141418;
+            --vb-panel: #212127;
+            --vb-line: #3a3a40;
+            --vb-text: #f4f4f7;
+            --vb-body: #b2b2b9;
+            --vb-muted: #8c8c93;
+        }
         .vb-wrap {
             max-width: var(--vb-maxw);
             margin-inline: auto;
         }
+        /* 뷰포트 전체 폭으로 꽉 차게 (vb-wrap 안에서 좌우로 브레이크아웃) */
+        .vb-fullbleed {
+            width: 100vw;
+            margin-left: calc(50% - 50vw);
+            margin-right: calc(50% - 50vw);
+        }
+        .vb-fullbleed img { width: 100%; height: auto; display: block; }
         /* 콘텐츠 타이포: 디자인 시스템 스케일(--fs-*) 사용 */
         .vb-eyebrow {
             display: inline-block;
@@ -307,6 +338,11 @@
         .vb-grid--2 { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
         .vb-grid--3 { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
         .vb-grid--4 { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+        /* 2:1:1 비율 3단 (넓은 첫 칸 + 같은 높이로 나란한 두 칸) */
+        .vb-grid--2-1-1 { grid-template-columns: 2fr 1fr 1fr; align-items: stretch; }
+        @media (max-width: 720px) { .vb-grid--2-1-1 { grid-template-columns: 1fr; } }
+        .vb-grid--2-1-1 > .reveal { display: flex; flex-direction: column; }
+        .vb-grid--2-1-1 > .reveal > div:first-child { flex: 1 1 auto; min-height: 0; }
 
         .vb-card {
             background: var(--vb-panel);
@@ -320,6 +356,165 @@
         }
         .vb-card h3 { margin: 0 0 12px; font-size: var(--fs-h3); font-weight: 600; color: var(--vb-text); }
         .vb-card p { margin: 0; font-size: var(--fs-body); line-height: 1.7; color: var(--vb-body); word-break: keep-all; }
+
+        /* Apple Vision Pro 페이지 "엔터테인먼트" 캐러셀 레이아웃.
+           세로 스택: eyebrow(위, 좌측 정렬) → 캐러셀(전체 폭) → 화살표(아래, 가운데 정렬)
+           콘텐츠는 max-width 1120px 컨테이너에 맞춰 정렬. 카드 폭은 뷰포트 %, peek으로 다음 카드가 살짝 보임. */
+        .vb-carousel-block { max-width: 1120px; margin-inline: auto; }
+        .vb-carousel-block__eyebrow { margin-bottom: 36px; }
+        /* 오른쪽 풀블리드: 왼쪽은 컨테이너 라인에 맞추고(padding-left) 오른쪽은 뷰포트 끝까지.
+           width:100vw + margin-left:calc(50%-50vw)로 모든 상위 max-width/padding을 무시하고 뷰포트 기준으로 재배치.
+           scroll-padding-left를 padding-left와 동일하게 줘서, 스냅 시작점이 패딩 안쪽(진짜 첫 카드 위치)이 되도록 맞춤. */
+        .vb-carousel {
+            box-sizing: border-box;
+            width: 100vw;
+            margin-left: calc(50% - 50vw);
+            padding-left: max(24px, calc((100vw - 1120px) / 2));
+            /* 마지막 카드가 화면 끝에 걸린 채로 멈추지 않도록, 화면 절반만큼 여유를 오른쪽에 줘서
+               끝까지 스크롤하면 마지막 카드가 중앙 부근까지 끌려오게 함 */
+            padding-right: 50vw;
+            scroll-padding-left: max(24px, calc((100vw - 1120px) / 2));
+            overflow-x: scroll;
+            overflow-y: hidden;
+            scroll-snap-type: x mandatory;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none; /* Firefox */
+        }
+        .vb-carousel::-webkit-scrollbar { display: none; } /* Chrome/Safari — 스크롤바 숨김, 스와이프/버튼으로만 이동 */
+        .vb-carousel__track {
+            display: grid;
+            grid-auto-flow: column;
+            grid-auto-columns: max-content;
+            gap: 16px;
+            width: max-content;
+        }
+        .vb-carousel__item {
+            display: flex;
+            flex-direction: column;
+            scroll-snap-align: start;
+        }
+        /* 높이만 고정(반응형 clamp), 폭은 미디어 원본 비율대로 자동 — 자르지 않음 */
+        .vb-carousel__media {
+            position: relative;
+            height: clamp(260px, 48vw, 460px);
+            border-radius: 20px;
+            overflow: hidden;
+            background: var(--vb-panel);
+        }
+        .vb-carousel__media img,
+        .vb-carousel__media video {
+            height: 100%;
+            width: auto;
+            display: block;
+        }
+        /* 카드별 재생 버튼 — 모든 카드(이미지 포함) 미디어 우하단에 오버레이.
+           애플 레퍼런스처럼 얇은 선 기반 원(면 채움 없음) + 반투명 블러 */
+        .vb-carousel__play {
+            position: absolute; right: 12px; bottom: 12px; z-index: 2;
+            width: 40px; height: 40px; border-radius: 50%;
+            border: 1.5px solid rgba(255, 255, 255, 0.85);
+            background: rgba(0, 0, 0, 0.12);
+            -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+            color: #fff;
+            font-size: 0.85rem; line-height: 1; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            transition: background 0.2s ease, transform 0.2s ease;
+        }
+        .vb-carousel__play:hover { background: rgba(0, 0, 0, 0.28); transform: scale(1.06); }
+        .vb-carousel__caption {
+            margin: 28px 0 0;
+            font-size: 19px;
+            line-height: 1.5;
+            color: #a1a1a6;
+            word-break: keep-all;
+        }
+        .vb-carousel__caption strong {
+            color: #fff;
+            font-weight: 700;
+        }
+        .vb-carousel-nav {
+            display: flex; justify-content: center; align-items: center;
+            gap: 12px; margin-top: 40px;
+        }
+        .vb-carousel-nav__arrow {
+            width: 44px; height: 44px; border-radius: 50%;
+            border: 1px solid var(--vb-line); background: var(--vb-panel); color: var(--vb-text);
+            font-size: 1.2rem; line-height: 1; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            transition: background 0.2s ease;
+        }
+        .vb-carousel-nav__arrow:hover { background: var(--vb-line); }
+        .vb-carousel-nav__arrow:disabled { opacity: 0.35; cursor: default; }
+
+        /* Functions 4컷 그리드 — 다크 카드, 비율 4:3, 라벨만 하단에 */
+        .vb-func-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+        }
+        .vb-func-card {
+            display: flex; flex-direction: column;
+        }
+        .vb-func-card__media {
+            width: 100%; aspect-ratio: 4 / 3; border-radius: 16px;
+            background: var(--vb-panel); border: 1px solid var(--vb-line);
+        }
+        .vb-func-card__label {
+            margin: 12px 0 0; font-size: var(--fs-caption); font-weight: 600;
+            color: var(--vb-text); word-break: keep-all;
+        }
+        @media (max-width: 768px) { .vb-func-grid { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 480px) { .vb-func-grid { grid-template-columns: 1fr; } }
+
+        /* Skybox — Key Features 3개. 영상은 독립된 박스(테두리·라운드), 캡션은 그 밖으로 분리 (박스 안 박스 금지)
+           순차 재생: is-active인 것만 컬러+재생, 나머지는 흑백+정지 프레임 */
+        .sky-features { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--vb-gap); }
+        @media (max-width: 820px) { .sky-features { grid-template-columns: 1fr; max-width: 420px; margin-inline: auto; } }
+        .sky-feature__media {
+            width: 100%; aspect-ratio: 1 / 1; border-radius: 16px; overflow: hidden;
+            border: 1px solid var(--vb-line); background: var(--vb-panel);
+            filter: grayscale(1); transition: filter 0.5s ease;
+        }
+        .sky-feature.is-active .sky-feature__media { filter: grayscale(0); }
+        .sky-feature__media video { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .sky-feature__caption {
+            margin: 16px 0 0; text-align: center; font-size: var(--fs-body); line-height: 1.6;
+            color: var(--vb-muted); word-break: keep-all; transition: color 0.4s ease;
+        }
+        .sky-feature.is-active .sky-feature__caption { color: var(--vb-text); }
+        .sky-feature__num { font-weight: 800; color: var(--vb-text); margin-right: 4px; }
+        .sky-feature.is-active .sky-feature__num { color: var(--accent-color); }
+
+        /* Skybox — 3D Asset: 좌 스카이박스(원본 16:9 유지) + 우 에셋 6종(3열×2행).
+           스카이박스는 억지로 세로로 늘리지 않고 자기 비율대로 → 대신 좌우 컬럼 비율로 균형 조정.
+           이미지 독립 박스 + 캡션 밖. 토큰 에셋 6종(투명 PNG)은 안 잘리게 contain */
+        .sky-asset { display: grid; grid-template-columns: 1.3fr 1fr; gap: var(--vb-gap); align-items: stretch; }
+        @media (max-width: 820px) { .sky-asset { grid-template-columns: 1fr; } }
+        .sky-asset__hero-col { display: flex; flex-direction: column; }
+        .sky-asset__hero-media {
+            width: 100%; flex: 1 1 auto; min-height: 0; border-radius: 20px; overflow: hidden;
+            border: 1px solid var(--vb-line); background: var(--vb-panel);
+        }
+        .sky-asset__hero-media img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .sky-asset__hero-cap { margin: 14px 0 0; text-align: center; font-size: var(--fs-body); font-weight: 600; color: var(--vb-text); flex: 0 0 auto; }
+
+        .sky-asset__grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: clamp(20px, 2.5vw, 28px); align-content: space-between; }
+        @media (max-width: 560px) { .sky-asset__grid { grid-template-columns: repeat(2, 1fr); } }
+        .sky-asset__item-media {
+            aspect-ratio: 1 / 1; border-radius: 14px; overflow: hidden;
+            border: 1px solid var(--vb-line); background: var(--vb-panel);
+            padding: 12%; box-sizing: border-box;
+        }
+        .sky-asset__item-media img { width: 100%; height: 100%; object-fit: contain; display: block; }
+        /* margin-top을 히어로 캡션(14px, 더 큰 폰트)과 총 높이가 같아지도록 19px로 맞춤
+           → 캡션 영역 높이가 같아져서 3D Asset 그리드 아랫줄 이미지 하단이 왼쪽 히어로 이미지 하단과 정확히 일치함 */
+        .sky-asset__item-cap { margin: 19px 0 0; text-align: center; font-size: var(--fs-caption); font-weight: 600; color: var(--vb-text); word-break: keep-all; }
+
+        /* 하단 솔루션 섹션(Skybox·In Stadium·Interaction)도 상단 섹션과 동일하게 가운데 정렬 (디자인 시스템 통일) */
+        .sec-centered .vb-wrap { text-align: center; }
+        .sec-centered .vb-title { margin-inline: auto; }
+        .sec-centered .vb-body { max-width: 760px; margin-inline: auto; }
+        .sec-centered .vb-group__head { justify-content: center; }
 
         .vb-group { margin-top: var(--space-lg); }
         .vb-group:first-of-type { margin-top: 0; }
@@ -367,34 +562,6 @@
         .ql-method-card__title { margin: 0 0 6px; font-size: var(--fs-body); font-weight: 700; color: var(--vb-text); word-break: keep-all; }
         .ql-method-card__desc { margin: 0; font-size: var(--fs-caption); line-height: 1.65; color: var(--vb-muted); word-break: keep-all; }
 
-        /* B. 가설의 진화 (세로 흐름) */
-        .ql-flow { max-width: 640px; margin-inline: auto; display: flex; flex-direction: column; align-items: center; gap: clamp(28px, 4vw, 44px); }
-        .ql-connector { width: 1px; height: clamp(36px, 5vw, 56px); background: var(--vb-line); }
-        .ql-connector--accent { background: color-mix(in srgb, var(--accent-color) 45%, var(--vb-line)); }
-        .ql-step { width: 100%; text-align: center; }
-        .ql-step__tag { display: block; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--vb-muted); margin-bottom: 14px; }
-        /* 가설 = 살짝 눌러둔 톤 / 결과 = 가설과 같은 크기로 또렷하게 (박스 없음) */
-        .ql-step__q { margin: 0; font-size: var(--fs-h3); font-weight: 600; line-height: 1.5; color: var(--vb-body); word-break: keep-all; }
-        .ql-result { margin-top: clamp(18px, 2.4vw, 26px); }
-        .ql-result__tag { display: block; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent-color); margin-bottom: 10px; }
-        .ql-result__title { margin: 0 0 10px; font-size: var(--fs-h3); font-weight: 700; color: var(--vb-text); line-height: 1.45; word-break: keep-all; }
-        .ql-result__desc { margin: 0; font-size: var(--fs-body); line-height: 1.75; color: var(--vb-body); word-break: keep-all; }
-        .ql-final { width: 100%; text-align: center; }
-        .ql-final__tag { display: block; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent-color); margin-bottom: 16px; }
-        .ql-final__q { margin: 0 0 20px; font-size: var(--fs-h2); font-weight: 700; color: var(--vb-text); line-height: 1.4; word-break: keep-all; }
-        .ql-final__answer { max-width: 600px; margin: 0 auto; font-size: var(--fs-h3); font-weight: 600; line-height: 1.7; color: var(--vb-text); word-break: keep-all; }
-        .ql-final__answer strong { color: var(--accent-color); font-weight: 800; }
-
-        /* C. XR 디바이스 문제 정의 / 지향 경험 2단 */
-        .ql-xr-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--vb-gap); }
-        @media (max-width: 720px) { .ql-xr-grid { grid-template-columns: 1fr; } }
-        .ql-xr-card { padding: clamp(28px, 3.4vw, 40px); border-radius: 18px; background: var(--vb-panel); border-top: 3px solid var(--vb-line); text-align: center; }
-        .ql-xr-card--solution { border-top-color: var(--accent-color); }
-        .ql-xr-card__title { margin: 0 0 16px; font-size: var(--fs-h3); font-weight: 700; color: var(--vb-text); word-break: keep-all; }
-        .ql-xr-card--solution .ql-xr-card__title { color: var(--accent-color); }
-        .ql-xr-card__desc { margin: 0; font-size: var(--fs-body); line-height: 1.8; color: var(--vb-body); word-break: keep-all; }
-        .ql-xr-card__desc strong { color: var(--vb-text); font-weight: 700; }
-
         /* UX Direction — 어피니티 다이어그램을 배경으로, 키워드를 그 위에 오버레이 */
         .ql-ux-hero {
             position: relative; overflow: hidden; border-radius: 24px;
@@ -422,619 +589,64 @@
         }
         .ql-ux-chip:hover { background: var(--accent-color); transform: translateY(-2px); }
 
-        /* Service Flow */
-        .vb-flow {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-            gap: var(--vb-gap);
-        }
-        .vb-flow__step { position: relative; }
-        .vb-flow__phase {
-            display: inline-block; color: var(--vb-text); font-weight: 700;
-            font-size: 0.8rem; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 14px;
-        }
-
         /* =========================================================
-           리서치 서술형 (Quantitative Research) — reference 카드 구조
-           (알약 태그 + 인용형 제목 + <br><br> 문단 + strong 강조, 가운데 정렬)
+           Service Flow — Pre/In/Post-Match 가로 타임라인 (원형 노드 + XR 디바이스 구간)
            ========================================================= */
-        .rn { max-width: 860px; margin-inline: auto; }
-        .rn-card {                               /* reference: 어두운 카드 */
-            background: #17171a;
-            border: 1px solid #2a2a2e;
-            border-radius: 22px;
-            padding: clamp(32px, 4.5vw, 56px);
-            text-align: center;                 /* reference: 가운데 정렬 */
-            transition: transform .3s ease, box-shadow .3s ease;
-            will-change: transform;
-        }
-        .rn-card:hover { transform: scale(1.02); box-shadow: 0 22px 48px rgba(0,0,0,.35); }
-        @media (hover: none) { .rn-card:hover { transform: none; box-shadow: none; } }
-        .rn-card + .rn-card { margin-top: clamp(20px, 3vw, 32px); }
-        .rn-card__tag {                          /* reference: NEXT STEP 알약 (bg-gray-800) */
-            display: inline-block;
-            font-size: var(--fs-caption);
-            font-weight: 700;
-            letter-spacing: 0.14em;
-            text-transform: uppercase;
-            color: #d4d4d8;
-            background: #27272a;
-            padding: 6px 15px;
-            border: 1px solid #3f3f46;
-            border-radius: 999px;
-            margin-bottom: 20px;
-        }
-        .rn-card__title {                        /* reference: text-2xl font-bold text-white, 인용형 */
-            margin: 0 0 20px;
-            font-size: clamp(1.5rem, 2.6vw, 2rem);
-            font-weight: 700;
-            line-height: 1.35;
-            letter-spacing: -0.015em;
-            color: #ffffff;
-            word-break: keep-all;
-        }
-        .rn-card__body {                         /* reference: text-gray-300, leading-relaxed, max-w-2xl, mx-auto, text-lg */
-            max-width: 42rem;
-            margin-inline: auto;
-            font-size: calc(var(--fs-body) * 1.12);
-            line-height: 1.8;
-            color: #d4d4d8;
-            word-break: keep-all;
-        }
-        .rn-card__body strong { font-weight: 700; color: #ffffff; }
-        .rn-card__body strong.rn-accent { color: #fb7185; }   /* reference: text-rose-400 */
-
-        /* =========================================================
-           QUANTITATIVE RESEARCH (참고 코드 → vibra 톤 변환)
-           Desk Research 세로 스토리텔링 + Field Research 데이터 카드.
-           참고 코드의 rose 포인트 → vibra 파랑(--accent-color),
-           클라이맥스 69% 스탯은 페이지 XR 그라데이션으로 통일.
-           ========================================================= */
-        .qr2 { --qr2-accent: var(--accent-color); }
-
-        html { scroll-behavior: smooth; }
-        @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
-        #qualitative { scroll-margin-top: 90px; }
-
-        /* 섹션 헤더 (참고 코드 hero → 결론 먼저) — 가운데 정렬 */
-        .qr2-head { text-align: center; max-width: 760px; margin-inline: auto; }
-        .qr2-head .vb-title { margin-top: 0; }
-        /* 하위 섹션 소제목 (Desk Research / Field Research) — eyebrow와 큰 제목 사이 층위 */
-        .qr2-subhead {
-            margin: clamp(30px, 4vw, 44px) auto clamp(22px, 2.8vw, 30px);
-            text-align: center; font-size: var(--fs-h3); font-weight: 700;
-            color: var(--vb-text); letter-spacing: -0.01em;
-        }
-        .qr2-lead {
-            margin: clamp(16px, 2vw, 22px) auto 0; max-width: 620px;
-            font-size: var(--fs-body); line-height: 1.85; color: var(--vb-body); word-break: keep-all;
-        }
-        .qr2-lead strong { color: var(--vb-text); font-weight: 700; }
-
-        /* STEP 라벨 헤더 */
-        .qr2-step { text-align: center; margin-top: clamp(72px, 10vw, 128px); margin-bottom: clamp(48px, 6vw, 88px); }
-        .qr2-pill {
-            display: inline-block; font-size: var(--fs-caption); font-weight: 700;
-            letter-spacing: 0.12em; text-transform: uppercase;
-            color: var(--vb-muted); background: var(--vb-panel);
-            border: 1px solid var(--vb-line); padding: 6px 14px; border-radius: 999px; margin-bottom: 18px;
-        }
-        .qr2-pill--accent {
-            color: var(--qr2-accent);
-            background: color-mix(in srgb, var(--qr2-accent) 12%, transparent);
-            border-color: color-mix(in srgb, var(--qr2-accent) 30%, transparent);
-        }
-        .qr2-step__title { margin: 0; font-size: var(--fs-h2); font-weight: 800; color: var(--vb-text); word-break: keep-all; }
-        .qr2-step__sub { margin: 10px 0 0; font-size: var(--fs-body); color: var(--vb-muted); }
-
-        /* Desk Research 세로 스토리텔링 플로우 */
-        .qr2-flow { max-width: 880px; margin: 0 auto; display: flex; flex-direction: column; align-items: center; gap: clamp(24px, 3.5vw, 44px); }
-        /* 출처 캡션 (데이터/인용 근거) */
-        .qr2-source { margin: 14px 0 0; font-size: var(--fs-caption); color: var(--vb-muted); letter-spacing: 0.01em; word-break: keep-all; }
-        .qr2-node { display: flex; flex-direction: column; align-items: center; text-align: center; width: 100%; }
-        .qr2-connector { width: 1px; height: 48px; background: var(--vb-line); }
-        .qr2-connector--accent { background: color-mix(in srgb, var(--qr2-accent) 45%, var(--vb-line)); }
-
-        /* 배경 노드 (일부러 눌러둔 '당연한 현상') */
-        .qr2-icon {
-            width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center;
+        .sf-ai-pill {
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+            width: fit-content; margin: 0 auto clamp(32px, 4.5vw, 48px);
+            padding: 10px 20px; border-radius: 999px;
             background: var(--vb-panel); border: 1px solid var(--vb-line);
-            box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.05); margin-bottom: 22px; color: var(--vb-muted);
+            font-size: var(--fs-caption); font-weight: 700; color: var(--vb-text);
         }
-        .qr2-icon svg { width: 26px; height: 26px; }
-        .qr2-node__title { margin: 0 0 14px; font-size: var(--fs-h2); font-weight: 700; line-height: 1.4; color: var(--vb-text); word-break: keep-all; }
-        .qr2-node__desc { margin: 0; max-width: 34rem; font-size: var(--fs-body); line-height: 1.75; color: var(--vb-body); word-break: keep-all; }
-        .qr2-tag {
-            display: inline-block; margin-top: 14px; font-size: var(--fs-caption); color: var(--vb-muted);
-            background: var(--vb-panel); border: 1px solid var(--vb-line); padding: 5px 12px; border-radius: 8px;
+        .sf-ai-pill__icon { color: var(--accent-color); }
+        /* overflow-x:auto가 있으면 브라우저가 overflow-y도 강제로 auto로 바꿔 세로로 튀어나온 걸 잘라버림
+           → 위로 튀어나오는 요소(XR 박스 라벨)가 없도록 스크롤 컨테이너에 여유 패딩을 둠 */
+        .sf-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; padding-top: 16px; margin-top: -16px; }
+        .sf-track { position: relative; min-width: 760px; padding: 52px 20px 28px; }
+
+        /* XR 디바이스 구간 (가운데 3개 노드를 감싸는 점선 박스) */
+        .sf-xr-box {
+            position: absolute; top: 8px; bottom: 0; left: 20%; right: 20%;
+            border: 1px dashed color-mix(in srgb, var(--accent-color) 45%, var(--vb-line));
+            border-radius: 24px;
+        }
+        .sf-xr-box__label {
+            position: absolute; top: -11px; left: 50%; transform: translateX(-50%);
+            background: var(--vb-panel); padding: 2px 12px; border-radius: 999px;
+            font-size: 0.68rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+            color: var(--accent-color); white-space: nowrap;
         }
 
-        /* 질문 던지기 */
-        .qr2-q { margin: 0 0 28px; font-size: var(--fs-h2); font-weight: 700; color: var(--qr2-accent); word-break: keep-all; }
-
-        /* 검색량 데이터 카드 */
-        .qr2-search {
-            width: 100%; max-width: 620px; text-align: left;
-            background: var(--vb-panel); border: 1px solid var(--vb-line);
-            border-radius: 20px; padding: clamp(24px, 3vw, 40px);
+        /* 원형 노드 5개 + 연결선 */
+        .sf-circle-row { display: grid; grid-template-columns: repeat(5, 1fr); align-items: center; position: relative; margin-bottom: 22px; }
+        .sf-circle-row::before {
+            content: ""; position: absolute; left: 8%; right: 8%; top: 50%; height: 1px;
+            background: color-mix(in srgb, var(--accent-color) 35%, var(--vb-line)); z-index: 0;
         }
-        .qr2-search__label { margin: 0 0 22px; font-size: var(--fs-caption); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--vb-muted); }
-        .qr2-srow { margin-bottom: 20px; }
-        .qr2-srow:last-of-type { margin-bottom: 0; }
-        .qr2-srow__head { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; margin-bottom: 8px; }
-        .qr2-srow__name { font-size: var(--fs-caption); color: var(--vb-muted); }
-        .qr2-srow__val { font-size: var(--fs-body); font-weight: 700; color: var(--vb-text); }
-        .qr2-track { width: 100%; height: 8px; background: var(--gray-300); border-radius: 99px; overflow: hidden; }
-        .qr2-track__fill { height: 100%; border-radius: 99px; background: var(--gray-500); }
-        /* 하이라이트 (2위 '분석하다' = 핵심 발견) */
-        .qr2-srow--hi { padding: 0; background: none; border: none; }
-        .qr2-srow--hi .qr2-srow__name,
-        .qr2-srow--hi .qr2-srow__val { color: var(--qr2-accent); font-weight: 700; }
-        .qr2-srow--hi .qr2-track { background: color-mix(in srgb, var(--qr2-accent) 14%, transparent); }
-        .qr2-srow--hi .qr2-track__fill { background: var(--qr2-accent); }
-        .qr2-note {
-            margin: 22px 0 0; text-align: center; font-size: var(--fs-caption); color: var(--vb-body);
-            background: var(--vb-bg); border: 1px solid var(--vb-line); border-radius: 10px; padding: 14px;
+        .sf-circle {
+            position: relative; z-index: 1; justify-self: center;
+            width: 84px; height: 84px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.85rem; font-weight: 700; text-align: center; line-height: 1.3;
+            background: var(--vb-bg); border: 1.5px solid color-mix(in srgb, var(--vb-text) 18%, var(--vb-line)); color: var(--vb-text);
         }
-        .qr2-note strong { color: var(--vb-text); font-weight: 700; }
-        /* Desk 데이터 2단 (검색량 · 흥행 콘텐츠) — 한 줄 배치 */
-        .qr2-deskdata { display: grid; grid-template-columns: 2fr 3fr; gap: var(--vb-gap); align-items: stretch; width: 100%; }
-        @media (max-width: 720px) { .qr2-deskdata { grid-template-columns: 1fr; } }
-        .qr2-deskdata .qr2-search { width: auto; max-width: none; min-width: 0; box-sizing: border-box; display: flex; flex-direction: column; }
-        /* 오른쪽 박스 데이터를 바닥 정렬 → 왼쪽 박스의 마지막 행('받다')과 하단 라인 일치 */
-        .qr2-content2col { margin-top: auto; }
-        .qr2-search__note { margin: 0 0 18px; font-size: 11px; letter-spacing: 0.01em; color: var(--vb-muted); }
-        .qr2-bar-group__label { margin: 18px 0 10px; font-size: var(--fs-caption); font-weight: 700; color: var(--vb-muted); }
-        .qr2-search__label + .qr2-bar-group__label { margin-top: 4px; }
-        /* 흥행 콘텐츠 두 열 (남성팬 | 여성팬) */
-        .qr2-content2col { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(14px, 2vw, 22px); }
-        .qr2-content2col .qr2-bar-group__label { margin-top: 4px; }
-        @media (max-width: 460px) { .qr2-content2col { grid-template-columns: 1fr; } }
-        /* 박스 밖으로 뺀 인사이트 */
-        .qr2-insight-out {
-            max-width: 700px; margin: 0 auto clamp(30px, 4vw, 44px); text-align: center;
-            font-size: var(--fs-h2); font-weight: 700; line-height: 1.45; color: var(--vb-text); word-break: keep-all;
-        }
-        .qr2-insight-out strong { color: var(--qr2-accent); font-weight: 700; }
-
-        /* 가설 다크 박스 */
-        .qr2-hypo {
-            display: inline-block; max-width: 440px; background: #1d1d1f; color: #fff;
-            padding: 16px 24px; border-radius: 14px; box-shadow: 0 12px 30px rgba(0, 0, 0, 0.18);
-            font-size: var(--fs-h3); font-weight: 600; line-height: 1.5; word-break: keep-all;
-        }
-        .qr2-hypo-cap { margin: 16px 0 0; font-size: var(--fs-caption); color: var(--vb-muted); }
-
-        /* Field Research — 큰 스탯 카드 (XR 그라데이션 클라이맥스) */
-        .qr2-stat-hero {
-            text-align: center; color: #fff; border-radius: 32px;
-            padding: clamp(48px, 7vw, 80px) clamp(24px, 4vw, 40px);
-            background: linear-gradient(135deg, #7B5EE6 0%, #4F7BF0 55%, #2997ff 100%);
-            box-shadow: 0 24px 60px rgba(70, 110, 230, 0.32);
-            margin-bottom: clamp(56px, 7vw, 96px);
-            transition: transform 0.32s cubic-bezier(0.2, 0.7, 0.3, 1);
-        }
-        .qr2-stat-hero:hover { transform: translateY(-8px); }
-        @media (hover: none) { .qr2-stat-hero:hover { transform: none; } }
-        .qr2-stat-hero__label { margin: 0 0 14px; font-size: var(--fs-h3); font-weight: 500; color: rgba(255, 255, 255, 0.8); letter-spacing: 0.02em; }
-        .qr2-stat-hero__num { font-size: clamp(72px, 14vw, 150px); font-weight: 900; line-height: 1; margin-bottom: 22px; }
-        .qr2-stat-hero__quote { margin: 0; font-size: clamp(1.25rem, 3vw, 2rem); font-weight: 700; line-height: 1.3; word-break: keep-all; }
-
-        /* Insight 02 헤딩 */
-        .qr2-ins-head { margin: 0 0 40px; }
-        .qr2-ins-head__title {
-            margin: 0; font-size: var(--fs-h2); font-weight: 700; color: var(--vb-text);
-            border-left: 4px solid var(--qr2-accent); padding-left: 16px; word-break: keep-all;
-        }
-        .qr2-ins-head__desc { margin: 12px 0 0 20px; font-size: var(--fs-body); color: var(--vb-body); word-break: keep-all; }
-
-        /* 행동 카드 그리드 (2fr : 3fr) */
-        .qr2-behav { display: grid; grid-template-columns: 2fr 3fr; gap: var(--vb-gap); margin-bottom: clamp(56px, 7vw, 88px); }
-        @media (max-width: 820px) { .qr2-behav { grid-template-columns: 1fr; } }
-        .qr2-card {
-            background: var(--vb-panel); border: 1px solid var(--vb-line); border-radius: 20px;
-            padding: clamp(24px, 3vw, 36px); transition: box-shadow 0.25s ease;
-        }
-        .qr2-card:hover { box-shadow: 0 14px 32px rgba(0, 0, 0, 0.08); }
-        .qr2-card--center { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
-        .qr2-card__title { margin: 0 0 8px; font-size: var(--fs-h3); font-weight: 700; color: var(--vb-text); word-break: keep-all; }
-        .qr2-card__sub { margin: 0 0 24px; font-size: var(--fs-caption); color: var(--vb-muted); word-break: keep-all; }
-        .qr2-card__desc { margin: 0; font-size: var(--fs-caption); line-height: 1.7; color: var(--vb-body); word-break: keep-all; }
-        .qr2-card__desc strong { color: var(--vb-text); font-weight: 700; }
-
-        /* 원형 차트 (conic-gradient) */
-        .qr2-donut { width: 112px; height: 112px; border-radius: 50%; display: grid; place-items: center; position: relative; margin-bottom: 22px; }
-        .qr2-donut::before { content: ""; position: absolute; inset: 9px; background: var(--vb-panel); border-radius: 50%; }
-        .qr2-donut__val { position: relative; font-size: var(--fs-h2); font-weight: 800; color: var(--vb-text); }
-        .qr2-donut--64 { background: conic-gradient(var(--qr2-accent) 0 64%, var(--gray-300) 64% 100%); }
-
-        /* 파편화 막대 */
-        .qr2-bars { display: flex; flex-direction: column; gap: 18px; }
-        .qr2-bar__head { display: flex; justify-content: space-between; gap: 12px; font-size: var(--fs-caption); margin-bottom: 7px; }
-        .qr2-bar__name { color: var(--vb-body); font-weight: 500; }
-        .qr2-bar__pct { font-weight: 700; color: var(--vb-muted); }
-        .qr2-bar--hi .qr2-bar__pct { color: var(--qr2-accent); }
-        .qr2-bar__track { height: 10px; background: var(--gray-300); border-radius: 99px; overflow: hidden; }
-        .qr2-bar__fill { height: 100%; border-radius: 99px; background: var(--gray-500); }
-        .qr2-bar--hi .qr2-bar__fill { background: var(--qr2-accent); }
-
-        /* 페인포인트 경고 박스 */
-        .qr2-warn {
-            margin-top: 24px; text-align: center; font-size: var(--fs-caption); font-weight: 500;
-            color: color-mix(in srgb, var(--qr2-accent) 72%, var(--vb-text));
-            background: color-mix(in srgb, var(--qr2-accent) 8%, transparent);
-            border: 1px solid color-mix(in srgb, var(--qr2-accent) 22%, transparent);
-            border-radius: 12px; padding: 14px;
+        .sf-circle--accent {
+            border-color: var(--accent-color); color: var(--accent-color);
+            box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent-color) 10%, transparent);
         }
 
-        /* NEXT STEP 다크 카드 */
-        .qr2-next {
-            text-align: center; color: #fff; background: #1d1d1f; border-radius: 32px;
-            padding: clamp(40px, 5vw, 60px) clamp(24px, 4vw, 40px);
-            box-shadow: 0 22px 48px rgba(0, 0, 0, 0.22); transition: transform 0.3s ease;
-        }
-        .qr2-next:hover { transform: scale(1.02); }
-        @media (hover: none) { .qr2-next:hover { transform: none; } }
-        .qr2-next__pill {
-            display: inline-block; font-size: var(--fs-caption); font-weight: 700; letter-spacing: 0.14em;
-            text-transform: uppercase; color: #d4d4d8; background: #2a2a2e; border: 1px solid #3f3f46;
-            padding: 6px 15px; border-radius: 999px; margin-bottom: 20px;
-        }
-        .qr2-next__title { margin: 0 0 18px; font-size: clamp(1.5rem, 2.6vw, 2rem); font-weight: 700; color: #fff; line-height: 1.35; word-break: keep-all; }
-        .qr2-next__body { max-width: 42rem; margin: 0 auto; font-size: calc(var(--fs-body) * 1.05); line-height: 1.8; color: #d4d4d8; word-break: keep-all; }
-        .qr2-next__body strong { color: #fff; font-weight: 700; }
-        .qr2-next__body strong.qr2-accent { color: var(--qr2-accent); }
-        .qr2-cta {
-            display: inline-flex; align-items: center; gap: 8px; margin-top: 32px;
-            padding: 14px 28px; border-radius: 999px; background: var(--qr2-accent); color: #fff;
-            font-weight: 700; text-decoration: none; transition: background 0.2s ease, transform 0.2s ease;
-        }
-        .qr2-cta:hover { background: color-mix(in srgb, var(--qr2-accent) 85%, #fff); transform: translateY(-2px); }
-        .qr2-cta svg { width: 20px; height: 20px; }
-
-        /* Field Research — 번호 데이터 카드 (덱 구조) */
-        .qr2-fhead { text-align: center; margin-top: clamp(72px, 10vw, 128px); }
-        .qr2-fintro { max-width: 640px; margin: 6px auto 0; font-size: var(--fs-body); line-height: 1.8; color: var(--vb-body); word-break: keep-all; }
-        .qr2-fhead .qr2-source { text-align: center; }
-        .qr2-fconc {
-            max-width: 800px; margin: clamp(32px, 4vw, 48px) auto clamp(40px, 5vw, 60px);
-            text-align: center; font-size: var(--fs-h2); font-weight: 700; line-height: 1.45;
-            color: var(--vb-text); word-break: keep-all;
-        }
-        .qr2-fconc strong { color: var(--qr2-accent); }
-        /* 도넛 카드(01·03) 작게 : 막대 카드(02·04) 크게 */
-        .qr2-fgrid { display: grid; grid-template-columns: 2fr 3fr; gap: var(--vb-gap); align-items: stretch; max-width: 880px; margin: 0 auto clamp(56px, 7vw, 96px); }
-        @media (max-width: 820px) { .qr2-fgrid { grid-template-columns: 1fr; } }
-        /* Field 카드 2개 그룹 (각 그룹 위 결론 헤더) */
-        .qr2-fgroup { max-width: 880px; margin-inline: auto; }
-        .qr2-fgroup + .qr2-fgroup { margin-top: clamp(48px, 6vw, 80px); }
-        .qr2-fgroup:last-of-type { margin-bottom: clamp(56px, 7vw, 96px); }
-        .qr2-fgroup__head { margin: 0 0 clamp(20px, 2.5vw, 28px); font-size: var(--fs-h3); font-weight: 700; color: var(--vb-text); text-align: left; line-height: 1.4; word-break: keep-all; }
-        .qr2-fgroup .qr2-fgrid { max-width: none; margin: 0; }
-
-        /* =========================================================
-           DESK RESEARCH — FINDING 카드 (이미지 레이아웃 · 라이트 톤)
-           ========================================================= */
-        .dk-lead { margin: clamp(6px, 1.5vw, 12px) auto 0; text-align: center; font-size: var(--fs-h2); font-weight: 700; color: var(--vb-text); line-height: 1.4; word-break: keep-all; }
-        .dk-findings { display: grid; grid-template-columns: 1fr 1fr; gap: var(--vb-gap); max-width: 880px; margin: clamp(40px, 5vw, 64px) auto 0; }
-        @media (max-width: 760px) { .dk-findings { grid-template-columns: 1fr; } }
-        .dk-find { display: flex; flex-direction: column; padding: clamp(24px, 3vw, 34px); border-radius: 18px; background: var(--vb-panel); border: 1px solid var(--vb-line); text-align: left; }
-        .dk-find__label { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent-color); margin-bottom: 12px; }
-        .dk-find__title { margin: 0 0 22px; font-size: var(--fs-h3); font-weight: 700; color: var(--vb-text); line-height: 1.4; word-break: keep-all; }
-        .dk-find__stats { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-        .dk-stat { padding: 18px 16px; border-radius: 12px; background: var(--vb-bg); border: 1px solid var(--vb-line); }
-        .dk-stat__num { font-size: var(--fs-h2); font-weight: 800; color: var(--vb-text); line-height: 1; }
-        .dk-stat__cap { margin: 8px 0 0; font-size: var(--fs-caption); line-height: 1.5; color: var(--vb-muted); word-break: keep-all; }
-        .dk-find__source { margin: 16px 0 0; font-size: var(--fs-caption); color: var(--vb-muted); }
-        .dk-bridge { max-width: 640px; margin: clamp(32px, 4vw, 48px) auto 0; text-align: center; font-size: var(--fs-body); color: var(--vb-muted); word-break: keep-all; }
-
-        /* =========================================================
-           FIELD RESEARCH — BEAT 그룹 (수치 카드 + 텍스트 카드 · 중앙정렬)
-           ========================================================= */
-        .fd-beat { max-width: 880px; margin-inline: auto; text-align: center; }
-        .fd-beat + .fd-beat { margin-top: clamp(48px, 6vw, 80px); }
-        .fd-beat__label { display: block; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent-color); margin-bottom: 12px; }
-        .fd-beat__title { margin: 0 0 clamp(22px, 3vw, 30px); font-size: var(--fs-h2); font-weight: 700; color: var(--vb-text); line-height: 1.4; word-break: keep-all; }
-        .fd-beat__cards { display: grid; grid-template-columns: 1fr 1.4fr; gap: var(--vb-gap); }
-        @media (max-width: 760px) { .fd-beat__cards { grid-template-columns: 1fr; } }
-        .fd-card { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: clamp(28px, 3.4vw, 40px); border-radius: 18px; background: var(--vb-panel); border: 1px solid var(--vb-line); }
-        .fd-card__num { font-size: clamp(44px, 6vw, 60px); font-weight: 800; color: var(--vb-text); line-height: 1; }
-        .fd-card__cap { margin: 12px 0 0; font-size: var(--fs-body); color: var(--vb-muted); word-break: keep-all; }
-        .fd-card__txt { margin: 0; font-size: var(--fs-h3); font-weight: 600; line-height: 1.6; color: var(--vb-text); word-break: keep-all; }
-        .fd-card__txt strong { font-weight: 800; color: var(--vb-text); }
-        .qr2-fcard {
-            background: var(--vb-panel); border: 1px solid var(--vb-line); border-radius: 20px;
-            padding: clamp(24px, 3vw, 36px); display: flex; flex-direction: column;
-            transition: box-shadow 0.25s ease;
-        }
-        .qr2-fcard:hover { box-shadow: 0 14px 32px rgba(0, 0, 0, 0.08); }
-        .qr2-fcard__title { margin: 0 0 8px; font-size: var(--fs-h3); font-weight: 700; color: var(--vb-text); line-height: 1.45; word-break: keep-all; }
-        .qr2-fcard__sub { margin: 2px 0 24px; font-size: var(--fs-caption); color: var(--vb-muted); line-height: 1.6; word-break: keep-all; }
-        .qr2-fcard__desc { margin: 16px 0 0; font-size: var(--fs-caption); color: var(--vb-muted); line-height: 1.6; word-break: keep-all; }
-        /* 차트(도넛·막대)를 카드 바닥으로 정렬 → 데이터 바닥선 일치, 위쪽 여백만 차이 */
-        .qr2-fcard .qr2-bars { margin-top: auto; }
-        /* 도넛 카드(01·03): 도넛+서브텍스트를 묶어 바닥 정렬, 가운데 정렬 */
-        .qr2-fcard--donut { align-items: flex-start; text-align: left; }
-        .qr2-donut-group { margin-top: auto; display: flex; flex-direction: column; align-items: center; }
-        .qr2-donut--63 { background: conic-gradient(var(--qr2-accent) 0 63%, var(--gray-300) 63% 100%); }
-
-        @media (max-width: 640px) {
-            .qr2-q { font-size: var(--fs-h3); }
-        }
-
-        /* =========================================================
-           데이터 카드 (Quantitative Research) — 수치·인용·출처 + CSS 도넛
-           ========================================================= */
-        .qr-card {
-            /* ▼▼▼ 조절 패널 - 작업용: 이 변수들을 하단 슬라이더가 실시간 덮어씀 ▼▼▼
-               (확정되면 이 기본값을 디자인 토큰/고정값으로 옮기면 됨) */
-            --qr-gap-num: 24px;      /* 번호 → 인용문 간격 */
-            --qr-gap-quote: 4px;     /* 인용문 → 출처 간격 */
-            --qr-gap-source: 64px;   /* 출처 → 도넛 간격 */
-            --qr-donut-size: 181px;  /* 도넛 지름 */
-            --qr-donut-legend-gap: 20px; /* 도넛 → 범례 간격 */
-            --qr-legend-item-gap: 4px;   /* 범례 항목(줄)끼리 간격 */
-            --qr-legend-offset: 80px;     /* 범례 세로 위치 미세조정(+아래/−위) */
-            --qr-donut-gap: 35px;    /* 도넛 쌍 사이 세로 간격 */
-            --qr-pad: 40px;          /* 카드 안쪽 여백 */
-            --qr-maxw: 658px;        /* 카드 최대 너비 */
-            /* ▲▲▲ 조절 패널 - 작업용 ▲▲▲ */
-
-            background: var(--vb-panel);            /* 연한 회색 면 (--gray-50) */
-            border: 1px solid var(--vb-line);
-            border-radius: 18px;
-            padding: var(--qr-pad);
-            display: flex;
-            flex-direction: column;                 /* 간격은 자식 margin-top으로 개별 제어 */
-        }
-
-        /* 카드 그리드 2:1 — 도넛 2개 카드(넓게) : 도넛 1개 카드(좁게) */
-        .qr-grid {
-            display: grid;
-            grid-template-columns: 2fr 1fr;
-            gap: var(--vb-gap);
-            align-items: stretch;                   /* 같은 줄 카드 높이 맞춤 */
-            margin-bottom: var(--space-xl);         /* 다음 섹션과 충분한 간격 (겹침 방지) */
-        }
-        @media (max-width: 768px) {
-            .qr-grid { grid-template-columns: 1fr; } /* 좁은 화면: 전부 1열 */
-        }
-        .qr-card__num {
-            display: inline-block;
-            font-size: var(--fs-h3);
-            font-weight: 700;
-            color: var(--accent-color);            /* 포인트 컬러 */
-            letter-spacing: 0.02em;
-        }
-        .qr-card__quote {
-            margin: var(--qr-gap-num) 0 0;          /* 번호 → 인용문 */
-            font-size: var(--fs-h3);
-            font-weight: 600;
-            line-height: 1.5;
-            color: var(--vb-text);
-            word-break: keep-all;
-            text-indent: -0.45em;                   /* 여는 따옴표를 왼쪽으로 매달기 → 본문 첫 글자가 번호·출처와 같은 선에서 시작 */
-        }
-        .qr-card__source {
-            margin: var(--qr-gap-quote) 0 0;        /* 인용문 → 출처 */
-            font-size: var(--fs-caption);
-            font-style: normal;
-            color: var(--vb-muted);
-            line-height: 1.5;
-        }
-
-        /* 도넛 영역: 도넛+범례 쌍을 가로로 나란히 (좁으면 자동 줄바꿈) */
-        .qr-card__data {
-            flex: 1 1 auto;                         /* 남는 높이 차지 → 도넛을 바닥에 붙임 */
-            display: flex;
-            flex-wrap: wrap;                        /* 칸 좁아지면 아래로 떨어짐 */
-            align-items: flex-end;                  /* 도넛을 카드 바닥 기준 정렬 (두 카드 도넛 높이 일치) */
-            gap: var(--qr-donut-gap);               /* 도넛 쌍 사이 간격 */
-            margin-top: var(--qr-gap-source);       /* 출처 → 도넛 (최소 간격) */
-        }
-        .qr-stat { flex: 1 1 0; }                   /* 두 쌍이 칸을 고르게 나눠 가짐 */
-        /* 재사용 단위: 도넛(좌) + 범례(우) 가로 배치 */
-        .qr-stat {
-            display: flex;
-            align-items: flex-start;                /* 범례를 도넛 위쪽 기준 정렬 → 여러 범례 시작 높이 동일 */
-            gap: var(--qr-donut-legend-gap);        /* 도넛 → 범례 간격 */
-        }
-
-        /* SVG 도넛 — 색 끝 둥글게(stroke-linecap) + 차오름 애니메이션(stroke-dashoffset).
-           둘레를 100으로 맞춘 원(r=15.9155)이라 dash 값 = 퍼센트로 바로 대응 */
-        .qr-donut {
-            --size: var(--qr-donut-size);           /* 도넛 지름 (조절 패널 제어) */
-            --stroke: 3.6;                          /* 링 두께 (viewBox 36 기준) */
-            --fill: var(--accent-color);            /* 채움: 포인트 파랑 */
-            --fill-2: color-mix(in srgb, var(--accent-color) 40%, #fff); /* 두번째 구간(연한 파랑) */
-            --track: var(--gray-300);               /* 빈 부분: 연한 회색 */
-            position: relative;
-            flex-shrink: 0;                         /* 좁은 칸에서도 원형 유지 */
-            width: var(--size);
-            height: var(--size);
-            display: grid;
-            place-items: center;
-        }
-        .qr-donut svg { position: absolute; inset: 0; width: 100%; height: 100%; }
-        .qr-donut circle { fill: none; stroke-width: var(--stroke); }
-        .qr-donut__track { stroke: var(--track); }
-        .qr-donut__arc {
-            stroke: var(--fill);
-            stroke-linecap: round;                  /* 색 부분 끝 둥글게 */
-            stroke-dasharray: 100;                  /* 둘레 = 100 */
-            stroke-dashoffset: 100;                 /* 초기: 완전히 빈 상태 */
-            /* 시작점을 12시로: 각 구간 시작%(--start)만큼 추가 회전 */
-            transform: rotate(calc((var(--start, 0) * 3.6 - 90) * 1deg));
-            transform-origin: center;
-            transform-box: fill-box;
-            transition: stroke-dashoffset 1.2s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-        .qr-donut__arc--2 { stroke: var(--fill-2); } /* 두번째 구간 색 */
-        /* 화면에 들어오면 0 → 목표%로 차오름 (--seg = 그 구간 길이%).
-           둥근 끝이 양 끝에서 stroke 두께만큼 더 길어 보이므로 그만큼 빼서 실제 %와 맞춤 */
-        .qr-donut.is-filled .qr-donut__arc { stroke-dashoffset: calc(100 - var(--seg) + var(--stroke)); }
-        @media (prefers-reduced-motion: reduce) {
-            .qr-donut__arc, .qr-bar__fill { transition: none; } /* 모션 최소화 설정 시 즉시 표시 */
-        }
-        .qr-donut__val {
-            position: relative;
-            z-index: 1;
-            font-size: var(--fs-h2);
-            font-weight: 700;
-            color: var(--vb-text);
-        }
-        /* 범례 (도넛 오른쪽): 제목 + 점·항목 */
-        .qr-legend {
-            display: flex;
-            flex-direction: column;
-            gap: var(--qr-legend-item-gap);         /* 범례 줄끼리 간격 (조절 패널 제어) */
-            transform: translateY(var(--qr-legend-offset)); /* 범례 세로 위치 미세조정 */
-        }
-        .qr-legend__title + .qr-legend__item { margin-top: 4px; } /* 제목 ↔ 첫 항목은 살짝 띄움 */
-        .qr-legend__title {
-            margin: 0;
-            font-size: var(--fs-body);
-            font-weight: 600;
-            line-height: 1.4;
-            color: var(--vb-text);
-            word-break: keep-all;
-        }
-        .qr-legend__item {
-            margin: 0;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: var(--fs-caption);
-            line-height: 1.5;
-            color: var(--vb-body);
-            word-break: keep-all;
-        }
-        .qr-legend__dot {
-            flex-shrink: 0;
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            background: var(--dot, var(--accent-color)); /* 항목별로 style="--dot:..."로 색 지정 */
-        }
-
-        /* =========================================================
-           인사이트 두괄식 결론 (Desk Research 카드 위)
-           번호 1·2·3 = 아래 근거카드 01·02·03 와 같은 포인트색으로 연결
-           ========================================================= */
-        .qr-insights {
-            max-width: 72ch;
-            margin-bottom: var(--space-lg);
-        }
-        .qr-insights__intro {
-            margin: 0 0 var(--space-md);
-            font-size: var(--fs-body);
-            color: var(--vb-muted);
-            word-break: keep-all;
-        }
-        .qr-insights__list {
-            list-style: none;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            flex-direction: column;
-            gap: 18px;
-        }
-        .qr-insights__item {
-            display: grid;
-            grid-template-columns: auto 1fr;
-            gap: 18px;
-            align-items: baseline;
-        }
-        .qr-insights__num {
-            font-size: var(--fs-h3);
-            font-weight: 700;
-            color: var(--accent-color);            /* 카드 번호(01·02·03)와 동일한 포인트색 */
-            letter-spacing: 0.02em;
-            font-variant-numeric: tabular-nums;
-        }
-        .qr-insights__text {
-            font-size: var(--fs-h3);
-            font-weight: 500;
-            line-height: 1.5;
-            color: var(--vb-text);
-            word-break: keep-all;
-        }
-        .qr-insights__key {
-            font-style: normal;
-            font-weight: 700;
-            color: var(--accent-color);            /* 키워드 강조 = 포인트색 + 볼드 */
-        }
-
-        /* =========================================================
-           가로 막대그래프 (03 카드)
-           ========================================================= */
-        .qr-card--wide { grid-column: 1 / -1; }     /* 03 카드는 그리드 전체 너비 차지 */
-        .qr-bars-wrap {
-            margin-top: var(--qr-gap-source);       /* 출처 → 그래프 */
-            display: grid;
-            grid-template-columns: 1fr 1fr;          /* 두 데이터 그룹을 좌우로 */
-            gap: clamp(32px, 5vw, 80px);
-        }
-        @media (max-width: 768px) {
-            .qr-bars-wrap { grid-template-columns: 1fr; } /* 좁으면 위아래로 */
-        }
-        .qr-bar-group__title {
-            margin: 0 0 18px;
-            font-size: var(--fs-body);
-            font-weight: 600;
-            color: var(--vb-text);
-            word-break: keep-all;
-        }
-        .qr-bar-group__sub {
-            margin: 20px 0 10px;
-            font-size: var(--fs-caption);
-            font-weight: 600;
-            color: var(--vb-muted);
-        }
-        .qr-bars { display: flex; flex-direction: column; gap: 12px; }
-        .qr-bar {
-            display: grid;
-            grid-template-columns: 8em 1fr auto;     /* 라벨 / 막대 / 값 */
-            align-items: center;
-            gap: 14px;
-            font-size: var(--fs-caption);
-        }
-        .qr-bar__label { color: var(--vb-body); word-break: keep-all; }
-        .qr-bar__track {
-            height: 10px;
-            background: var(--gray-300);
-            border-radius: 99px;
-            overflow: hidden;
-        }
-        .qr-bar__fill {
-            height: 100%;
-            width: 0;                                /* 초기 0 → is-filled 시 목표 너비로 */
-            background: var(--accent-color);         /* 기본 채움색 = 포인트색 */
-            border-radius: 99px;
-            transition: width 1.1s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-        .qr-bar.is-filled .qr-bar__fill { width: var(--w); }
-        .qr-bar__val {
-            color: var(--vb-body);
-            font-weight: 600;
-            font-variant-numeric: tabular-nums;
-            white-space: nowrap;
-        }
-        /* 강조 항목(예: 분석하다)만 진하게 */
-        .qr-bar--accent .qr-bar__fill { background: color-mix(in srgb, var(--accent-color) 68%, #000); }
-        .qr-bar--accent .qr-bar__label,
-        .qr-bar--accent .qr-bar__val {
-            color: color-mix(in srgb, var(--accent-color) 68%, #000);
-            font-weight: 700;
-        }
+        /* 노드 하단 라벨 (구분 · 제목 · 설명) */
+        .sf-labels-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; text-align: center; }
+        .sf-label { padding: 0 8px; }
+        .sf-label__meta { font-size: 0.66rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--vb-muted); margin-bottom: 8px; }
+        .sf-label__title { font-size: var(--fs-body); font-weight: 700; color: var(--vb-text); margin-bottom: 10px; word-break: keep-all; }
+        .sf-label__title--accent { color: var(--accent-color); }
+        .sf-label__desc { font-size: var(--fs-caption); line-height: 1.7; color: var(--vb-muted); word-break: keep-all; }
 
         /* =========================================================
            Market Research — 가로 타임라인 (Norgram 스타일)
-           큰 연한 회색 번호 앵커 + 얇은 세로 구분선 + 가로 축선,
-           번호 → 날짜 → 제목 → 카테고리 → 이미지 → 설명 으로 쌓는 에디토리얼 컬럼.
-           1단계: 정적 배치 (스크롤 등장 애니메이션은 나중에)
            ========================================================= */
-        /* 섹션을 화면 높이에 고정 · 제목은 위, 타임라인은 남는 높이에 맞춰 자동 축소 */
         .mr-section {
             min-height: 100vh;
             display: flex;
@@ -1070,19 +682,15 @@
             overflow: hidden;             /* 스크롤바 없음 — 가로 이동은 스크롤 이펙트가 담당 */
             display: flex;
             align-items: center;          /* 축소된 타임라인을 남는 세로 공간 가운데에 */
-            /* 시작(왼쪽)은 위 텍스트와 같은 위치에 맞추고, 오른쪽으로만 화면 끝까지 확장
-               transform 대신 마진으로 처리 → .reveal 애니메이션(transform)과 충돌 없음 */
             width: auto;
             margin-left: 0;
             margin-right: calc(50% - 50vw + clamp(24px, 5vw, 72px));
         }
-        /* 세로 높이에 맞춰 통째로 축소되는 래퍼 (배율은 JS가 계산) */
         .mr-fit {
             transform-origin: left center;
             width: max-content;
             will-change: transform;
         }
-        /* 컬럼은 고정폭(줄어들지 않음) · 위/아래 영역은 내용에 맞춰 auto (한 화면에 맞게 압축) */
         .mr-track {
             display: grid;
             grid-template-columns: 300px 300px 340px 1150px 520px;
@@ -1293,7 +901,6 @@
 
         /* =========================================================
            PROCESS TIMELINE — 리서치 → 비주얼라이제이션 프로세스
-           (헤더 가운데 정렬 / 4단계 가로 흐름)
            ========================================================= */
         .tl-head { text-align: center; max-width: 720px; margin-inline: auto; }
         .tl-head .vb-eyebrow { color: var(--vb-muted); }
@@ -1382,6 +989,65 @@
         @media (max-width: 768px) {
             .vb-info-grid { grid-template-columns: 1fr; }
         }
+
+        /* =========================================================
+           추가된 첫 번째 코드 스타일 (Quantitative & Qualitative 파트용)
+           ========================================================= */
+        .info-card {
+            background-color: #F4F4F5;
+            border-radius: 1.5rem;
+            padding: 2.5rem;
+            border: 1px solid #E5E7EB;
+        }
+
+        .vertical-line {
+            width: 1px;
+            height: 80px;
+            background-color: #D1D5DB;
+            margin: 4rem auto;
+        }
+
+        .circle-chart {
+            width: 130px;
+            height: 130px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.25rem;
+            font-weight: 800;
+            position: relative;
+            margin: 0 auto;
+        }
+
+        .circle-chart::before {
+            content: "";
+            position: absolute;
+            inset: 12px;
+            background-color: #F4F4F5;
+            border-radius: 50%;
+            z-index: 1;
+        }
+
+        .circle-chart span {
+            z-index: 2;
+            color: var(--vb-text);
+        }
+
+        .chart-63 { background: conic-gradient(#3B82F6 0% 63%, #D1D5DB 63% 100%); }
+        .chart-64 { background: conic-gradient(#3B82F6 0% 64%, #D1D5DB 64% 100%); }
+        .chart-blue { background-color: #3B82F6; }
+        .chart-text-blue { color: #3B82F6; }
+
+        /* Tailwind 유틸리티 클래스 대체 */
+        .flex { display: flex; }
+        .flex-col { flex-direction: column; }
+        .items-center { align-items: center; }
+        .justify-center { justify-content: center; }
+        .text-center { text-align: center; }
+        .hidden { display: none; }
+        @media (min-width: 768px) { .md\:block { display: block; } }
+
     </style>
 </head>
 <body>
@@ -1503,16 +1169,16 @@
                             <div class="vb-credit__label">Produced with</div>
                             <div class="vb-logos">
                                 <img class="vb-logo" src="media/logos/gangwonfc.png" alt="강원 FC"
-                                     onerror="this.outerHTML='&lt;span class=&quot;vb-chip&quot;&gt;강원 FC&lt;/span&gt;'">
+                                     onerror="this.outerHTML='<span class=&quot;vb-chip&quot;>강원 FC</span>'">
                                 <img class="vb-logo" src="media/logos/kleague.png" alt="K리그"
-                                     onerror="this.outerHTML='&lt;span class=&quot;vb-chip&quot;&gt;K리그&lt;/span&gt;'">
+                                     onerror="this.outerHTML='<span class=&quot;vb-chip&quot;>K리그</span>'">
                             </div>
                         </div>
                         <div class="vb-credit">
                             <div class="vb-credit__label">Featured by</div>
                             <div class="vb-logos">
                                 <img class="vb-logo" src="media/logos/designboom.png" alt="designboom"
-                                     onerror="this.outerHTML='&lt;span class=&quot;vb-chip&quot;&gt;designboom&lt;/span&gt;'">
+                                     onerror="this.outerHTML='<span class=&quot;vb-chip&quot;>designboom</span>'">
                             </div>
                         </div>
                     </div>
@@ -1535,7 +1201,6 @@
 
         <!-- ====================================================
              BACKGROUND — 축구 중계, 그 다음은?
-             매체 진화(신문·라디오·TV) + XR 강조 카드
              ==================================================== -->
         <section class="vb-section bg-section">
             <div class="vb-wrap">
@@ -1578,7 +1243,6 @@
 
         <!-- ====================================================
              TASK & GOAL — 그렇다면, 무엇을 제공해야 하는가?
-             (Background 타임라인 바로 다음, 가운데 정렬)
              ==================================================== -->
         <section class="vb-section tg-section">
             <div class="vb-wrap">
@@ -1592,7 +1256,6 @@
 
         <!-- ====================================================
              PROCESS TIMELINE — 리서치 → 비주얼라이제이션 프로세스
-             (백그라운드 다음, 4단계 가로 흐름 / 헤더 가운데 정렬)
              ==================================================== -->
         <section class="vb-section">
             <div class="vb-wrap">
@@ -1702,91 +1365,171 @@
         </section>
 
         <!-- ====================================================
-             3. QUANTITATIVE RESEARCH
+             3. QUANTITATIVE RESEARCH (업데이트됨)
              ==================================================== -->
-        <section class="vb-section">
-            <div class="vb-wrap qr2">
-                <!-- 섹션 헤더 (결론 먼저) -->
-                <div class="qr2-head">
-                    <span class="vb-eyebrow reveal">01 — Research</span>
-                    <h2 class="vb-title reveal">Quantitative Research</h2>
-                    <div class="qr2-subhead reveal">Desk Research</div>
-                    <p class="dk-lead reveal">정기 시청자는 이미 두 가지를 원하고 있었어요</p>
-                </div>
+        <section class="vb-section" style="padding-top: 6rem; padding-bottom: 6rem; text-align: center;">
+            <div class="vb-wrap">
+                <p class="vb-eyebrow reveal" style="color: var(--vb-muted); font-weight: 600; font-size: 0.75rem; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 1rem;">01 — RESEARCH</p>
+                <h2 class="vb-title reveal" style="font-size: 2.5rem; font-weight: 800; margin-bottom: 4rem; color: var(--vb-text);">Quantitative Research</h2>
+                
+                <h3 class="reveal" style="font-size: 1.25rem; font-weight: 800; color: var(--vb-text); margin-bottom: 1rem;">Desk Research</h3>
+                <p class="vb-body reveal" style="margin: 0 auto 0.5rem; max-width: 32rem; color: var(--vb-body); font-size: 1rem; line-height: 1.6;">
+                    기존 자료를 통해, 현재 팬들의 시청 트렌드를 관통하는<br class="hidden md:block"> <strong style="color: var(--vb-text);">2가지 핵심 니즈</strong>를 도출했습니다.
+                </p>
+                <p class="reveal" style="font-size: 0.75rem; color: #9CA3AF; margin-bottom: 2rem;">*한국프로스포츠협회, 2022 · Chiliz, 2024</p>
 
-                <div class="dk-findings">
-                    <!-- FINDING 01 -->
-                    <div class="dk-find reveal">
-                        <span class="dk-find__label">Finding 01</span>
-                        <h4 class="dk-find__title">라이브 시청은 이미 당연해졌어요</h4>
-                        <div class="dk-find__stats">
-                            <div class="dk-stat">
-                                <div class="dk-stat__num">95%</div>
-                                <p class="dk-stat__cap">K리그 팬 라이브 중계 시청 경험</p>
+                <!-- 한 줄(1-Row)로 배치된 데스크 리서치 카드 -->
+                <div class="vb-grid vb-grid--2 reveal text-left" style="margin-bottom: 4rem; max-width: 900px; margin-inline: auto;">
+                    
+                    <!-- Keyword 01: Live Experience -->
+                    <div style="display: flex; flex-direction: column; background-color: #ffffff; border: 1px solid var(--vb-line); border-radius: 1.5rem; overflow: hidden; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);">
+                        <div style="padding: 2.5rem; background-color: #F4F4F5; flex: 1;">
+                            <span style="font-size: 0.75rem; font-weight: 700; color: #9CA3AF; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 0.75rem; display: block;">Keyword 01</span>
+                            <h4 style="font-size: 1.875rem; font-weight: 900; color: var(--vb-text); margin-bottom: 1rem; line-height: 1.25;">Live<br>Experience</h4>
+                            <p style="font-size: 0.875rem; color: var(--vb-body); line-height: 1.6; margin: 0;">시간 부족이나 시차라는 물리적 제약에도 불구하고, 팬들은 결과를 나중에 확인하기보다 <strong style="color: var(--vb-text);">라이브 중계 시청을 고집</strong>합니다.</p>
+                        </div>
+                        <div style="padding: 2rem; display: flex; align-items: center; justify-content: space-between; background-color: #ffffff; border-top: 1px solid #F3F4F6;">
+                            <div style="text-align: center; width: 50%; border-right: 1px solid #F3F4F6; padding-right: 1rem;">
+                                <div style="font-size: 2.25rem; font-weight: 900; color: var(--vb-text); margin-bottom: 0.5rem;">95%</div>
+                                <div style="font-size: 0.75rem; font-weight: 700; color: #6B7280; word-break: keep-all;">중계방송 시청 경험</div>
                             </div>
-                            <div class="dk-stat">
-                                <div class="dk-stat__num">57%</div>
-                                <p class="dk-stat__cap">해외 리그 팬, 시차 감수하고 라이브 경기 시청하는 비율</p>
+                            <div style="text-align: center; width: 50%; padding-left: 1rem;">
+                                <div style="font-size: 2.25rem; font-weight: 900; color: var(--vb-text); margin-bottom: 0.5rem;">57%</div>
+                                <div style="font-size: 0.75rem; font-weight: 700; color: #6B7280; word-break: keep-all;">라이브 시청 고집</div>
                             </div>
                         </div>
-                        <p class="dk-find__source">*한국프로스포츠협회 2022 · Chiliz 2024</p>
                     </div>
 
-                    <!-- FINDING 02 -->
-                    <div class="dk-find reveal">
-                        <span class="dk-find__label">Finding 02</span>
-                        <h4 class="dk-find__title">보는 것 다음은, 이해하는 것</h4>
-                        <div class="dk-find__stats">
-                            <div class="dk-stat">
-                                <div class="dk-stat__num">분석하다<br> 2위</div>
-                                <p class="dk-stat__cap"> 리그 경기 관련 키워드 검색량 순위, 44k </p>
+                    <!-- Keyword 02: Understanding & Analysis -->
+                    <div style="display: flex; flex-direction: column; background-color: #ffffff; border: 1px solid var(--vb-line); border-radius: 1.5rem; overflow: hidden; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);">
+                        <div style="padding: 2.5rem; background-color: #F4F4F5; flex: 1;">
+                            <span style="font-size: 0.75rem; font-weight: 700; color: #9CA3AF; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 0.75rem; display: block;">Keyword 02</span>
+                            <h4 style="font-size: 1.875rem; font-weight: 900; color: var(--vb-text); margin-bottom: 1rem; line-height: 1.25;">Understanding<br>&amp; Analysis</h4>
+                            <p style="font-size: 0.875rem; color: var(--vb-body); line-height: 1.6; margin: 0;">단순히 경기를 감상하는 것을 넘어, 전문가처럼 <strong style="color: var(--vb-text);">경기를 분석하고 이해하려는 갈증</strong>이 뚜렷하게 나타납니다.</p>
+                        </div>
+                        <div style="padding: 2rem; display: flex; flex-direction: column; justify-content: center; gap: 1.25rem; background-color: #ffffff; border-top: 1px solid #F3F4F6;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 1rem; border-bottom: 1px solid #F9FAFB;">
+                                <span style="font-size: 0.75rem; font-weight: 700; color: #6B7280;">관련 검색어 2위</span>
+                                <span style="font-size: 1.5rem; font-weight: 900; color: var(--vb-text);">'분석하다'</span>
                             </div>
-                            <div class="dk-stat">
-                                <div class="dk-stat__num">경기 분석<br> 1위</div>
-                                <p class="dk-stat__cap">원하는 온라인 콘텐츠 종류 (남 27% · 여 28%)</p>
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span style="font-size: 0.75rem; font-weight: 700; color: #6B7280;">가장 필요한 콘텐츠</span>
+                                <div style="text-align: right;">
+                                    <span style="font-size: 1.125rem; font-weight: 900; color: var(--vb-text); display: block;">경기 분석 영상</span>
+                                    <span style="font-size: 0.625rem; font-weight: 700; color: #9CA3AF; display: block; margin-top: 0.25rem; text-transform: uppercase; letter-spacing: 0.1em;">남성 1위 / 여성 2위</span>
+                                </div>
                             </div>
                         </div>
-                        <p class="dk-find__source">*한국프로스포츠협회 2022</p>
                     </div>
+
                 </div>
 
-                <p class="dk-bridge reveal">이 니즈가 실제 시청자에게도 유효한지, 정기 시청자 대상 설문으로 확인했어요 ↓</p>
+                <div class="vertical-line reveal"></div>
+
+                <div class="reveal" style="margin-bottom: 5rem;">
+                    <h4 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 1rem; color: var(--vb-text);">"자료에서 드러난 이 니즈, 실제 시청자도 똑같이 느끼고 있을까?"</h4>
+                    <p style="color: var(--vb-body); font-size: 0.875rem;">그래서 정기 시청자를 대상으로 직접 설문을 진행했어요.</p>
+                </div>
+                
+                <div class="vertical-line reveal"></div>
 
                 <!-- FIELD RESEARCH -->
-                <div class="qr2-fhead reveal">
-                    <div class="qr2-subhead">Field Research</div>
-                    <p class="qr2-source">*자체 설문조사 · 온·오프라인 축구 커뮤니티 회원 102명 · 2024.03.31 – 04.09</p>
+                <h3 class="reveal" style="font-size: 1.25rem; font-weight: 800; color: var(--vb-text); margin-bottom: 1.5rem;">Field Research</h3>
+                <div class="reveal" style="margin-bottom: 3rem;">
+                    <p class="vb-body" style="margin: 0 auto; max-width: 36rem; font-size: 0.875rem; line-height: 1.6;">
+                        축구 경기를 주기적으로 보는 사람을 대상으로 설문 조사를 진행해, 경기 관람 방식과 시청 태도, 경기 이해 수준, 부가 서비스 이용 현황 등을 물었습니다.
+                    </p>
+                    <p style="font-size: 0.75rem; color: #9CA3AF; margin-top: 1rem;">*자체 설문조사 · 축구 커뮤니티 회원 102명</p>
+                </div>
+                <div class="reveal" style="margin-bottom: 4rem;">
+                    <h4 style="font-size: 1.875rem; font-weight: 700; color: var(--vb-text);">
+                        아는 만큼 보이니까, 더 알고싶어져요
+                    </h4>
                 </div>
 
-                <!-- BEAT 01 · 니즈 -->
-                <div class="fd-beat reveal">
-                    <span class="fd-beat__label">Beat 01 · 니즈</span>
-                    <h3 class="fd-beat__title">아는 만큼 보이니까, 더 알고 싶어져요</h3>
-                    <div class="fd-beat__cards">
-                        <div class="fd-card">
-                            <div class="fd-card__num">63%</div>
-                            <p class="fd-card__cap">경기를 이해하면서 보고싶어해요</p>
-                        </div>
-                        <div class="fd-card">
-                            <p class="fd-card__txt">이유 1위는 <strong>‘경기 재미’ 69%</strong> — 의무가 아니라 즐거움으로 이해해요</p>
+                <!-- 필드 리서치 4개 카드 그리드 -->
+                <div class="vb-grid vb-grid--2 text-left reveal" style="margin-bottom: 8rem; gap: 1.5rem; max-width: 900px; margin-inline: auto;">
+                    
+                    <div class="info-card flex flex-col items-center text-center">
+                        <h4 style="font-size: 1.125rem; font-weight: 700; margin-bottom: 2rem; color: var(--vb-text);">대부분 능동적으로,<br>경기를 이해하면서 보려고 해요.</h4>
+                        <div class="circle-chart chart-63" style="margin-bottom: 2rem;"><span>63%</span></div>
+                        <p style="font-size: 0.75rem; color: #6B7280; margin: 0;">분석적인 관점에서 경기를 본다고 답했어요.</p>
+                    </div>
+
+                    <div class="info-card flex flex-col justify-center">
+                        <h4 style="font-size: 1.125rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--vb-text);">이렇게 분석적으로 볼수록,<br>경기의 재미가 커져요.</h4>
+                        <p style="font-size: 0.75rem; color: #6B7280; margin-bottom: 2rem;">분석적으로 시청하는 이유 (복수 응답)</p>
+                        <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+                            <div>
+                                <div style="display: flex; justify-content: space-between; font-size: 0.875rem; margin-bottom: 0.5rem;">
+                                    <span style="color: var(--vb-text);">경기 재미</span>
+                                    <span class="chart-text-blue font-bold">69%</span>
+                                </div>
+                                <div style="width: 100%; background-color: #D1D5DB; height: 0.5rem; border-radius: 9999px;"><div class="chart-blue" style="height: 0.5rem; border-radius: 9999px; width: 69%"></div></div>
+                            </div>
+                            <div>
+                                <div style="display: flex; justify-content: space-between; font-size: 0.875rem; margin-bottom: 0.5rem;">
+                                    <span style="color: #6B7280;">팬심</span>
+                                    <span style="color: #6B7280;">41%</span>
+                                </div>
+                                <div style="width: 100%; background-color: #D1D5DB; height: 0.5rem; border-radius: 9999px;"><div style="background-color: #9CA3AF; height: 0.5rem; border-radius: 9999px; width: 41%"></div></div>
+                            </div>
+                            <div>
+                                <div style="display: flex; justify-content: space-between; font-size: 0.875rem; margin-bottom: 0.5rem;">
+                                    <span style="color: #6B7280;">지식 습득</span>
+                                    <span style="color: #6B7280;">28%</span>
+                                </div>
+                                <div style="width: 100%; background-color: #D1D5DB; height: 0.5rem; border-radius: 9999px;"><div style="background-color: #9CA3AF; height: 0.5rem; border-radius: 9999px; width: 28%"></div></div>
+                            </div>
                         </div>
                     </div>
+
+                    <div class="info-card flex flex-col items-center text-center">
+                        <h4 style="font-size: 1.125rem; font-weight: 700; margin-bottom: 2rem; color: var(--vb-text);">경기를 보다가도,<br>다른 서비스를 켜요.</h4>
+                        <div class="circle-chart chart-64" style="margin-bottom: 2rem;"><span>64%</span></div>
+                        <p style="font-size: 0.75rem; color: #6B7280; margin: 0;">경기 시청 중 부가 서비스를 이용한다고 답했어요.</p>
+                    </div>
+
+                    <div class="info-card flex flex-col justify-center">
+                        <h4 style="font-size: 1.125rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--vb-text);">"하나로는 부족해요"</h4>
+                        <p style="font-size: 0.75rem; color: #6B7280; margin-bottom: 2rem;">커뮤니티, 분석 사이트 등 2개 이상의 서비스 이용 (복수 응답)</p>
+                        <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+                            <div>
+                                <div style="display: flex; justify-content: space-between; font-size: 0.875rem; margin-bottom: 0.5rem;">
+                                    <span style="color: var(--vb-text);">축구 관련 커뮤니티</span>
+                                    <span class="chart-text-blue font-bold">62%</span>
+                                </div>
+                                <div style="width: 100%; background-color: #D1D5DB; height: 0.5rem; border-radius: 9999px;"><div class="chart-blue" style="height: 0.5rem; border-radius: 9999px; width: 62%"></div></div>
+                            </div>
+                            <div>
+                                <div style="display: flex; justify-content: space-between; font-size: 0.875rem; margin-bottom: 0.5rem;">
+                                    <span style="color: #6B7280;">데이터 분석 사이트</span>
+                                    <span style="color: #6B7280;">49%</span>
+                                </div>
+                                <div style="width: 100%; background-color: #D1D5DB; height: 0.5rem; border-radius: 9999px;"><div style="background-color: #9CA3AF; height: 0.5rem; border-radius: 9999px; width: 49%"></div></div>
+                            </div>
+                            <div>
+                                <div style="display: flex; justify-content: space-between; font-size: 0.875rem; margin-bottom: 0.5rem;">
+                                    <span style="color: #6B7280;">SNS</span>
+                                    <span style="color: #6B7280;">41%</span>
+                                </div>
+                                <div style="width: 100%; background-color: #D1D5DB; height: 0.5rem; border-radius: 9999px;"><div style="background-color: #9CA3AF; height: 0.5rem; border-radius: 9999px; width: 41%"></div></div>
+                            </div>
+                        </div>
+                    </div>
+                    
                 </div>
 
-                <!-- BEAT 02 · 페인포인트 -->
-                <div class="fd-beat reveal">
-                    <span class="fd-beat__label">Beat 02 · 페인포인트</span>
-                    <h3 class="fd-beat__title">그런데 그 이해는 중계 밖에 흩어져 있어요</h3>
-                    <div class="fd-beat__cards">
-                        <div class="fd-card">
-                            <div class="fd-card__num">64%</div>
-                            <p class="fd-card__cap">경기를 보다가도, 다른 서비스를 켜요</p>
-                        </div>
-                        <div class="fd-card">
-                            <p class="fd-card__txt">커뮤니티 62% · 분석 사이트 49% · SNS 41% — <strong>평균 2개 이상</strong>을 오가요</p>
-                        </div>
-                    </div>
+                <div class="vertical-line reveal"></div>
+
+                <div class="reveal" style="margin-bottom: 5rem;">
+                    <p style="font-size: 0.75rem; font-weight: 700; color: #9CA3AF; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 1rem;">Next Step</p>
+                    <h4 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 1rem; color: var(--vb-text);">"왜 그렇게 여러 서비스를 오가며 피로하게 시청할까?"</h4>
+                    <p style="color: var(--vb-body); font-size: 0.875rem;">맥락을 파악하기 위해 정성 리서치를 진행했습니다.</p>
                 </div>
+                
+                <div class="vertical-line reveal"></div>
+
             </div>
         </section>
 
@@ -1831,66 +1574,62 @@
                     </div>
                 </div>
 
-                <!-- A. 가설의 진화 (가설01 → 기각 → 가설02 → 기각 → 새 질문 → 관찰 결과) -->
+                <!-- A. 가설의 진화 (업데이트됨) -->
                 <div class="vb-group">
-                    <div class="vb-group__head reveal">
+                    <div class="vb-group__head reveal justify-center text-center">
                         <span class="vb-group__num">A</span>
-                        <span class="vb-group__name">가설 검증</span>
+                        <span class="vb-group__name">가설 수정 및 인사이트 도출</span>
                     </div>
-                    <div class="ql-flow">
-                        <div class="ql-step reveal">
-                            <span class="ql-step__tag">가설 01</span>
-                            <p class="ql-step__q">경기의 재미를 높이는 여러 요소 중, 경기 관련 추가 정보와 분석 데이터에 대한 니즈가 가장 클 것이다.</p>
-                            <div class="ql-result">
-                                <span class="ql-result__tag">검증 결과</span>
-                                <h4 class="ql-result__title">데이터는 오히려 몰입을 방해함</h4>
-                                <p class="ql-result__desc">보조 정보, 분석 데이터는 생각만큼 중요하지 않았고, 오히려 경기 몰입을 방해하는 요소로 작용하기도 했어요.</p>
-                            </div>
+                    <div class="vb-grid vb-grid--2 reveal" style="gap: 2rem; margin-bottom: 2rem; max-width: 900px; margin-inline: auto;">
+                        <!-- 가설 1 -->
+                        <div class="info-card" style="text-align: left;">
+                            <span style="font-size: 0.75rem; font-weight: 700; color: #9CA3AF; margin-bottom: 0.5rem; display: block;">초기 가설 01</span>
+                            <h4 style="font-size: 1rem; font-weight: 700; margin-bottom: 1rem; color: var(--vb-text);">분석 데이터에 대한 니즈가 클 것이다.</h4>
+                            <div style="border-top: 1px solid #D1D5DB; margin: 1rem 0;"></div>
+                            <span style="font-size: 0.75rem; font-weight: 700; color: #4B5563; margin-bottom: 0.5rem; display: block;">검증 결과</span>
+                            <p style="font-size: 0.875rem; color: var(--vb-body); margin: 0;">오히려 경기 몰입을 방해하는 요소로 작용.</p>
                         </div>
-
-                        <div class="ql-connector reveal"></div>
-
-                        <div class="ql-step reveal">
-                            <span class="ql-step__tag">가설 02</span>
-                            <p class="ql-step__q">경기의 재미를 높이는 여러 요소 중 특히, 온전히 몰입해 경기를 보는 경험에 대한 니즈가 가장 클 것이다.</p>
-                            <div class="ql-result">
-                                <span class="ql-result__tag">검증 결과</span>
-                                <h4 class="ql-result__title">온전히 몰입하는 시간은 매우 짧음</h4>
-                                <p class="ql-result__desc">사용자가 경기에 온전히 몰입할 수 있는 시간은 예상보다 훨씬 짧았어요. 대부분은 경기를 보며 지속적으로 다른 행동을 했어요.</p>
-                            </div>
+                        <!-- 가설 2 -->
+                        <div class="info-card" style="text-align: left;">
+                            <span style="font-size: 0.75rem; font-weight: 700; color: #9CA3AF; margin-bottom: 0.5rem; display: block;">수정 가설 02</span>
+                            <h4 style="font-size: 1rem; font-weight: 700; margin-bottom: 1rem; color: var(--vb-text);">온전히 몰입해 보는 니즈가 클 것이다.</h4>
+                            <div style="border-top: 1px solid #D1D5DB; margin: 1rem 0;"></div>
+                            <span style="font-size: 0.75rem; font-weight: 700; color: #4B5563; margin-bottom: 0.5rem; display: block;">검증 결과</span>
+                            <p style="font-size: 0.875rem; color: var(--vb-body); margin: 0;">몰입 시간은 짧고, 지속적으로 다른 행동(소통)을 병행함.</p>
                         </div>
-
-                        <div class="ql-connector ql-connector--accent reveal"></div>
-
-                        <div class="ql-final reveal">
-                            <span class="ql-final__tag">새로운 질문</span>
-                            <p class="ql-final__q">그렇다면 실제로 가장 큰 니즈는 무엇일까?</p>
-                            <p class="ql-final__answer">경기 중 가장 빈번하게 관찰된 공통적인 행동은, 경기를 함께 시청하는 사람들과의 <strong>소통</strong>과 <strong>감정의 표현·공유</strong>였어요.</p>
-                        </div>
+                    </div>
+                    <!-- 최종 결론 -->
+                    <div class="info-card reveal" style="background-color: #ffffff; border: 2px solid #E5E7EB; text-align: center; margin-top: 2rem; margin-bottom: 4rem; max-width: 900px; margin-inline: auto;">
+                        <h4 style="font-size: 1.125rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--vb-text);">실제 관찰된 가장 큰 니즈</h4>
+                        <p style="font-size: 1rem; font-weight: 700; color: var(--vb-text); margin: 0;">
+                            경기를 함께 시청하는 사람들과의 <span style="background-color: #E5E7EB; padding: 0.25rem 0.5rem; border-radius: 0.25rem;">소통과 감정 공유</span>
+                        </p>
                     </div>
                 </div>
 
-                <!-- B. XR 디바이스 환경에서 생기는 추가 문제 -->
+                <!-- B. XR 디바이스 환경에서 생기는 추가 문제 (업데이트됨) -->
                 <div class="vb-group">
-                    <div class="vb-group__head reveal">
+                    <div class="vb-group__head reveal justify-center text-center">
                         <span class="vb-group__num">B</span>
-                        <span class="vb-group__name">XR 디바이스 환경</span>
+                        <span class="vb-group__name">추가 문제 정의 (XR Context)</span>
                     </div>
-                    <p class="vb-body ql-group-intro reveal">XR 디바이스를 착용하면서 발생할 수 있는 추가적인 문제를 발견하고 정의했어요.</p>
-                    <div class="ql-xr-grid">
-                        <div class="ql-xr-card reveal">
-                            <h4 class="ql-xr-card__title">문제 정의</h4>
-                            <p class="ql-xr-card__desc">현재 XR 디바이스는 대부분 고글 형태로, 착용 시 외부 채널이 차단되는 한계가 있어요. 이 때문에 <strong>정보 확인이나 소통을 위해서는 반드시 디바이스를 벗어야</strong> 해요.</p>
+                    <div class="vb-grid vb-grid--2 reveal" style="gap: 1.5rem; margin-bottom: 4rem; max-width: 900px; margin-inline: auto;">
+                        <div class="info-card" style="text-align: left;">
+                            <span style="font-size: 0.75rem; font-weight: 700; color: #9CA3AF; margin-bottom: 0.5rem; display: block;">Problem</span>
+                            <h4 style="font-size: 1rem; font-weight: 700; margin-bottom: 0.75rem; color: var(--vb-text);">XR 디바이스의 외부 채널 차단</h4>
+                            <p style="font-size: 0.875rem; color: var(--vb-body); margin: 0;">고글 형태의 한계로 인해, 정보 확인이나 소통을 위해서는 반드시 기기를 벗어야 함.</p>
                         </div>
-                        <div class="ql-xr-card ql-xr-card--solution reveal">
-                            <h4 class="ql-xr-card__title">지향하는 경험</h4>
-                            <p class="ql-xr-card__desc"><strong>디바이스를 벗지 않고도</strong> 정보 확인, 소통 등 경기 중 자주 하는 다른 활동까지 <strong>XR 환경 안에서 자연스럽게</strong> 이어질 수 있어야 해요.</p>
+                        <div class="info-card" style="text-align: left; background-color: #1F2937; border: none;">
+                            <span style="font-size: 0.75rem; font-weight: 700; color: #9CA3AF; margin-bottom: 0.5rem; display: block;">Desired Experience</span>
+                            <h4 style="font-size: 1rem; font-weight: 700; margin-bottom: 0.75rem; color: #F9FAFB;">단절 없는 경험</h4>
+                            <p style="font-size: 0.875rem; color: #D1D5DB; margin: 0;">디바이스를 벗지 않고도 소통 등 다른 활동이 XR 환경 내에서 자연스럽게 이어져야 함.</p>
                         </div>
                     </div>
                 </div>
 
                 <!-- C. UX Direction — 어피니티 다이어그램 배경 위에 6키워드 오버레이 -->
-                <div class="vb-group">
+                <!-- 추후 별도 섹션으로 분리 예정 → 위 간격을 더 크게 -->
+                <div class="vb-group sec-dark" style="margin-top: clamp(260px, 28vw, 440px);">
                     <div class="vb-group__head reveal">
                         <span class="vb-group__num">C</span>
                         <span class="vb-group__name">UX Direction</span>
@@ -1914,26 +1653,56 @@
                 </div>
 
                 <!-- Service Flow: Pre / In / Post-Match -->
-                <div class="vb-group">
+                <!-- 히어로 끝난 직후 배경이 완전히 어두워질 여유를 주기 위해 위 간격을 더 크게 -->
+                <div class="vb-group sec-dark" style="margin-top: clamp(200px, 22vw, 320px);">
                     <div class="vb-group__head reveal">
                         <span class="vb-group__num">D</span>
                         <span class="vb-group__name">Service Flow</span>
                     </div>
-                    <div class="vb-flow">
-                        <div class="vb-flow__step reveal">
-                            <span class="vb-flow__phase">Pre-Match</span>
-                            <div class="ph ph--3x2"><span class="ph__label">경기 전 플로우 다이어그램</span></div>
-                            <p class="vb-caption">[설명 자리] 입장·세팅·개인 공간 진입 단계</p>
-                        </div>
-                        <div class="vb-flow__step reveal">
-                            <span class="vb-flow__phase">In-Match</span>
-                            <div class="ph ph--3x2"><span class="ph__label">경기 중 플로우 다이어그램</span></div>
-                            <p class="vb-caption">[설명 자리] 관람·인터랙션·소셜 단계</p>
-                        </div>
-                        <div class="vb-flow__step reveal">
-                            <span class="vb-flow__phase">Post-Match</span>
-                            <div class="ph ph--3x2"><span class="ph__label">경기 후 플로우 다이어그램</span></div>
-                            <p class="vb-caption">[설명 자리] 하이라이트·기록·공유 단계</p>
+                    <span class="sf-ai-pill reveal">
+                        <span class="sf-ai-pill__icon" aria-hidden="true">✦</span>
+                        AI Assistant VIVA — 전 과정을 매끄럽게 연결합니다
+                    </span>
+
+                    <div class="sf-scroll reveal">
+                        <div class="sf-track">
+                            <div class="sf-xr-box"><span class="sf-xr-box__label">In XR Device</span></div>
+
+                            <div class="sf-circle-row">
+                                <span class="sf-circle">Pre-Match</span>
+                                <span class="sf-circle sf-circle--accent">Pre-Match</span>
+                                <span class="sf-circle sf-circle--accent">In-Game</span>
+                                <span class="sf-circle sf-circle--accent">Post-Match</span>
+                                <span class="sf-circle">Post-Match</span>
+                            </div>
+
+                            <div class="sf-labels-row">
+                                <div class="sf-label">
+                                    <div class="sf-label__meta">Mobile App</div>
+                                    <div class="sf-label__title">Information</div>
+                                    <div class="sf-label__desc">경기 알림<br>사전 정보 제공</div>
+                                </div>
+                                <div class="sf-label">
+                                    <div class="sf-label__meta">Personal Space</div>
+                                    <div class="sf-label__title sf-label__title--accent">Skybox</div>
+                                    <div class="sf-label__desc">타 사용자와 네트워킹<br>실시간 경기 브라우징<br>Skybox 커스터마이징</div>
+                                </div>
+                                <div class="sf-label">
+                                    <div class="sf-label__meta">Live Match</div>
+                                    <div class="sf-label__title sf-label__title--accent">Stadium</div>
+                                    <div class="sf-label__desc">실시간 경기 시청<br>실시간 보조 정보 확인<br>타 사용자·AI와 인터랙션<br>멀티 채널 미디어 시청</div>
+                                </div>
+                                <div class="sf-label">
+                                    <div class="sf-label__meta">Personal Space</div>
+                                    <div class="sf-label__title sf-label__title--accent">Skybox</div>
+                                    <div class="sf-label__desc">하이라이트 시청<br>'찐'한 순간 다시 보기<br>나의 업적 확인</div>
+                                </div>
+                                <div class="sf-label">
+                                    <div class="sf-label__meta">Mobile App</div>
+                                    <div class="sf-label__title">Review</div>
+                                    <div class="sf-label__desc">요청한 세부 정보 확인</div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1943,41 +1712,94 @@
         <!-- ====================================================
              5. SKYBOX
              ==================================================== -->
-        <section class="vb-section">
+        <section class="vb-section sec-dark sec-centered">
             <div class="vb-wrap">
-                <span class="vb-eyebrow reveal">03 — Solution</span>
-                <h2 class="vb-title reveal">Skybox<br><span style="color:var(--vb-muted);font-weight:500;">나만의 개인 관람 공간</span></h2>
-
-                <p class="vb-body reveal" style="margin-bottom:clamp(32px,4vw,56px);">[Skybox 소개 자리] 사용자가 경기를 관람하는 개인 가상 공간 'Skybox'의 컨셉과 역할을 설명합니다.</p>
-
-                <div class="reveal">
-                    <div class="ph ph--21x9"><span class="ph__label">Skybox 메인 렌더 영상</span></div>
+                <div class="vb-fullbleed reveal" style="margin-bottom:clamp(32px,4vw,56px);">
+                    <img src="media/skybox/skybox.jpg" alt="Skybox">
                 </div>
 
-                <!-- Key Features 4개 -->
+                <span class="vb-eyebrow reveal">03 — Solution</span>
+                <h2 class="vb-title reveal">Skybox<br><span style="color:var(--vb-muted);font-weight:500;">나만의 로비 공간</span></h2>
+
+                <p class="vb-body reveal" style="margin-bottom:clamp(32px,4vw,56px);">서비스에 접속했을 때 나오는 개인 공간입니다. 경기장의 스카이 박스를 모티브로 만들어진 공간으로, 유저는 이곳에서 1. 시청할 경기, 하이라이트 등을 찾아보거나 2. 친구와 소통할 수 있고, 3. 업적을 통해 획득한 토큰으로 자신의 팬심을 시각화하고 공간을 커스터마이징 할 수 있습니다.</p>
+
+                <div class="reveal">
+                    <img src="media/skybox/hero.jpg" alt="Skybox" loading="lazy" style="width:100%;height:auto;display:block;border-radius:16px;border:1px solid var(--vb-line);">
+                </div>
+
+                <!-- Key Features 3개 (GIF 독립 박스 + 텍스트 박스 밖) -->
                 <div class="vb-group">
                     <div class="vb-group__head reveal">
                         <span class="vb-group__num">A</span>
                         <span class="vb-group__name">Key Features</span>
                     </div>
-                    <div class="vb-grid vb-grid--4">
-                        <div class="vb-card reveal"><span class="vb-card__tag">FEATURE 01</span><h3>[기능 1]</h3><p>[설명 자리]</p></div>
-                        <div class="vb-card reveal"><span class="vb-card__tag">FEATURE 02</span><h3>[기능 2]</h3><p>[설명 자리]</p></div>
-                        <div class="vb-card reveal"><span class="vb-card__tag">FEATURE 03</span><h3>[기능 3]</h3><p>[설명 자리]</p></div>
-                        <div class="vb-card reveal"><span class="vb-card__tag">FEATURE 04</span><h3>[기능 4]</h3><p>[설명 자리]</p></div>
+                    <div class="sky-features" id="sky-features">
+                        <div class="sky-feature reveal">
+                            <div class="sky-feature__media">
+                                <video class="sky-feature__video" muted playsinline preload="metadata">
+                                    <source src="media/skybox/feature-01.mp4" type="video/mp4">
+                                </video>
+                            </div>
+                            <p class="sky-feature__caption"><span class="sky-feature__num">1.</span>시청할 경기 브라우징</p>
+                        </div>
+                        <div class="sky-feature reveal">
+                            <div class="sky-feature__media">
+                                <video class="sky-feature__video" muted playsinline preload="metadata">
+                                    <source src="media/skybox/feature-02.mp4" type="video/mp4">
+                                </video>
+                            </div>
+                            <p class="sky-feature__caption"><span class="sky-feature__num">2.</span>친구와 소통</p>
+                        </div>
+                        <div class="sky-feature reveal">
+                            <div class="sky-feature__media">
+                                <video class="sky-feature__video" muted playsinline preload="metadata">
+                                    <source src="media/skybox/feature-03.mp4" type="video/mp4">
+                                </video>
+                            </div>
+                            <p class="sky-feature__caption"><span class="sky-feature__num">3.</span>업적 토큰 - 공간 커스터마이징</p>
+                        </div>
                     </div>
                 </div>
 
-                <!-- 3D 에셋 + 인터랙션 가이드 -->
+                <!-- 3D Asset: 좌 공간 렌더 + 우 에셋 6종 -->
                 <div class="vb-group">
-                    <div class="vb-grid vb-grid--2">
-                        <div class="reveal">
-                            <div class="ph ph--4x3"><span class="ph__label">3D 에셋 렌더</span></div>
-                            <p class="vb-caption">[캡션 자리] Skybox를 구성하는 3D 에셋</p>
+                    <div class="vb-group__head reveal">
+                        <span class="vb-group__num">B</span>
+                        <span class="vb-group__name">3D Asset</span>
+                    </div>
+                    <p class="vb-body reveal" style="margin-bottom:var(--space-md);">SKYBOX 공간과, 업적 기반 3D 토큰 에셋 6종 등을 제작하였습니다. 모든 토큰은 클릭외에도 옮기고 던지는 등 인터랙션이 가능합니다.</p>
+
+                    <div class="sky-asset">
+                        <div class="sky-asset__hero-col reveal">
+                            <div class="sky-asset__hero-media"><img src="media/skybox/asset-scene.png" alt="스카이박스"></div>
+                            <p class="sky-asset__hero-cap">스카이박스</p>
                         </div>
-                        <div class="reveal">
-                            <div class="ph ph--4x3"><span class="ph__label">인터랙션 가이드</span></div>
-                            <p class="vb-caption">[캡션 자리] 공간 내 조작 방식 가이드</p>
+
+                        <div class="sky-asset__grid">
+                            <div class="reveal">
+                                <div class="sky-asset__item-media"><img src="media/skybox/asset-uniform-box.png" alt="기념 유니폼"></div>
+                                <p class="sky-asset__item-cap">기념 유니폼</p>
+                            </div>
+                            <div class="reveal">
+                                <div class="sky-asset__item-media"><img src="media/skybox/asset-pennant.png" alt="강원FC 페넌트"></div>
+                                <p class="sky-asset__item-cap">강원FC 페넌트</p>
+                            </div>
+                            <div class="reveal">
+                                <div class="sky-asset__item-media"><img src="media/skybox/asset-emblem.png" alt="강원FC 엠블럼"></div>
+                                <p class="sky-asset__item-cap">강원FC 엠블럼</p>
+                            </div>
+                            <div class="reveal">
+                                <div class="sky-asset__item-media"><img src="media/skybox/asset-uniforms-grid.png" alt="시즌별, 구단별 유니폼"></div>
+                                <p class="sky-asset__item-cap">시즌별, 구단별 유니폼</p>
+                            </div>
+                            <div class="reveal">
+                                <div class="sky-asset__item-media"><img src="media/skybox/asset-trophy.png" alt="K리그 트로피"></div>
+                                <p class="sky-asset__item-cap">K리그 트로피</p>
+                            </div>
+                            <div class="reveal">
+                                <div class="sky-asset__item-media"><img src="media/skybox/asset-hearts.png" alt="강원FC 응원하트"></div>
+                                <p class="sky-asset__item-cap">강원FC 응원하트</p>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1987,42 +1809,75 @@
         <!-- ====================================================
              6. IN STADIUM
              ==================================================== -->
-        <section class="vb-section">
+        <section class="vb-section sec-dark sec-centered">
             <div class="vb-wrap">
                 <span class="vb-eyebrow reveal">04 — Solution</span>
-                <h2 class="vb-title reveal">In Stadium<br><span style="color:var(--vb-muted);font-weight:500;">경기장 한가운데로</span></h2>
+                <h2 class="vb-title reveal">In Stadium<br><span style="color:var(--vb-muted);font-weight:500;">원하는 위치에서, 원하는 방식으로</span></h2>
+                <p class="vb-body reveal" style="margin-bottom:clamp(32px,4vw,56px);">중계 환경을 사용자 본인의 취향에 맞게 조정하고, 경기를 더 재미있게 즐길 수 있도록 돕습니다.</p>
 
                 <!-- 360 VR 경기장 -->
-                <div class="reveal">
-                    <div class="ph ph--21x9"><span class="ph__label">360° VR 경기장 영상</span></div>
-                    <p class="vb-caption">[캡션 자리] 360도로 둘러보는 실제 경기장 뷰</p>
+                <div class="vb-fullbleed reveal">
+                    <img src="media/stadium/stadium-360.jpg" alt="360도 VR 경기장 뷰">
                 </div>
+                <p class="vb-caption"><strong style="color:var(--vb-text);font-weight:700;">360° 완전한 VR 경기장</strong> — 실제 경기장 관객 사이에 있는 것처럼, 현장의 분위기 느끼며 경기 시청</p>
 
-                <!-- Broadcast Screen + Quick Menu -->
-                <div class="vb-group">
-                    <div class="vb-grid vb-grid--2">
-                        <div class="reveal">
-                            <div class="ph ph--16x9"><span class="ph__label">Broadcast Screen Interaction</span></div>
-                            <p class="vb-caption">[캡션 자리] 중계 화면 인터랙션</p>
+                <!-- Key Features 캐러셀 (Apple Vision Pro 엔터테인먼트 캐러셀 레이아웃)
+                     세로 스택: eyebrow → 캐러셀(전체 폭) → 화살표(가운데)
+                     카드 순서: 경기장 다른 뷰(이미지) → 퀵메뉴바(이미지) → 핵심 기능 영상 3개
+                     위 360 캡션과 너무 붙지 않게 여백 추가 -->
+                <div class="vb-group" style="margin-top: clamp(64px, 8vw, 100px);">
+                    <div class="vb-carousel-block reveal">
+                        <div class="vb-group__head vb-carousel-block__eyebrow" style="margin-top:0;">
+                            <span class="vb-group__num">A</span>
+                            <span class="vb-group__name">Key Features</span>
                         </div>
-                        <div class="reveal">
-                            <div class="ph ph--16x9"><span class="ph__label">Quick Menu</span></div>
-                            <p class="vb-caption">[캡션 자리] 빠른 메뉴 호출</p>
+                        <div class="vb-carousel">
+                            <div class="vb-carousel__track" id="stadium-carousel">
+                                <div class="vb-carousel__item">
+                                    <div class="vb-carousel__media">
+                                        <img src="media/stadium/stadium-view-2.jpg" alt="스타디움뷰" loading="lazy">
+                                    </div>
+                                    <p class="vb-carousel__caption"><strong>1. 스타디움뷰</strong> 원하는 위치에서 시청하기</p>
+                                </div>
+                                <div class="vb-carousel__item">
+                                    <div class="vb-carousel__media">
+                                        <video muted playsinline loop preload="metadata">
+                                            <source src="media/stadium/info.mp4" type="video/mp4">
+                                        </video>
+                                        <button type="button" class="vb-carousel__play" aria-label="재생"><svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><polygon points="5,3 5,13 13,8"></polygon></svg></button>
+                                    </div>
+                                    <p class="vb-carousel__caption"><strong>2. 인포</strong> 실시간 경기 전술 / 선수 정보 확인</p>
+                                </div>
+                                <div class="vb-carousel__item">
+                                    <div class="vb-carousel__media">
+                                        <video muted playsinline loop preload="metadata">
+                                            <source src="media/stadium/friend.mp4" type="video/mp4">
+                                        </video>
+                                        <button type="button" class="vb-carousel__play" aria-label="재생"><svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><polygon points="5,3 5,13 13,8"></polygon></svg></button>
+                                    </div>
+                                    <p class="vb-carousel__caption"><strong>3. 프렌드</strong> 친구와 함께 보기</p>
+                                </div>
+                                <div class="vb-carousel__item">
+                                    <div class="vb-carousel__media">
+                                        <video muted playsinline loop preload="metadata">
+                                            <source src="media/stadium/chat.mp4" type="video/mp4">
+                                        </video>
+                                        <button type="button" class="vb-carousel__play" aria-label="재생"><svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><polygon points="5,3 5,13 13,8"></polygon></svg></button>
+                                    </div>
+                                    <p class="vb-carousel__caption"><strong>4. 챗</strong> AI 기반 통합 메신저</p>
+                                </div>
+                                <div class="vb-carousel__item">
+                                    <div class="vb-carousel__media">
+                                        <img src="media/stadium/quick-menu.png" alt="퀵리모트" loading="lazy">
+                                    </div>
+                                    <p class="vb-carousel__caption"><strong>5. 퀵리모트</strong> 경기 중 자주 사용되는 기능 5가지</p>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                </div>
-
-                <!-- 하단 기능 4컷 -->
-                <div class="vb-group">
-                    <div class="vb-group__head reveal">
-                        <span class="vb-group__num">A</span>
-                        <span class="vb-group__name">Functions</span>
-                    </div>
-                    <div class="vb-grid vb-grid--4">
-                        <div class="reveal"><div class="ph ph--1x1"><span class="ph__label">기능 컷 1</span></div></div>
-                        <div class="reveal"><div class="ph ph--1x1"><span class="ph__label">기능 컷 2</span></div></div>
-                        <div class="reveal"><div class="ph ph--1x1"><span class="ph__label">기능 컷 3</span></div></div>
-                        <div class="reveal"><div class="ph ph--1x1"><span class="ph__label">기능 컷 4</span></div></div>
+                        <div class="vb-carousel-nav">
+                            <button type="button" class="vb-carousel-nav__arrow" data-carousel-prev="stadium-carousel" aria-label="이전">‹</button>
+                            <button type="button" class="vb-carousel-nav__arrow" data-carousel-next="stadium-carousel" aria-label="다음">›</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -2031,7 +1886,7 @@
         <!-- ====================================================
              7. INTERACTION & AI
              ==================================================== -->
-        <section class="vb-section">
+        <section class="vb-section sec-dark sec-centered">
             <div class="vb-wrap">
                 <span class="vb-eyebrow reveal">05 — Interaction</span>
                 <h2 class="vb-title reveal">Interaction &amp; AI</h2>
@@ -2064,7 +1919,7 @@
         <!-- ====================================================
              FOOTER
              ==================================================== -->
-        <div class="vb-footer">
+        <div class="vb-footer sec-dark">
             <a href="../../../works.html" class="vb-back-btn hover-trigger">Back to Works</a>
         </div>
 
@@ -2197,6 +2052,169 @@
                     });
                 });
             }
+
+            // Key Features 캐러셀: 하나씩 순서대로 재생 (재생 중=컬러, 나머지=흑백 정지 프레임)
+            // sky-features(Skybox), stadium-features(In Stadium) 등 .sky-feature 구조를 쓰는 컨테이너에 동일하게 적용
+            function initFeatureCarousel(containerId) {
+                const wrap = document.getElementById(containerId);
+                if (!wrap) return;
+                const features = [...wrap.querySelectorAll('.sky-feature')];
+                const videos = features.map(f => f.querySelector('video'));
+                let started = false;
+
+                const activate = (i) => {
+                    features.forEach((f, idx) => {
+                        const v = videos[idx];
+                        if (idx === i) {
+                            f.classList.add('is-active');
+                            if (v) { v.currentTime = 0; v.play().catch(() => {}); }
+                        } else {
+                            f.classList.remove('is-active');
+                            if (v) v.pause();
+                        }
+                    });
+                };
+
+                videos.forEach((v, idx) => {
+                    if (!v) return;
+                    v.addEventListener('ended', () => activate((idx + 1) % videos.length));
+                });
+
+                const io = new IntersectionObserver((entries, obs) => {
+                    entries.forEach(entry => {
+                        if (!entry.isIntersecting || started) return;
+                        started = true;
+                        activate(0);
+                        obs.disconnect();
+                    });
+                }, { threshold: 0.3 });
+                io.observe(wrap);
+            }
+
+            initFeatureCarousel('sky-features');
+
+            // 캐러셀 컨트롤: 이전/다음 화살표 + 5초 자동 전환(끝나면 처음으로 루프)
+            function initCarouselControls(trackId) {
+                const track = document.getElementById(trackId);
+                if (!track) return;
+                const scroller = track.closest('.vb-carousel');
+                const prevBtn = document.querySelector(`[data-carousel-prev="${trackId}"]`);
+                const nextBtn = document.querySelector(`[data-carousel-next="${trackId}"]`);
+
+                function stepWidth() {
+                    const item = track.querySelector('.vb-carousel__item');
+                    return item ? item.getBoundingClientRect().width + 16 : scroller.clientWidth * 0.8;
+                }
+                function atEnd() {
+                    return scroller.scrollLeft + scroller.clientWidth >= scroller.scrollWidth - 8;
+                }
+                function pauseAllVideos() {
+                    track.querySelectorAll('video').forEach(v => { if (!v.paused) v.pause(); });
+                }
+                // 지금 화면 시작 위치(패딩 안쪽)에 가장 가까운 카드 = 현재 "활성" 카드
+                function getActiveItem() {
+                    const items = [...track.querySelectorAll('.vb-carousel__item')];
+                    const contentLeft = scroller.getBoundingClientRect().left + parseFloat(getComputedStyle(scroller).paddingLeft);
+                    let closest = items[0], closestDist = Infinity;
+                    items.forEach(it => {
+                        const d = Math.abs(it.getBoundingClientRect().left - contentLeft);
+                        if (d < closestDist) { closestDist = d; closest = it; }
+                    });
+                    return closest;
+                }
+                // 활성 카드가 영상이면 자동 재생, 나머지는 정지
+                function playActiveVideo() {
+                    const video = getActiveItem().querySelector('video');
+                    pauseAllVideos();
+                    if (video) video.play().catch(() => {});
+                }
+                function goTo(dir) {
+                    pauseAllVideos();
+                    if (dir > 0 && atEnd()) {
+                        scroller.scrollTo({ left: 0, behavior: 'smooth' });
+                    } else if (dir < 0 && scroller.scrollLeft <= 8) {
+                        scroller.scrollTo({ left: scroller.scrollWidth, behavior: 'smooth' });
+                    } else {
+                        scroller.scrollBy({ left: dir * stepWidth(), behavior: 'smooth' });
+                    }
+                    // scroll/scrollend 이벤트에만 기대지 않고, 전환 트리거(자동/화살표) 시점에도 직접 예약
+                    // (smooth 스크롤 애니메이션 시간만큼 뒤에 활성 카드 영상 재생)
+                    clearTimeout(goToPlayTimer);
+                    goToPlayTimer = setTimeout(playActiveVideo, 550);
+                }
+                let goToPlayTimer = null;
+
+                // 스크롤(자동 전환/화살표/드래그 전부 포함)이 멎으면 그 시점의 활성 카드 영상을 자동 재생
+                let scrollSettleTimer = null;
+                if ('onscrollend' in window) {
+                    scroller.addEventListener('scrollend', playActiveVideo);
+                } else {
+                    scroller.addEventListener('scroll', () => {
+                        clearTimeout(scrollSettleTimer);
+                        scrollSettleTimer = setTimeout(playActiveVideo, 150);
+                    });
+                }
+                // 처음 화면에 들어오면 첫 카드 기준으로 자동 재생 시작
+                new IntersectionObserver((entries, obs) => {
+                    entries.forEach(entry => {
+                        if (!entry.isIntersecting) return;
+                        playActiveVideo();
+                        obs.disconnect();
+                    });
+                }, { threshold: 0.3 }).observe(scroller);
+
+                let isHovering = false;
+                let autoplayHandle = null;
+
+                function clearAutoplay() {
+                    if (autoplayHandle) { clearTimeout(autoplayHandle); autoplayHandle = null; }
+                }
+                function scheduleAutoplay() {
+                    clearAutoplay();
+                    if (isHovering) return;
+                    autoplayHandle = setTimeout(() => {
+                        goTo(1);
+                        scheduleAutoplay();
+                    }, 5000);
+                }
+
+                [prevBtn, nextBtn].forEach(btn => {
+                    if (!btn) return;
+                    btn.addEventListener('click', () => {
+                        goTo(btn === prevBtn ? -1 : 1);
+                        scheduleAutoplay();
+                    });
+                });
+                scroller.addEventListener('mouseenter', () => { isHovering = true; clearAutoplay(); });
+                scroller.addEventListener('mouseleave', () => { isHovering = false; scheduleAutoplay(); });
+
+                scheduleAutoplay();
+            }
+            initCarouselControls('stadium-carousel');
+
+            // 카드별 재생 버튼: 클릭한 영상만 재생, 나머지는 정지 + 아이콘 리셋
+            document.querySelectorAll('.vb-carousel__play').forEach(btn => {
+                const media = btn.closest('.vb-carousel__media');
+                const video = media.querySelector('video');
+                if (!video) return;
+                const allButtons = () => [...document.querySelectorAll('.vb-carousel__play')];
+                btn.addEventListener('click', () => {
+                    if (video.paused) {
+                        allButtons().forEach(b => {
+                            const v = b.closest('.vb-carousel__media').querySelector('video');
+                            if (v && v !== video && !v.paused) v.pause();
+                        });
+                        video.play();
+                    } else {
+                        video.pause();
+                    }
+                });
+                const playIcon = '<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><polygon points="5,3 5,13 13,8"></polygon></svg>';
+                const pauseIcon = '<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><rect x="4" y="3" width="3" height="10"></rect><rect x="9" y="3" width="3" height="10"></rect></svg>';
+                video.addEventListener('play', () => { btn.innerHTML = pauseIcon; btn.setAttribute('aria-label', '일시정지'); });
+                video.addEventListener('pause', () => { btn.innerHTML = playIcon; btn.setAttribute('aria-label', '재생'); });
+                video.addEventListener('ended', () => { btn.innerHTML = playIcon; btn.setAttribute('aria-label', '재생'); });
+            });
         });
     </script>
 
