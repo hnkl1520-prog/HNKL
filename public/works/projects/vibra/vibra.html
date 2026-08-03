@@ -37,40 +37,37 @@
             --vb-pad-inline: clamp(24px, 6vw, 100px);
             --vb-maxw: 1280px;
             --vb-gap: var(--space-md);        /* 그리드 기본 간격 = 32px */
-            --vb-eyebrow-gap: 14px;            /* 작은 라벨(eyebrow) ↔ 큰 제목(title) 간격 */
+            --vb-eyebrow-gap: 16px;            /* 작은 라벨(eyebrow) ↔ 큰 제목(title) 간격 */
+            --vb-cap-gap: 20px;                /* 미디어(이미지·영상) ↔ 그 아래 캡션 간격 (전역 통일) */
+            --vb-gray-mid: #b3b5bb;            /* 밝은 구간 → 다크 구간 사이의 회색 (Skybox 이미지가 놓이는 톤) */
+            --vb-lead-gap: clamp(44px, 5vw, 72px); /* 설명 문단 ↔ 그 아래 미디어/그리드 간격 */
 
             /* 타이포 스케일 — common.css 기본값보다 페이지 전역에서 살짝 키움 */
-            --fs-caption: 14px;   /* 13 → 14 (eyebrow·캡션·라벨) */
+            --fs-caption: 15px;   /* 13 → 15 (작은 라벨·에셋 캡션) */
+            --fs-cap: 17px;       /* 이미지 아래 설명 캡션 — 너무 작지 않게 별도 스케일 */
             --fs-body: 18px;      /* 17 → 18 (본문·설명) */
             --fs-h3: 22px;        /* 20 → 22 (소제목·카드 제목) */
         }
 
         /* common.css의 main 기본 패딩 무력화 (히어로 풀스크린을 위해) */
-        body {
-            /* 스크롤 배경: 화이트 → 은은하게 회색 → (UX Direction 히어로 뒤에서, 배경이 이미지에 가려지는 구간) 다크로 전환 → 검정.
-               색 정지점 %는 문서 전체 높이 기준(측정값 반영). UX Direction 히어로는 자체 이미지+오버레이라 그 구간 배경색은 안 보임 → 급격한 전환을 숨기고 여유 있게 늘림.
-               Service Flow 그룹부터 .sec-dark로 글자색도 반전(배경이 이미 충분히 어두워진 뒤). */
-            background-color: #0b0b0d;
-            background-image: linear-gradient(to bottom,
-                #ffffff 0%,
-                #ffffff 50%,
-                #fafafc 53%,
-                #f0f0f4 56%,
-                #dcdde3 58%,
-                #a8a9b1 59%,
-                #6c6d74 59.8%,
-                #3a3b40 60.5%,
-                #1c1d22 61%,
-                #17181d 61.3%,
-                #101115 100%);
+        /* 스크롤 배경: 화이트 → 은은하게 회색 → (UX Direction 히어로 뒤, 배경이 이미지에 가려지는 구간) 다크로 전환 → 검정.
+           배경을 body가 아닌 html(루트)에 둔다: html에 overflow-x:hidden이 있으면 body 배경이 캔버스로 "전파"되면서
+           스크롤 중 재계산돼 배경이 갑자기 튀는 현상이 생김. 루트에 직접 주면 전파 과정이 없어 안정적. */
+        html {
+            overflow-x: hidden;
+            /* 루트 배경은 '밝은 톤'만 담당(드리프트 무해). 다크 구간은 각 섹션이 직접 칠함.
+               위(인트로·리서치)와 아래(Behind·Archive·Closing) 라이트 섹션이 이 배경 위에 놓임 */
+            background-color: #eceef2;
+            background-image: linear-gradient(to bottom, #ffffff 0%, #f4f5f8 55%, #eceef2 100%);
             background-repeat: no-repeat;
-            background-attachment: scroll;
+        }
+        body {
+            background: transparent;
             color: var(--vb-text);
             font-family: 'Pretendard', sans-serif;
             /* body에 직접 overflow를 주면 sticky/스크롤 기준이 꼬여 히어로 sticky가 깨짐
                → 가로 넘침 방지는 html에서 처리 (.vb-fullbleed의 100vw가 스크롤바 폭만큼 넘치는 것 차단) */
         }
-        html { overflow-x: hidden; }
         main { padding: 0; min-height: auto; }
 
         /* =========================================================
@@ -80,7 +77,8 @@
             padding-block: var(--vb-pad-block);
             padding-inline: var(--vb-pad-inline);
         }
-        /* 다크 구간(Skybox~): 배경 그라데이션이 어두워지는 구역의 섹션 — 색 토큰을 다크로 반전해 글자·카드가 밝게 나오도록 */
+        /* 다크 구간(Skybox~Play Film): 색 토큰을 다크로 반전 + 섹션 자체에 다크 배경을 직접 입힘.
+           (배경을 문서 높이 %로 계산하면 이미지 로드에 따라 높이가 변해 어긋나므로, 섹션에 직접 칠함) */
         .sec-dark {
             --vb-bg: #141418;
             --vb-panel: #212127;
@@ -88,6 +86,38 @@
             --vb-text: #f4f4f7;
             --vb-body: #b2b2b9;
             --vb-muted: #8c8c93;
+        }
+        section.vb-section.sec-dark { background-color: #101115; }
+        /* 밝음→다크 전환: Qualitative 섹션 '맨 아래 빈 여백'에서 길고 점진적으로.
+           바닥 기준 px 앵커라 섹션 높이가 바뀌어도 전환 위치가 안 틀어짐.
+           padding-bottom(최소 520px) > 그라데이션 길이(460px) → 전환은 항상 빈 공간에서만 일어남 */
+        #qualitative {
+            padding-bottom: clamp(460px, 48vh, 640px);
+            background: linear-gradient(to bottom,
+                transparent calc(100% - 420px),
+                #eef0f3 calc(100% - 330px),
+                #dcdee3 calc(100% - 240px),
+                #c6c8ce calc(100% - 140px),
+                var(--vb-gray-mid) 100%);
+        }
+        /* 회색 구간: Skybox 전체화면 이미지가 여기 놓이고, 이미지 바로 아래부터 검정 */
+        .vb-skybox-bridge {
+            background: var(--vb-gray-mid);
+            padding-top: clamp(56px, 7vh, 110px);
+        }
+        /* Play Film까지는 완전 다크 유지 (전환은 아래 UI 브릿지에서) */
+        .vb-video-section.sec-dark { background-color: #101115; }
+        /* 다크→밝음 전환: 전체화면 UI 모음 이미지를 경계로.
+           이미지 위 여백은 다크, 아래 여백은 밝게 → 이미지가 자연스러운 경계 역할 */
+        .vb-ui-bridge {
+            padding-block: clamp(120px, 16vh, 220px);
+            background: linear-gradient(to bottom,
+                #101115 0%,
+                #101115 30%,
+                #43444a 42%,
+                #9d9ea5 52%,
+                #d5d6da 62%,
+                transparent 74%);
         }
         .vb-wrap {
             max-width: var(--vb-maxw);
@@ -188,6 +218,24 @@
            sticky 기반이라 JS 없이도 동작 → 무조건 렌더됨 */
         .vb-stage {
             position: relative;
+            /* 덮기 가속량. 0.35 = 100vh 대신 65vh만 스크롤해도 덮기 완료.
+               JS가 켜졌을 때만(.is-boosted) 적용 → JS 없으면 기존(히어로 100% 노출) 그대로 */
+            --hero-boost: 0.35;
+        }
+        .vb-stage.is-boosted .vb-hero { margin-bottom: calc(var(--hero-boost) * -100vh); }
+        /* 히어로는 흐름상 높이만 줄었을 뿐 실제로는 100vh 그대로라 아래로 그만큼 삐져나옴(sticky는 정적 요소 위에 그려짐).
+           덮개를 같은 양만큼 아래로 늘려 그 구간을 가림. content-box라 안쪽 콘텐츠 중앙 정렬은 100vh 기준 유지 */
+        .vb-stage.is-boosted .vb-cover {
+            will-change: transform;
+            box-sizing: content-box;
+            padding-bottom: calc(var(--hero-boost) * 100vh);
+        }
+        /* sticky 히어로는 정적 요소보다 위에 그려지므로, 바로 다음 섹션에 배경 + 쌓임 순서를 줘서
+           히어로가 비쳐 보이지 않게 함 (이 구간의 페이지 배경은 흰색) */
+        .vb-stage.is-boosted + .vb-section {
+            position: relative;
+            z-index: 6;
+            background: #ffffff;
         }
         .vb-hero {
             position: sticky;          /* 스크롤 동안 화면에 고정 */
@@ -361,7 +409,7 @@
            세로 스택: eyebrow(위, 좌측 정렬) → 캐러셀(전체 폭) → 화살표(아래, 가운데 정렬)
            콘텐츠는 max-width 1120px 컨테이너에 맞춰 정렬. 카드 폭은 뷰포트 %, peek으로 다음 카드가 살짝 보임. */
         .vb-carousel-block { max-width: 1120px; margin-inline: auto; }
-        .vb-carousel-block__eyebrow { margin-bottom: 36px; }
+        /* 제목↔콘텐츠 간격은 .vb-group__head--lead 하나로 통일(아래 .vb-group__head 규칙 참고) */
         /* 오른쪽 풀블리드: 왼쪽은 컨테이너 라인에 맞추고(padding-left) 오른쪽은 뷰포트 끝까지.
            width:100vw + margin-left:calc(50%-50vw)로 모든 상위 max-width/padding을 무시하고 뷰포트 기준으로 재배치.
            scroll-padding-left를 padding-left와 동일하게 줘서, 스냅 시작점이 패딩 안쪽(진짜 첫 카드 위치)이 되도록 맞춤. */
@@ -470,6 +518,10 @@
            순차 재생: is-active인 것만 컬러+재생, 나머지는 흑백+정지 프레임 */
         .sky-features { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--vb-gap); }
         @media (max-width: 820px) { .sky-features { grid-template-columns: 1fr; max-width: 420px; margin-inline: auto; } }
+        /* 카드 클릭 = 해당 영상으로 바로 전환 (순차 재생 카드 + 캐러셀 영상 카드 공통) */
+        .sky-feature, .ig-card, .vb-carousel__item.hover-trigger { cursor: pointer; outline: none; }
+        .sky-feature:focus-visible .sky-feature__media,
+        .ig-card:focus-visible .ig-card__media { outline: 2px solid var(--accent-color); outline-offset: 3px; }
         .sky-feature__media {
             width: 100%; aspect-ratio: 1 / 1; border-radius: 16px; overflow: hidden;
             border: 1px solid var(--vb-line); background: var(--vb-panel);
@@ -478,12 +530,39 @@
         .sky-feature.is-active .sky-feature__media { filter: grayscale(0); }
         .sky-feature__media video { width: 100%; height: 100%; object-fit: cover; display: block; }
         .sky-feature__caption {
-            margin: 16px 0 0; text-align: center; font-size: var(--fs-body); line-height: 1.6;
+            margin: var(--vb-cap-gap) 0 0; text-align: center; font-size: var(--fs-body); line-height: 1.6;
             color: var(--vb-muted); word-break: keep-all; transition: color 0.4s ease;
         }
         .sky-feature.is-active .sky-feature__caption { color: var(--vb-text); }
         .sky-feature__num { font-weight: 800; color: var(--vb-text); margin-right: 4px; }
         .sky-feature.is-active .sky-feature__num { color: var(--accent-color); }
+
+        /* Skybox 리드 문단 — 아래 Key Features 3개와 대응되는 번호 항목 강조 */
+        .sky-lead__n { color: var(--accent-color); font-weight: 800; }
+        .sky-lead__k { color: var(--vb-text); font-weight: 600; }
+
+        /* Skybox — 인터랙션: 영상 1 + 이미지 1.
+           높이는 두 개 동일, 비율은 원본 그대로 → 폭은 각자 다름(잘림·레터박스 없음).
+           높이 기준 배치를 위해 flex 사용(2열 균등 그리드는 폭을 강제로 같게 만들어 불가). */
+        .sky-inter { display: flex; flex-wrap: wrap; gap: var(--vb-gap); align-items: flex-start; justify-content: center; }
+        .sky-inter > div { display: flex; flex-direction: column; align-items: center; max-width: 100%; }
+        .sky-inter__media {
+            position: relative; height: clamp(240px, 30vw, 420px); width: fit-content; max-width: 100%;
+            border-radius: 16px; overflow: hidden; line-height: 0;
+            border: 1px solid var(--vb-line); background: var(--vb-panel);
+        }
+        /* 높이 고정 + 폭 auto → 박스가 미디어 원본 비율을 그대로 따르면서 높이만 일치 */
+        .sky-inter__media img,
+        .sky-inter__media video { height: 100%; width: auto; max-width: 100%; display: block; }
+        @media (max-width: 820px) {
+            .sky-inter { flex-direction: column; align-items: center; }
+            .sky-inter > div { width: 100%; max-width: 560px; }
+            .sky-inter__media { height: auto; width: 100%; max-width: 560px; }
+            .sky-inter__media img, .sky-inter__media video { width: 100%; height: auto; }
+        }
+        /* 캡션은 열 폭 계산에서 빠지고(width:0) 정해진 폭을 채우기만 함(min-width:100%).
+           → 캡션이 길어져도 미디어 원본 비율이 정한 열 폭을 밀지 않음 (두 열 유지) */
+        .sky-inter__caption { width: 0; min-width: 100%; margin: var(--vb-cap-gap) 0 0; text-align: center; font-size: var(--fs-body); line-height: 1.6; color: var(--vb-text); word-break: keep-all; }
 
         /* Skybox — 3D Asset: 좌 스카이박스(원본 16:9 유지) + 우 에셋 6종(3열×2행).
            스카이박스는 억지로 세로로 늘리지 않고 자기 비율대로 → 대신 좌우 컬럼 비율로 균형 조정.
@@ -496,7 +575,7 @@
             border: 1px solid var(--vb-line); background: var(--vb-panel);
         }
         .sky-asset__hero-media img { width: 100%; height: 100%; object-fit: cover; display: block; }
-        .sky-asset__hero-cap { margin: 14px 0 0; text-align: center; font-size: var(--fs-body); font-weight: 600; color: var(--vb-text); flex: 0 0 auto; }
+        .sky-asset__hero-cap { margin: var(--vb-cap-gap) 0 0; line-height: 26px; text-align: center; font-size: var(--fs-body); font-weight: 600; color: var(--vb-text); flex: 0 0 auto; }
 
         .sky-asset__grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: clamp(20px, 2.5vw, 28px); align-content: space-between; }
         @media (max-width: 560px) { .sky-asset__grid { grid-template-columns: repeat(2, 1fr); } }
@@ -506,9 +585,151 @@
             padding: 12%; box-sizing: border-box;
         }
         .sky-asset__item-media img { width: 100%; height: 100%; object-fit: contain; display: block; }
-        /* margin-top을 히어로 캡션(14px, 더 큰 폰트)과 총 높이가 같아지도록 19px로 맞춤
-           → 캡션 영역 높이가 같아져서 3D Asset 그리드 아랫줄 이미지 하단이 왼쪽 히어로 이미지 하단과 정확히 일치함 */
-        .sky-asset__item-cap { margin: 19px 0 0; text-align: center; font-size: var(--fs-caption); font-weight: 600; color: var(--vb-text); word-break: keep-all; }
+        /* 히어로 캡션과 '간격+줄높이'를 동일하게 맞춤(20+26=46px) → 캡션 블록 높이가 같아져
+           3D Asset 그리드 아랫줄 이미지 하단이 왼쪽 히어로 이미지 하단과 정확히 일치 */
+        .sky-asset__item-cap { margin: var(--vb-cap-gap) 0 0; line-height: 26px; text-align: center; font-size: var(--fs-caption); font-weight: 600; color: var(--vb-text); word-break: keep-all; }
+
+        /* =========================================================
+           AI (VIVA AI) — 풀블리드 블랙 전용 레이아웃.
+           좌: 정방형 원본을 컨테이너 높이에 맞춰 크롭해서 크게 / 우: 텍스트 + 정방형 영상 3개
+           (레퍼런스 시안 기준이라 이 섹션만 좌측 정렬 유지) */
+        /* 위·아래를 투명으로 페이드시켜 인접 섹션과 부드럽게 연결(검정 구간은 넓게, 섹션 경계 안 보이게) */
+        .ai-sec {
+            padding-block: clamp(120px, 18vh, 260px);
+            /* 위아래를 인접 다크 섹션색(#101115)으로 페이드 → 경계 없이 순수 블랙 코어로 */
+            background: linear-gradient(to bottom, #101115 0%, #000 14%, #000 86%, #101115 100%);
+        }
+        .ai-sec__inner {
+            display: grid; grid-template-columns: 0.8fr 1.2fr; align-items: stretch;
+            min-height: clamp(560px, 78vh, 880px);
+        }
+        @media (max-width: 900px) { .ai-sec__inner { grid-template-columns: 1fr; min-height: 0; } }
+        .ai-sec__visual { position: relative; overflow: hidden; min-height: 0; }
+        .ai-sec__visual img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        @media (max-width: 900px) { .ai-sec__visual { aspect-ratio: 1 / 1; } }
+
+        .ai-sec__content {
+            display: flex; flex-direction: column; justify-content: center;
+            padding: clamp(40px, 5vw, 80px) clamp(32px, 4vw, 64px) clamp(40px, 5vw, 80px) clamp(48px, 6vw, 96px);
+            text-align: left;
+        }
+        .ai-sec__eyebrow {
+            display: block; font-size: clamp(13px, 1.15vw, 17px);
+            letter-spacing: 0.06em; color: #d4d4d8; margin-bottom: 8px;
+        }
+        .ai-sec__title {
+            margin: 0 0 26px; font-size: clamp(28px, 3vw, 44px);
+            font-weight: 800; letter-spacing: -0.01em; color: #fff;
+        }
+        .ai-sec__desc {
+            margin: 0 auto; max-width: 640px; font-size: var(--fs-body);
+            line-height: 1.7; color: #b4b4ba; word-break: keep-all;
+        }
+        .ai-sec__desc strong { color: #fff; font-weight: 700; font-style: italic; }
+        /* 텍스트 블록을 가운데 정렬하고, 아래 두 번째 영상의 중심선에 맞춤.
+           영상 3개는 translateX(-27%/-54%)로 당겨져 시각적 중심이 컨테이너 폭의 41% 지점(=2번째 영상 중심)이므로,
+           오른쪽에 18%를 비워 텍스트 중심도 41% 지점에 오게 함 */
+        .ai-sec__text { text-align: center; padding-right: 18%; }
+
+        /* 영상 3개: 하단 정렬. 오른쪽 여백은 아래 translateX가 만들어 주므로 padding 불필요
+           (텍스트 중심 계산이 컨테이너 폭 기준이라 padding을 빼야 정확히 맞음) */
+        .ai-sec__grid {
+            display: grid; grid-template-columns: repeat(3, 1fr);
+            gap: 0; margin-top: clamp(40px, 5vw, 76px);
+            align-items: end;
+        }
+        /* 세 박스는 항상 동일 크기(1fr) 유지. 간격만 좁히려고 translateX로 시각적으로만 당김
+           (음수 마진은 1fr 트랙 폭을 재분배해 박스 크기를 틀어버리므로 사용 안 함).
+           translateX %는 자기 폭 기준이라 뷰포트가 바뀌어도 간격 비율이 일정 */
+        .ai-sec__item:nth-child(2) { transform: translateX(-27%); }
+        .ai-sec__item:nth-child(3) { transform: translateX(-54%); }
+        @media (max-width: 560px) {
+            .ai-sec__grid { grid-template-columns: 1fr; max-width: 300px; }
+            /* 세로로 쌓이면 겹침·중심 오프셋 해제 */
+            .ai-sec__item:nth-child(2), .ai-sec__item:nth-child(3) { transform: none; }
+            .ai-sec__text { padding-right: 0; }
+        }
+        .ai-sec__media { position: relative; width: 100%; aspect-ratio: 1 / 1; overflow: hidden; }
+        .ai-sec__media img,
+        .ai-sec__media video {
+            width: 100%; height: 100%; object-fit: cover; display: block;
+            transform-origin: bottom center;   /* 축소 시 하단 기준 → 구체가 아래로 정렬 */
+        }
+        /* 앞 두 영상의 오브젝트를 세 번째(하트)와 비슷한 크기로 축소 (값은 추후 미세조정) */
+        .ai-sec__media--scale video { transform: scale(0.62); }
+        .ai-sec__cap { margin: var(--vb-cap-gap) 0 0; text-align: center; font-size: var(--fs-cap); font-weight: 600; color: #d4d4d8; word-break: keep-all; }
+
+        /* AI 섹션 하단: 기본 컨테이너(vb-wrap) 폭에 맞춘 이미지 1장 + 그 아래 설명 텍스트 */
+        .ai-sec__below {
+            margin-top: clamp(90px, 13vh, 190px);
+            padding-inline: var(--vb-pad-inline);
+        }
+        .ai-sec__below-media { width: 100%; border-radius: 20px; overflow: hidden; }
+        .ai-sec__below-media img { width: 100%; height: auto; display: block; }
+        .ai-sec__below-desc {
+            margin: clamp(24px, 3vw, 44px) auto 0; max-width: 760px;
+            text-align: center; font-size: var(--fs-body); line-height: 1.7;
+            color: #b4b4ba; word-break: keep-all;
+        }
+
+        /* 인터랙션 가이드: 튜토리얼 영상 카드 4장 (균일 그리드) */
+        .ig-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: clamp(16px, 2vw, 28px); }
+        @media (max-width: 900px) { .ig-grid { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 520px) { .ig-grid { grid-template-columns: 1fr; max-width: 320px; margin-inline: auto; } }
+        /* 비율 강제·크롭 없이 원본 비율 그대로 */
+        .ig-card__media {
+            position: relative; width: 100%; line-height: 0;
+            border-radius: 8px; overflow: hidden;
+            border: 1px solid var(--vb-line); background: var(--vb-panel);
+        }
+        .ig-card__media img,
+        .ig-card__media video { width: 100%; height: auto; display: block; }
+        /* 순차 재생: 재생 중인 카드만 컬러, 나머지는 흑백 정지 (Key Features와 동일 규칙) */
+        .ig-card__media { filter: grayscale(1); transition: filter 0.5s ease; }
+        .ig-card.is-active .ig-card__media { filter: grayscale(0); }
+        .ig-card__cap { margin: var(--vb-cap-gap) 0 0; text-align: center; font-size: var(--fs-cap); font-weight: 600; color: var(--vb-muted); word-break: keep-all; transition: color 0.4s ease; }
+        .ig-card.is-active .ig-card__cap { color: var(--vb-text); }
+        .ig-card__num { font-weight: 800; margin-right: 5px; }
+        .ig-card.is-active .ig-card__num { color: var(--accent-color); }
+
+        /* 프로젝트 아카이브 GIF (기본 컨테이너 폭) */
+        .vb-archive-media {
+            max-width: var(--vb-maxw); margin: var(--vb-lead-gap) auto 0;
+            border-radius: 20px; overflow: hidden; border: 1px solid var(--vb-line);
+        }
+        .vb-archive-media img { width: 100%; height: auto; display: block; }
+
+        /* 아카이브 슬라이드쇼 — 1초 간격 자동 전환.
+           첫 장이 흐름 안에서 높이를 잡고, 나머지는 그 위에 겹쳐서 페이드 */
+        .vb-slideshow { position: relative; }
+        .vb-slideshow img {
+            display: block; width: 100%; height: auto;
+            opacity: 0; transition: opacity 0.35s ease;
+        }
+        .vb-slideshow img:not(:first-child) {
+            position: absolute; top: 0; left: 0; height: 100%; object-fit: cover;
+        }
+        .vb-slideshow img.is-active { opacity: 1; }
+
+        /* 클로징: 세로로 긴 원본(2400×5240)을 전체폭에 원본 비율 그대로(안 잘림) + 그 위 CTA 오버레이 */
+        .vb-closing {
+            position: relative; width: 100vw; margin-left: calc(50% - 50vw); overflow: hidden;
+        }
+        .vb-closing__bg { display: block; }
+        /* 원본 2400×5240 비율을 지정해 파일 로드 전에도 높이를 확보(레이아웃·배경 % 안정) */
+        .vb-closing__bg img { width: 100%; height: auto; aspect-ratio: 2400 / 5240; object-fit: cover; display: block; }
+        .vb-closing__inner {
+            position: absolute; left: 50%; bottom: clamp(56px, 9vh, 130px); transform: translateX(-50%);
+            z-index: 2; text-align: center; padding: 0 var(--vb-pad-inline); max-width: 720px;
+        }
+        .vb-closing__title { margin: 0 0 clamp(20px, 3vw, 36px); font-size: var(--fs-h2); font-weight: 800; letter-spacing: -0.01em; color: var(--vb-text); word-break: keep-all; }
+        .vb-closing__cta {
+            display: inline-block; padding: 15px 34px; border-radius: 999px;
+            background: var(--vb-text); color: var(--vb-bg);
+            font-size: var(--fs-body); font-weight: 700; text-decoration: none;
+            transition: transform 0.2s ease, opacity 0.2s ease;
+        }
+        .vb-closing__cta:hover { transform: translateY(-2px); opacity: 0.9; }
 
         /* 하단 솔루션 섹션(Skybox·In Stadium·Interaction)도 상단 섹션과 동일하게 가운데 정렬 (디자인 시스템 통일) */
         .sec-centered .vb-wrap { text-align: center; }
@@ -521,11 +742,14 @@
         .vb-group__head {
             display: flex; align-items: baseline; gap: 14px; margin-bottom: var(--space-sm);
         }
+        /* 리드 문단 없이 제목 바로 아래 카드가 오는 그룹 — 간격을 리드 문단 아래(--vb-lead-gap)와 동일하게 */
+        .vb-group__head--lead { margin-bottom: var(--vb-lead-gap); }
         .vb-group__num { color: var(--vb-text); font-weight: 700; font-size: 0.95rem; }
         .vb-group__name { font-size: var(--fs-h3); font-weight: 600; color: var(--vb-text); }
 
         .vb-caption {
-            margin-top: 12px; font-size: var(--fs-caption); color: var(--vb-muted); letter-spacing: 0.02em;
+            margin-top: var(--vb-cap-gap); font-size: var(--fs-cap); line-height: 1.65;
+            color: var(--vb-body); letter-spacing: 0.01em; word-break: keep-all;
         }
 
         /* UX Direction 키워드 */
@@ -550,7 +774,7 @@
 
         /* Qualitative 섹션 전체 가운데 정렬 + 그룹 간 간격 확대 */
         #qualitative .vb-group { margin-top: clamp(72px, 9vw, 120px); }
-        #qualitative .vb-group__head { justify-content: center; text-align: center; }
+        #qualitative .vb-group__head { justify-content: center; text-align: center; margin-bottom: 40px; }
         .ql-group-intro { text-align: center; max-width: 640px; margin: 0 auto var(--space-md); }
 
         /* 리서치 방법 3개 (이미지 온전하게 + 아래 텍스트 분리, 박스로 안 감쌈, 가운데 정렬) */
@@ -579,15 +803,83 @@
         .ql-ux-hero__eyebrow { display: block; font-size: 0.78rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(255, 255, 255, 0.75); margin-bottom: 14px; }
         .ql-ux-hero__title { margin: 0; font-size: var(--fs-h2); font-weight: 700; color: #fff; word-break: keep-all; }
         .ql-ux-hero__desc { margin: 16px 0 0; font-size: var(--fs-body); line-height: 1.8; color: rgba(255, 255, 255, 0.82); word-break: keep-all; }
-        .ql-ux-chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin-top: clamp(32px, 4vw, 48px); }
+        /* 키워드 6개는 항상 한 줄 (좁은 화면에선 좌우 스크롤) */
+        .ql-ux-chips {
+            display: flex; flex-wrap: nowrap; justify-content: center;
+            gap: clamp(8px, 1vw, 12px); margin-top: clamp(32px, 4vw, 48px);
+            max-width: 100%; overflow-x: auto; scrollbar-width: none;
+        }
+        .ql-ux-chips::-webkit-scrollbar { display: none; }
         .ql-ux-chip {
-            padding: 13px 24px; border-radius: 14px;
+            flex: 0 0 auto; white-space: nowrap;
+            padding: 13px clamp(14px, 1.6vw, 24px); border-radius: 14px;
             background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.18);
             -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
             color: #fff; font-weight: 700; font-size: var(--fs-body);
             transition: background 0.25s ease, transform 0.25s ease;
         }
         .ql-ux-chip:hover { background: var(--accent-color); transform: translateY(-2px); }
+
+        /* C. UX Direction — 전체화면 어피니티 다이어그램 (원본 비율 유지, 크롭 없음) */
+        .vb-affinity {
+            position: relative;
+            width: 100vw;
+            margin-left: calc(50% - 50vw);
+            margin-right: calc(50% - 50vw);
+            background-color: #0a0a0e; /* 좁은 폭에서 콘텐츠가 이미지보다 클 때 이음새 방지 */
+        }
+        /* 이미지가 흐름 안에서 섹션 높이를 결정 → 원본 비율 그대로, 화면 폭에 꽉 참 */
+        .vb-affinity__bg { position: relative; z-index: 0; line-height: 0; }
+        .vb-affinity__bg img { width: 100%; height: auto; display: block; }
+        .vb-affinity__overlay {
+            position: absolute; inset: 0; z-index: 1;
+            background: linear-gradient(180deg, rgba(10,10,14,0.52) 0%, rgba(10,10,14,0.86) 100%);
+        }
+        /* 이미지 위에 겹쳐서 중앙 배치 */
+        .vb-affinity__inner {
+            position: absolute; inset: 0; z-index: 2;
+            display: flex; flex-direction: column;
+            justify-content: center; align-items: center;
+            text-align: center;
+            max-width: var(--vb-maxw);
+            margin-inline: auto;
+            padding-inline: clamp(24px, 6vw, 100px);
+        }
+        .vb-affinity__inner .vb-group__head { justify-content: center; margin-bottom: 32px; }
+        .vb-affinity__inner .vb-group__num { color: rgba(255,255,255,0.4); }
+        .vb-affinity__inner .vb-group__name { color: #fff; }
+        .aff-desc {
+            font-size: var(--fs-body); color: rgba(255,255,255,0.78);
+            line-height: 1.8; word-break: keep-all;
+            margin: 0 auto clamp(40px, 5vw, 64px); max-width: 600px;
+        }
+        .aff-kw-row {
+            display: flex; flex-wrap: nowrap; justify-content: center;
+            gap: clamp(10px, 1.2vw, 16px);
+            width: 100%; overflow-x: auto; scrollbar-width: none;
+        }
+        .aff-kw-row::-webkit-scrollbar { display: none; }
+        .aff-kw-card {
+            flex: 1 1 0; min-width: 140px;
+            background: rgba(255,255,255,0.08);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255,255,255,0.14);
+            border-radius: 16px;
+            padding: clamp(20px, 2.2vw, 28px) clamp(14px, 1.6vw, 20px);
+            text-align: center;
+        }
+        .aff-kw-card__en {
+            display: block;
+            font-size: clamp(1rem, 1.3vw, 1.15rem);
+            font-weight: 700; color: #fff;
+            margin-bottom: 12px; word-break: break-word;
+        }
+        .aff-kw-card__ko {
+            display: block;
+            font-size: clamp(0.85rem, 1.05vw, 0.95rem);
+            color: rgba(255,255,255,0.68);
+            line-height: 1.65; word-break: keep-all;
+        }
 
         /* =========================================================
            Service Flow — Pre/In/Post-Match 가로 타임라인 (원형 노드 + XR 디바이스 구간)
@@ -1208,7 +1500,7 @@
                 <div class="bg-head">
                     <span class="vb-eyebrow reveal">Background</span>
                     <h2 class="vb-title reveal">축구 중계, 그 다음은?</h2>
-                    <p class="bg-desc reveal">축구 중계는 신문에서 라디오, 그리고 TV로 이어지며 늘 더 깊은 몰입을 향해 진화해 왔습니다. 우리는 그 다음 단계가 <strong>XR</strong>이라고 봤습니다.</p>
+                    <p class="bg-desc reveal">신문에서 라디오, 흑백 TV에서 컬러 TV. 축구 중계는 늘 더 깊은 몰입을 향해<br>진화해 왔습니다. 우리는 그 다음 단계가 <strong>XR</strong>이라고 봤습니다.</p>
                 </div>
 
                 <!-- Print → Radio → TV → XR (몰입도 진화 라인) -->
@@ -1376,7 +1668,7 @@
                 <p class="vb-body reveal" style="margin: 0 auto 0.5rem; max-width: 32rem; color: var(--vb-body); font-size: 1rem; line-height: 1.6;">
                     기존 자료를 통해, 현재 팬들의 시청 트렌드를 관통하는<br class="hidden md:block"> <strong style="color: var(--vb-text);">2가지 핵심 니즈</strong>를 도출했습니다.
                 </p>
-                <p class="reveal" style="font-size: 0.75rem; color: #9CA3AF; margin-bottom: 2rem;">*한국프로스포츠협회, 2022 · Chiliz, 2024</p>
+                <p class="reveal" style="font-size: 0.75rem; color: #9CA3AF; margin-bottom: 2rem;">*한국프로스포츠협회, 2022, 2022 KOREA PROSPORTS FAN SURVEY: 프로 스포츠 관람객 성향조사 - 프로축구 <br>Chiliz, 2024,The Global Fan Report </p>
 
                 <!-- 한 줄(1-Row)로 배치된 데스크 리서치 카드 -->
                 <div class="vb-grid vb-grid--2 reveal text-left" style="margin-bottom: 4rem; max-width: 900px; margin-inline: auto;">
@@ -1386,16 +1678,16 @@
                         <div style="padding: 2.5rem; background-color: #F4F4F5; flex: 1;">
                             <span style="font-size: 0.75rem; font-weight: 700; color: #9CA3AF; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 0.75rem; display: block;">Keyword 01</span>
                             <h4 style="font-size: 1.875rem; font-weight: 900; color: var(--vb-text); margin-bottom: 1rem; line-height: 1.25;">Live<br>Experience</h4>
-                            <p style="font-size: 0.875rem; color: var(--vb-body); line-height: 1.6; margin: 0;">시간 부족이나 시차라는 물리적 제약에도 불구하고, 팬들은 결과를 나중에 확인하기보다 <strong style="color: var(--vb-text);">라이브 중계 시청을 고집</strong>합니다.</p>
+                            <p style="font-size: 0.875rem; color: var(--vb-body); line-height: 1.6; margin: 0;">시간 부족이나 시차라는 물리적 제약에도 불구하고,<br>팬들은 하이라이트보다 <strong style="color: var(--vb-text);">라이브 중계 시청을 고집</strong>합니다.</p>
                         </div>
                         <div style="padding: 2rem; display: flex; align-items: center; justify-content: space-between; background-color: #ffffff; border-top: 1px solid #F3F4F6;">
                             <div style="text-align: center; width: 50%; border-right: 1px solid #F3F4F6; padding-right: 1rem;">
-                                <div style="font-size: 2.25rem; font-weight: 900; color: var(--vb-text); margin-bottom: 0.5rem;">95%</div>
-                                <div style="font-size: 0.75rem; font-weight: 700; color: #6B7280; word-break: keep-all;">중계방송 시청 경험</div>
+                                <div style="font-size: 2.25rem; font-weight: 900; color: var(--vb-text); margin-bottom: 0.5rem;">46%</div>
+                                <div style="font-size: 0.75rem; font-weight: 700; color: #6B7280; word-break: keep-all;">직관 갈증 달래는 중계 시청</div>
                             </div>
                             <div style="text-align: center; width: 50%; padding-left: 1rem;">
                                 <div style="font-size: 2.25rem; font-weight: 900; color: var(--vb-text); margin-bottom: 0.5rem;">57%</div>
-                                <div style="font-size: 0.75rem; font-weight: 700; color: #6B7280; word-break: keep-all;">라이브 시청 고집</div>
+                                <div style="font-size: 0.75rem; font-weight: 700; color: #6B7280; word-break: keep-all;">해외 응원 구단 라이브 시청 고집</div>
                             </div>
                         </div>
                     </div>
@@ -1428,7 +1720,7 @@
 
                 <div class="reveal" style="margin-bottom: 5rem;">
                     <h4 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 1rem; color: var(--vb-text);">"자료에서 드러난 이 니즈, 실제 시청자도 똑같이 느끼고 있을까?"</h4>
-                    <p style="color: var(--vb-body); font-size: 0.875rem;">그래서 정기 시청자를 대상으로 직접 설문을 진행했어요.</p>
+                    <p style="color: var(--vb-body); font-size: 0.875rem;">그래서 경기를 주기적으로 챙겨보는 시청자를 대상으로 직접 설문을 진행했어요.</p>
                 </div>
                 
                 <div class="vertical-line reveal"></div>
@@ -1437,9 +1729,9 @@
                 <h3 class="reveal" style="font-size: 1.25rem; font-weight: 800; color: var(--vb-text); margin-bottom: 1.5rem;">Field Research</h3>
                 <div class="reveal" style="margin-bottom: 3rem;">
                     <p class="vb-body" style="margin: 0 auto; max-width: 36rem; font-size: 0.875rem; line-height: 1.6;">
-                        축구 경기를 주기적으로 보는 사람을 대상으로 설문 조사를 진행해, 경기 관람 방식과 시청 태도, 경기 이해 수준, 부가 서비스 이용 현황 등을 물었습니다.
+                        축구 경기를 주기적으로 보는 사람을 대상으로 설문 조사를 진행해, 경기 관람 방식과 <br>시청 태도, 경기 이해 수준, 부가 서비스 이용 현황 등을 물었습니다.
                     </p>
-                    <p style="font-size: 0.75rem; color: #9CA3AF; margin-top: 1rem;">*자체 설문조사 · 축구 커뮤니티 회원 102명</p>
+                    <p style="font-size: 0.75rem; color: #9CA3AF; margin-top: 1rem;">*자체 설문조사 : 온·오프라인 축구 커뮤니티 회원 102명</p>
                 </div>
                 <div class="reveal" style="margin-bottom: 4rem;">
                     <h4 style="font-size: 1.875rem; font-weight: 700; color: var(--vb-text);">
@@ -1451,14 +1743,14 @@
                 <div class="vb-grid vb-grid--2 text-left reveal" style="margin-bottom: 8rem; gap: 1.5rem; max-width: 900px; margin-inline: auto;">
                     
                     <div class="info-card flex flex-col items-center text-center">
-                        <h4 style="font-size: 1.125rem; font-weight: 700; margin-bottom: 2rem; color: var(--vb-text);">대부분 능동적으로,<br>경기를 이해하면서 보려고 해요.</h4>
+                        <h4 style="font-size: 1.125rem; line-height: 1.5; font-weight: 700; margin-top: 0; margin-bottom: 56px; color: var(--vb-text);">대부분 능동적으로,<br>경기를 이해하면서 보려고 해요.</h4>
                         <div class="circle-chart chart-63" style="margin-bottom: 2rem;"><span>63%</span></div>
                         <p style="font-size: 0.75rem; color: #6B7280; margin: 0;">분석적인 관점에서 경기를 본다고 답했어요.</p>
                     </div>
 
                     <div class="info-card flex flex-col justify-center">
-                        <h4 style="font-size: 1.125rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--vb-text);">이렇게 분석적으로 볼수록,<br>경기의 재미가 커져요.</h4>
-                        <p style="font-size: 0.75rem; color: #6B7280; margin-bottom: 2rem;">분석적으로 시청하는 이유 (복수 응답)</p>
+                        <h4 style="font-size: 1.125rem; line-height: 1.5; font-weight: 700; margin-top: 0; margin-bottom: 6px; color: var(--vb-text);">이렇게 이해하면서 볼수록,<br>경기의 재미가 커져요.</h4>
+                        <p style="font-size: 0.75rem; color: #6B7280; margin-top: 0; margin-bottom: 70px;">분석적으로 시청하는 이유 (복수 응답)</p>
                         <div style="display: flex; flex-direction: column; gap: 1.5rem;">
                             <div>
                                 <div style="display: flex; justify-content: space-between; font-size: 0.875rem; margin-bottom: 0.5rem;">
@@ -1485,14 +1777,14 @@
                     </div>
 
                     <div class="info-card flex flex-col items-center text-center">
-                        <h4 style="font-size: 1.125rem; font-weight: 700; margin-bottom: 2rem; color: var(--vb-text);">경기를 보다가도,<br>다른 서비스를 켜요.</h4>
+                        <h4 style="font-size: 1.125rem; line-height: 1.5; font-weight: 700; margin-top: 0; margin-bottom: 56px; color: var(--vb-text);">경기를 보면서, 경기 관련 정보를<br> 찾기 위해 다른 서비스를 켜요.</h4>
                         <div class="circle-chart chart-64" style="margin-bottom: 2rem;"><span>64%</span></div>
                         <p style="font-size: 0.75rem; color: #6B7280; margin: 0;">경기 시청 중 부가 서비스를 이용한다고 답했어요.</p>
                     </div>
 
                     <div class="info-card flex flex-col justify-center">
-                        <h4 style="font-size: 1.125rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--vb-text);">"하나로는 부족해요"</h4>
-                        <p style="font-size: 0.75rem; color: #6B7280; margin-bottom: 2rem;">커뮤니티, 분석 사이트 등 2개 이상의 서비스 이용 (복수 응답)</p>
+                        <h4 style="font-size: 1.125rem; font-weight: 700; margin-top: 0; margin-bottom: 6px; color: var(--vb-text);">하나로는 부족해요</h4>
+                        <p style="font-size: 0.75rem; color: #6B7280; margin-top: 0; margin-bottom: 70px;">커뮤니티, 분석 사이트 등 2개 이상의 서비스 이용 (복수 응답)</p>
                         <div style="display: flex; flex-direction: column; gap: 1.5rem;">
                             <div>
                                 <div style="display: flex; justify-content: space-between; font-size: 0.875rem; margin-bottom: 0.5rem;">
@@ -1524,8 +1816,8 @@
 
                 <div class="reveal" style="margin-bottom: 5rem;">
                     <p style="font-size: 0.75rem; font-weight: 700; color: #9CA3AF; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 1rem;">Next Step</p>
-                    <h4 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 1rem; color: var(--vb-text);">"왜 그렇게 여러 서비스를 오가며 피로하게 시청할까?"</h4>
-                    <p style="color: var(--vb-body); font-size: 0.875rem;">맥락을 파악하기 위해 정성 리서치를 진행했습니다.</p>
+                    <h4 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 1rem; color: var(--vb-text);">"아는 만큼 재밌다'는 팬들, 정말 데이터를 가장 원하고 필요해 할까요?"</h4>
+                    <p style="color: var(--vb-body); font-size: 0.875rem;">설문을 통해 확인된 분명한 '정보 니즈'가 실제 시청 환경에서도 유효한지 궁금했습니다.</p>
                 </div>
                 
                 <div class="vertical-line reveal"></div>
@@ -1568,93 +1860,141 @@
                             <div class="ql-method-card__body">
                                 <span class="ql-method-card__tag">Online Ethnography</span>
                                 <h3 class="ql-method-card__title">온라인 행태 관찰</h3>
-                                <p class="ql-method-card__desc">경기가 진행되는 동안 구단 팬 커뮤니티에 올라온 실시간 댓글 약 4,000건</p>
+                                <p class="ql-method-card__desc">경기 중 구단 팬 커뮤니티에 올라온 실시간 댓글 약 4,000건</p>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- A. 가설의 진화 (업데이트됨) -->
-                <div class="vb-group">
-                    <div class="vb-group__head reveal justify-center text-center">
-                        <span class="vb-group__num">A</span>
-                        <span class="vb-group__name">가설 수정 및 인사이트 도출</span>
-                    </div>
-                    <div class="vb-grid vb-grid--2 reveal" style="gap: 2rem; margin-bottom: 2rem; max-width: 900px; margin-inline: auto;">
-                        <!-- 가설 1 -->
-                        <div class="info-card" style="text-align: left;">
-                            <span style="font-size: 0.75rem; font-weight: 700; color: #9CA3AF; margin-bottom: 0.5rem; display: block;">초기 가설 01</span>
-                            <h4 style="font-size: 1rem; font-weight: 700; margin-bottom: 1rem; color: var(--vb-text);">분석 데이터에 대한 니즈가 클 것이다.</h4>
-                            <div style="border-top: 1px solid #D1D5DB; margin: 1rem 0;"></div>
-                            <span style="font-size: 0.75rem; font-weight: 700; color: #4B5563; margin-bottom: 0.5rem; display: block;">검증 결과</span>
-                            <p style="font-size: 0.875rem; color: var(--vb-body); margin: 0;">오히려 경기 몰입을 방해하는 요소로 작용.</p>
-                        </div>
-                        <!-- 가설 2 -->
-                        <div class="info-card" style="text-align: left;">
-                            <span style="font-size: 0.75rem; font-weight: 700; color: #9CA3AF; margin-bottom: 0.5rem; display: block;">수정 가설 02</span>
-                            <h4 style="font-size: 1rem; font-weight: 700; margin-bottom: 1rem; color: var(--vb-text);">온전히 몰입해 보는 니즈가 클 것이다.</h4>
-                            <div style="border-top: 1px solid #D1D5DB; margin: 1rem 0;"></div>
-                            <span style="font-size: 0.75rem; font-weight: 700; color: #4B5563; margin-bottom: 0.5rem; display: block;">검증 결과</span>
-                            <p style="font-size: 0.875rem; color: var(--vb-body); margin: 0;">몰입 시간은 짧고, 지속적으로 다른 행동(소통)을 병행함.</p>
-                        </div>
-                    </div>
-                    <!-- 최종 결론 -->
-                    <div class="info-card reveal" style="background-color: #ffffff; border: 2px solid #E5E7EB; text-align: center; margin-top: 2rem; margin-bottom: 4rem; max-width: 900px; margin-inline: auto;">
-                        <h4 style="font-size: 1.125rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--vb-text);">실제 관찰된 가장 큰 니즈</h4>
-                        <p style="font-size: 1rem; font-weight: 700; color: var(--vb-text); margin: 0;">
-                            경기를 함께 시청하는 사람들과의 <span style="background-color: #E5E7EB; padding: 0.25rem 0.5rem; border-radius: 0.25rem;">소통과 감정 공유</span>
-                        </p>
-                    </div>
+            <!-- A. 가설 수정 및 인사이트 도출 -->
+            <div class="vb-group">
+                <!-- 섹션 타이틀 -->
+                <div class="vb-group__head reveal justify-center text-center">
+                    <span class="vb-group__num">A</span>
+                    <span class="vb-group__name">가설 수정 및 인사이트 도출</span>
                 </div>
-
-                <!-- B. XR 디바이스 환경에서 생기는 추가 문제 (업데이트됨) -->
-                <div class="vb-group">
-                    <div class="vb-group__head reveal justify-center text-center">
-                        <span class="vb-group__num">B</span>
-                        <span class="vb-group__name">추가 문제 정의 (XR Context)</span>
+                
+                <!-- 카드 그리드 영역 -->
+                <div class="vb-grid vb-grid--2 reveal" style="gap: 2rem; margin-top: 2rem; margin-bottom: 2rem;">
+                    
+                    <!-- 가설 1 -->
+                    <div class="info-card" style="text-align: center;"> <!-- left에서 center로 변경 -->
+                        <!-- 간격을 0.75rem으로 통일 -->
+                        <span style="font-size: 0.75rem; font-weight: 700; color: #4B5563; margin-bottom: 0.75rem; display: block;">초기 가설 01</span>
+                        
+                        <p style="font-size: 1.25rem; font-weight: 700; color: var(--vb-text); margin: 0;">재미를 위한 최우선 니즈는 경기 관련 심층 정보일 것이다.</p>
+                        
+                        <!-- 중앙 구분선 -->
+                        <div style="border-top: 1px solid #D1D5DB; margin: 1.5rem 0;"></div>
+                        
+                        <span style="font-size: 0.75rem; font-weight: 700; color: #4B5563; margin-bottom: 0.75rem; display: block;">검증 결과</span>
+                        
+                        <p style="font-size: 1.25rem; font-weight: 700; color: var(--vb-text); margin: 0;">정보 확인이 오히려 경기 몰입을 방해하는 요소로 작용한다.</p>
                     </div>
-                    <div class="vb-grid vb-grid--2 reveal" style="gap: 1.5rem; margin-bottom: 4rem; max-width: 900px; margin-inline: auto;">
-                        <div class="info-card" style="text-align: left;">
-                            <span style="font-size: 0.75rem; font-weight: 700; color: #9CA3AF; margin-bottom: 0.5rem; display: block;">Problem</span>
-                            <h4 style="font-size: 1rem; font-weight: 700; margin-bottom: 0.75rem; color: var(--vb-text);">XR 디바이스의 외부 채널 차단</h4>
-                            <p style="font-size: 0.875rem; color: var(--vb-body); margin: 0;">고글 형태의 한계로 인해, 정보 확인이나 소통을 위해서는 반드시 기기를 벗어야 함.</p>
-                        </div>
-                        <div class="info-card" style="text-align: left; background-color: #1F2937; border: none;">
-                            <span style="font-size: 0.75rem; font-weight: 700; color: #9CA3AF; margin-bottom: 0.5rem; display: block;">Desired Experience</span>
-                            <h4 style="font-size: 1rem; font-weight: 700; margin-bottom: 0.75rem; color: #F9FAFB;">단절 없는 경험</h4>
-                            <p style="font-size: 0.875rem; color: #D1D5DB; margin: 0;">디바이스를 벗지 않고도 소통 등 다른 활동이 XR 환경 내에서 자연스럽게 이어져야 함.</p>
-                        </div>
+                    
+                    <!-- 가설 2 -->
+                    <div class="info-card" style="text-align: center;"> <!-- left에서 center로 변경 -->
+                        <span style="font-size: 0.75rem; font-weight: 700; color: #4B5563; margin-bottom: 0.75rem; display: block;">수정 가설 02</span>
+                        
+                        <p style="font-size: 1.25rem; font-weight: 700; color: var(--vb-text); margin: 0;">온전히 몰입해 보는 니즈가 가장 클 것이다.</p>
+                        
+                        <div style="border-top: 1px solid #D1D5DB; margin: 1.5rem 0;"></div>
+                        
+                        <span style="font-size: 0.75rem; font-weight: 700; color: #4B5563; margin-bottom: 0.75rem; display: block;">검증 결과</span>
+                        
+                        <p style="font-size: 1.25rem; font-weight: 700; color: var(--vb-text); margin: 0;">실제 온전히 몰입하는 시간은 짧고, 지속적으로 멀티 태스킹을 한다.</p>
                     </div>
+                    
                 </div>
+                
+                <!-- 최종 결론 영역 -->
+                <div class="info-card reveal" style="background-color: #ffffff; border: 2px solid #E5E7EB; text-align: center; margin-top: 2rem; margin-bottom: 4rem; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+                    
+                    <h4 style="font-size: 1.125rem; font-weight: 700; margin-top: 0; margin-bottom: 0.75rem; color: var(--vb-text);">실제 관찰된 가장 큰 니즈</h4>
+                    
+                    <p style="font-size: 1.5rem; font-weight: 700; color: var(--vb-text); margin: 0;">
+                        경기를 함께 시청하는 사람들과의 <span style="background-color: #E5E7EB; padding: 0.25rem 0.5rem; border-radius: 0.25rem;">소통과 감정 공유</span>
+                    </p>
+                    
+                </div>
+            </div>
 
-                <!-- C. UX Direction — 어피니티 다이어그램 배경 위에 6키워드 오버레이 -->
-                <!-- 추후 별도 섹션으로 분리 예정 → 위 간격을 더 크게 -->
-                <div class="vb-group sec-dark" style="margin-top: clamp(260px, 28vw, 440px);">
-                    <div class="vb-group__head reveal">
-                        <span class="vb-group__num">C</span>
-                        <span class="vb-group__name">UX Direction</span>
+            <!-- B. XR 디바이스 환경에서 생기는 추가 문제 -->
+            <div class="vb-group">
+                <div class="vb-group__head reveal justify-center text-center">
+                    <span class="vb-group__num">B</span>
+                    <span class="vb-group__name">추가 문제 정의 (XR Context)</span>
+                </div>
+                <div class="vb-grid vb-grid--2 reveal" style="gap: 1.5rem; margin-bottom: 4rem;">
+                    
+                    <!-- Problem -->
+                    <!-- 중앙 정렬(text-align: center) 및 세로 균형을 위해 flex 추가 -->
+                    <div class="info-card" style="text-align: center; display: flex; flex-direction: column; justify-content: center;">
+                        <span style="font-size: 0.75rem; font-weight: 700; color: #9CA3AF; margin-bottom: 0.75rem; display: block;">Problem</span>
+                        
+                        <!-- 태그를 p로 변경하고 A파트와 동일하게 사이즈 1.25rem으로 확대 -->
+                        <p style="font-size: 1.25rem; font-weight: 700; color: var(--vb-text); margin-top: 0; margin-bottom: 0.75rem;">XR 디바이스의 외부 채널 차단</p>
+                        
+                        <!-- 부연 설명 사이즈도 0.875rem에서 1rem으로 확대 -->
+                        <p style="font-size: 1rem; color: var(--vb-body); margin: 0;">고글 형태의 한계로 인해, 정보 확인이나 소통을 위해서는 반드시 기기를 벗어야 함.</p>
                     </div>
-                    <div class="ql-ux-hero reveal">
-                        <div class="ql-ux-hero__bg"><img src="media/qualitative/affinity-diagram.jpg" alt="어피니티 다이어그램"></div>
-                        <div class="ql-ux-hero__overlay"></div>
-                        <div class="ql-ux-hero__content">
-                            <span class="ql-ux-hero__eyebrow">Affinity Diagram</span>
-                            <p class="ql-ux-hero__desc">리서치 과정에서 확인한 여러 페인 포인트와 인사이트를 종합해 유저 페르소나, 저니맵, 어피니티 다이어그램을 작성했고, 이를 통해 서비스의 6가지 컨셉 키워드를 도출했어요.</p>
-                            <div class="ql-ux-chips">
-                                <span class="ql-ux-chip">Immersion</span>
-                                <span class="ql-ux-chip">Understanding</span>
-                                <span class="ql-ux-chip">Social Experience</span>
-                                <span class="ql-ux-chip">Multi-tasking</span>
-                                <span class="ql-ux-chip">Customizable</span>
-                                <span class="ql-ux-chip">Fandom</span>
+                    
+                    <!-- Desired Experience -->
+                    <div class="info-card" style="text-align: center; background-color: #1F2937; border: none; display: flex; flex-direction: column; justify-content: center;">
+                        <span style="font-size: 0.75rem; font-weight: 700; color: #9CA3AF; margin-bottom: 0.75rem; display: block;">Desired Experience</span>
+                        
+                        <p style="font-size: 1.25rem; font-weight: 700; color: #F9FAFB; margin-top: 0; margin-bottom: 0.75rem;">단절 없는 경험</p>
+                        
+                        <p style="font-size: 1rem; color: #D1D5DB; margin: 0;">디바이스를 벗지 않고도 소통 등 다른 활동이 XR 환경 내에서 자연스럽게 이어져야 함.</p>
+                    </div>
+                    
+                </div>
+            </div>
+                <!-- C. UX Direction — 전체화면 어피니티 다이어그램 -->
+                <div class="vb-group" style="margin-top: clamp(60px, 8vw, 100px);">
+                    <div class="vb-affinity">
+                        <div class="vb-affinity__bg">
+                            <img src="media/qualitative/affinity-diagram.jpg" alt="어피니티 다이어그램">
+                        </div>
+                        <div class="vb-affinity__overlay"></div>
+                        <div class="vb-affinity__inner">
+                            <div class="vb-group__head reveal">
+                                <span class="vb-group__num">C</span>
+                                <span class="vb-group__name">UX Direction</span>
+                            </div>
+                            <p class="aff-desc reveal">리서치 과정에서 확인한 여러 페인 포인트와 인사이트를 종합해, 서비스의 6가지 컨셉 키워드를 도출했어요.</p>
+                            <div class="aff-kw-row reveal">
+                                <div class="aff-kw-card">
+                                    <span class="aff-kw-card__en">Immersion</span>
+                                    <span class="aff-kw-card__ko">경기에 더 깊이 몰입해서 볼 수 있도록</span>
+                                </div>
+                                <div class="aff-kw-card">
+                                    <span class="aff-kw-card__en">Understanding</span>
+                                    <span class="aff-kw-card__ko">아는 만큼 더 잘 보이니까, 더 잘 알게</span>
+                                </div>
+                                <div class="aff-kw-card">
+                                    <span class="aff-kw-card__en">Social Experience</span>
+                                    <span class="aff-kw-card__ko">함께 보는 사람들과 소통하며 즐기도록</span>
+                                </div>
+                                <div class="aff-kw-card">
+                                    <span class="aff-kw-card__en">Multi-tasking</span>
+                                    <span class="aff-kw-card__ko">경기를 보며 하던 다른 일들도 동시에</span>
+                                </div>
+                                <div class="aff-kw-card">
+                                    <span class="aff-kw-card__en">Customizable</span>
+                                    <span class="aff-kw-card__ko">정해진 중계 화면 대신<br>내 방식대로</span>
+                                </div>
+                                <div class="aff-kw-card">
+                                    <span class="aff-kw-card__en">Fandom</span>
+                                    <span class="aff-kw-card__ko">업적으로 공간을 꾸미며 팬경험 극대화</span>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Service Flow: Pre / In / Post-Match -->
-                <!-- 히어로 끝난 직후 배경이 완전히 어두워질 여유를 주기 위해 위 간격을 더 크게 -->
-                <div class="vb-group sec-dark" style="margin-top: clamp(200px, 22vw, 320px);">
+                <div class="vb-group" style="margin-top: clamp(80px, 10vw, 140px);">
                     <div class="vb-group__head reveal">
                         <span class="vb-group__num">D</span>
                         <span class="vb-group__name">Service Flow</span>
@@ -1712,16 +2052,19 @@
         <!-- ====================================================
              5. SKYBOX
              ==================================================== -->
+        <!-- 회색 구간에 놓이는 전체화면 이미지. 이 이미지 '바로 아래'부터 검정 시작 -->
+        <section class="vb-skybox-bridge">
+            <div class="vb-fullbleed reveal">
+                <img src="media/skybox/skybox.jpg" alt="Skybox">
+            </div>
+        </section>
+
         <section class="vb-section sec-dark sec-centered">
             <div class="vb-wrap">
-                <div class="vb-fullbleed reveal" style="margin-bottom:clamp(32px,4vw,56px);">
-                    <img src="media/skybox/skybox.jpg" alt="Skybox">
-                </div>
-
                 <span class="vb-eyebrow reveal">03 — Solution</span>
                 <h2 class="vb-title reveal">Skybox<br><span style="color:var(--vb-muted);font-weight:500;">나만의 로비 공간</span></h2>
 
-                <p class="vb-body reveal" style="margin-bottom:clamp(32px,4vw,56px);">서비스에 접속했을 때 나오는 개인 공간입니다. 경기장의 스카이 박스를 모티브로 만들어진 공간으로, 유저는 이곳에서 1. 시청할 경기, 하이라이트 등을 찾아보거나 2. 친구와 소통할 수 있고, 3. 업적을 통해 획득한 토큰으로 자신의 팬심을 시각화하고 공간을 커스터마이징 할 수 있습니다.</p>
+                <p class="vb-body reveal" style="margin-bottom:var(--vb-lead-gap);">서비스에 접속했을 때 나오는 개인 공간입니다. 경기장의 스카이 박스를 모티브로 만들어진 공간으로,<br>각각의 유저는 이 공간에서 <span class="sky-lead__n">1.</span> <span class="sky-lead__k">시청할 경기, 하이라이트 등을 찾아보거나</span> <span class="sky-lead__n">2.</span> <span class="sky-lead__k">친구와 소통</span>할 수 있고,<br><span class="sky-lead__n">3.</span> <span class="sky-lead__k">업적을 통해 획득한 토큰으로 자신의 팬심을 시각화하고 공간을 커스터마이징</span> 할 수 있습니다.</p>
 
                 <div class="reveal">
                     <img src="media/skybox/hero.jpg" alt="Skybox" loading="lazy" style="width:100%;height:auto;display:block;border-radius:16px;border:1px solid var(--vb-line);">
@@ -1729,7 +2072,7 @@
 
                 <!-- Key Features 3개 (GIF 독립 박스 + 텍스트 박스 밖) -->
                 <div class="vb-group">
-                    <div class="vb-group__head reveal">
+                    <div class="vb-group__head vb-group__head--lead reveal">
                         <span class="vb-group__num">A</span>
                         <span class="vb-group__name">Key Features</span>
                     </div>
@@ -1762,12 +2105,12 @@
                 </div>
 
                 <!-- 3D Asset: 좌 공간 렌더 + 우 에셋 6종 -->
-                <div class="vb-group">
+                <div class="vb-group" style="margin-top: clamp(96px, 12vw, 160px);">
                     <div class="vb-group__head reveal">
                         <span class="vb-group__num">B</span>
                         <span class="vb-group__name">3D Asset</span>
                     </div>
-                    <p class="vb-body reveal" style="margin-bottom:var(--space-md);">SKYBOX 공간과, 업적 기반 3D 토큰 에셋 6종 등을 제작하였습니다. 모든 토큰은 클릭외에도 옮기고 던지는 등 인터랙션이 가능합니다.</p>
+                    <p class="vb-body reveal" style="margin-bottom:var(--vb-lead-gap);">SKYBOX 공간과, 업적 기반 3D 토큰 에셋 6종 등을 제작하였습니다.<br>모든 토큰은 클릭외에도 옮기고 던지는 등 인터랙션이 가능합니다.</p>
 
                     <div class="sky-asset">
                         <div class="sky-asset__hero-col reveal">
@@ -1797,9 +2140,34 @@
                                 <p class="sky-asset__item-cap">K리그 트로피</p>
                             </div>
                             <div class="reveal">
-                                <div class="sky-asset__item-media"><img src="media/skybox/asset-hearts.png" alt="강원FC 응원하트"></div>
+                                <div class="sky-asset__item-media"><img src="media/skybox/asset-hearts.png" alt="강원FC 응원심볼"></div>
                                 <p class="sky-asset__item-cap">강원FC 응원하트</p>
                             </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 인터랙션: 좌 와이어프레임 스케치 + 우 플레이 영상(자동재생) -->
+                <div class="vb-group" style="margin-top: clamp(96px, 12vw, 160px);">
+                    <div class="vb-group__head vb-group__head--lead reveal">
+                        <span class="vb-group__num">C</span>
+                        <span class="vb-group__name">인터랙션</span>
+                    </div>
+                    <div class="sky-inter">
+                        <div class="reveal">
+                            <div class="sky-inter__media">
+                                <img src="media/skybox/interaction-guide.jpg" alt="인터랙션 와이어프레임 스케치" loading="lazy">
+                            </div>
+                            <p class="sky-inter__caption">VR 공간의 거리·시야각을 고려한 배치 스케치</p>
+                        </div>
+                        <div class="reveal">
+                            <div class="sky-inter__media">
+                                <video muted playsinline loop autoplay preload="metadata">
+                                    <source src="media/skybox/interaction.mp4" type="video/mp4">
+                                </video>
+                                <button type="button" class="vb-carousel__play" aria-label="재생"><svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><polygon points="5,3 5,13 13,8"></polygon></svg></button>
+                            </div>
+                            <p class="sky-inter__caption">3D 오브젝트 인터랙션</p>
                         </div>
                     </div>
                 </div>
@@ -1813,7 +2181,7 @@
             <div class="vb-wrap">
                 <span class="vb-eyebrow reveal">04 — Solution</span>
                 <h2 class="vb-title reveal">In Stadium<br><span style="color:var(--vb-muted);font-weight:500;">원하는 위치에서, 원하는 방식으로</span></h2>
-                <p class="vb-body reveal" style="margin-bottom:clamp(32px,4vw,56px);">중계 환경을 사용자 본인의 취향에 맞게 조정하고, 경기를 더 재미있게 즐길 수 있도록 돕습니다.</p>
+                <p class="vb-body reveal" style="margin-bottom:var(--vb-lead-gap);">중계 환경을 사용자 본인의 취향에 맞게 조정하고, 경기를 더 재미있게 즐길 수 있도록 돕습니다.</p>
 
                 <!-- 360 VR 경기장 -->
                 <div class="vb-fullbleed reveal">
@@ -1827,7 +2195,7 @@
                      위 360 캡션과 너무 붙지 않게 여백 추가 -->
                 <div class="vb-group" style="margin-top: clamp(64px, 8vw, 100px);">
                     <div class="vb-carousel-block reveal">
-                        <div class="vb-group__head vb-carousel-block__eyebrow" style="margin-top:0;">
+                        <div class="vb-group__head vb-group__head--lead vb-carousel-block__eyebrow" style="margin-top:0;">
                             <span class="vb-group__num">A</span>
                             <span class="vb-group__name">Key Features</span>
                         </div>
@@ -1837,7 +2205,7 @@
                                     <div class="vb-carousel__media">
                                         <img src="media/stadium/stadium-view-2.jpg" alt="스타디움뷰" loading="lazy">
                                     </div>
-                                    <p class="vb-carousel__caption"><strong>1. 스타디움뷰</strong> 원하는 위치에서 시청하기</p>
+                                    <p class="vb-carousel__caption"><strong>1. 자유로운 시청 환경</strong><br>원하는 위치에서 원하는 방식으로. 초개인화된 시청 환경</p>
                                 </div>
                                 <div class="vb-carousel__item">
                                     <div class="vb-carousel__media">
@@ -1846,7 +2214,7 @@
                                         </video>
                                         <button type="button" class="vb-carousel__play" aria-label="재생"><svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><polygon points="5,3 5,13 13,8"></polygon></svg></button>
                                     </div>
-                                    <p class="vb-carousel__caption"><strong>2. 인포</strong> 실시간 경기 전술 / 선수 정보 확인</p>
+                                    <p class="vb-carousel__caption"><strong>2. 손쉬운 경기 정보 탐색</strong><br>디바이스를 벗지 않고도 손쉽게. 리그, 팀 , 선수 정보, 경기 전술 등 다양한 정보 실시간 확인</p>
                                 </div>
                                 <div class="vb-carousel__item">
                                     <div class="vb-carousel__media">
@@ -1855,7 +2223,7 @@
                                         </video>
                                         <button type="button" class="vb-carousel__play" aria-label="재생"><svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><polygon points="5,3 5,13 13,8"></polygon></svg></button>
                                     </div>
-                                    <p class="vb-carousel__caption"><strong>3. 프렌드</strong> 친구와 함께 보기</p>
+                                    <p class="vb-carousel__caption"><strong>3. 소셜 : 친구와 함께 보기</strong><br>원하는 친구와 음성 대화하며 경기 함께 시청</p>
                                 </div>
                                 <div class="vb-carousel__item">
                                     <div class="vb-carousel__media">
@@ -1864,13 +2232,13 @@
                                         </video>
                                         <button type="button" class="vb-carousel__play" aria-label="재생"><svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><polygon points="5,3 5,13 13,8"></polygon></svg></button>
                                     </div>
-                                    <p class="vb-carousel__caption"><strong>4. 챗</strong> AI 기반 통합 메신저</p>
+                                    <p class="vb-carousel__caption"><strong>4. 소셜 : AI 기반 통합 메신저</strong><br>디바이스를 벗을 필요 없이, 연동된 계정 기반으로 가족, 친구들과 소통</p>
                                 </div>
                                 <div class="vb-carousel__item">
                                     <div class="vb-carousel__media">
                                         <img src="media/stadium/quick-menu.png" alt="퀵리모트" loading="lazy">
                                     </div>
-                                    <p class="vb-carousel__caption"><strong>5. 퀵리모트</strong> 경기 중 자주 사용되는 기능 5가지</p>
+                                    <p class="vb-carousel__caption"><strong>5. 퀵리모트</strong><br>경기 중 자주 사용되는 기능 5가지를 숏컷으로 설정</p>
                                 </div>
                             </div>
                         </div>
@@ -1884,44 +2252,246 @@
         </section>
 
         <!-- ====================================================
-             7. INTERACTION & AI
+             7. AI (VIVA AI) — 풀블리드 블랙 / 좌 크롭 이미지 + 우 텍스트·영상 3
              ==================================================== -->
-        <section class="vb-section sec-dark sec-centered">
+        <section class="ai-sec sec-dark">
+            <div class="ai-sec__inner">
+                <div class="ai-sec__visual reveal">
+                    <img src="media/ai/viva-hero.jpg" alt="VIVA AI" loading="lazy">
+                </div>
+                <div class="ai-sec__content">
+                    <!-- 영문 원본 (나중에 필요 시 교체용으로 보존)
+                    <span class="ai-sec__eyebrow reveal">VIBRA'S FOOTBALL ASSISTANT</span>
+                    <h2 class="ai-sec__title reveal">VIVA AI</h2>
+                    <p class="ai-sec__desc reveal">VIVA is a friendly AI assistant designed with themes of <strong>VIBRANCY</strong>, <strong>VIVIDNESS</strong> and <strong>BOUNCE</strong> to enhance the football viewing experience. Its multimodal interface recognizes voice, text, and gestures, enabling natural, friend-like interactions.</p>
+                    -->
+                    <div class="ai-sec__text">
+                        <span class="ai-sec__eyebrow reveal">VIBRA의 풋볼 어시스턴트</span>
+                        <h2 class="ai-sec__title reveal">VIVA AI</h2>
+                        <p class="ai-sec__desc reveal"><strong>VIVA</strong>는 <strong>최초의 축구공을 모티브</strong>로 디자인된 AI 어시스턴트입니다. 축구 시청 경험을 한층 끌어올리기 위해 <strong>생동감(Vibrancy)</strong>, <strong>선명함(Vividness)</strong>, <strong>경쾌함(Bounce)</strong>을 핵심 컨셉으로 삼았으며, 음성·텍스트·제스처를 아우르는 멀티모달 인터페이스를 통해 마치 친구처럼 자연스러운 상호작용을 제공합니다.</p>
+                    </div>
+
+                    <div class="ai-sec__grid">
+                        <div class="ai-sec__item reveal">
+                            <div class="ai-sec__media ai-sec__media--scale">
+                                <video muted playsinline loop autoplay preload="metadata">
+                                    <source src="media/ai/viva-01.mp4" type="video/mp4">
+                                </video>
+                            </div>
+                            <p class="ai-sec__cap">음성 인식</p>
+                        </div>
+                        <div class="ai-sec__item reveal">
+                            <div class="ai-sec__media ai-sec__media--scale">
+                                <video muted playsinline loop autoplay preload="metadata">
+                                    <source src="media/ai/viva-02.mp4" type="video/mp4">
+                                </video>
+                            </div>
+                            <p class="ai-sec__cap">알림</p>
+                        </div>
+                        <div class="ai-sec__item reveal">
+                            <div class="ai-sec__media">
+                                <video muted playsinline loop autoplay preload="metadata">
+                                    <source src="media/ai/viva-03.mp4" type="video/mp4">
+                                </video>
+                            </div>
+                            <p class="ai-sec__cap">감정 공유</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 하단: 기본 컨테이너 폭 이미지 1장 + 그 아래 설명 텍스트 -->
+            <div class="ai-sec__below">
+                <div class="vb-wrap">
+                    <div class="ai-sec__below-media reveal">
+                        <img src="media/ai/viva-detail.jpg" alt="VIVA AI 상세" loading="lazy">
+                    </div>
+                    <p class="ai-sec__below-desc reveal">경기와 관련된 실시간 정보뿐만 아니라, "47번 선수가 신고 있는 축구화 뭐야?"와 같은 사소한 호기심까지. VIVA AI가 명쾌하게 해결해줍니다.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ====================================================
+             8. INTERACTION (AI 아래) : 큰 설명 → 캐러셀 → 인터랙션 가이드(영상 4장)
+             ==================================================== -->
+        <section class="vb-section sec-dark sec-centered" style="padding-top: clamp(140px, 18vh, 240px); padding-bottom: clamp(140px, 18vh, 240px);">
             <div class="vb-wrap">
                 <span class="vb-eyebrow reveal">05 — Interaction</span>
-                <h2 class="vb-title reveal">Interaction &amp; AI</h2>
+                <h2 class="vb-title reveal">Interaction<br><span style="color:var(--vb-muted);font-weight:500;">사용자의 행동을 인터랙션으로</span></h2>
+                <p class="vb-body reveal" style="margin-bottom: clamp(56px, 8vw, 110px);">세밀한 관찰을 통해 <strong>실제 축구 관람 중 공통적으로 자주 나타나는 행동과 포즈</strong>를 파악했습니다.<br> 이를 서비스 속 <strong>제스처·컨트롤러 인터랙션</strong>으로 전환해, 자연스럽고 직관적인 경험을 구현했습니다.</p>
 
-                <div class="vb-grid vb-grid--2">
-                    <div class="reveal">
-                        <div class="ph ph--16x9"><span class="ph__label">제스처 / 컨트롤러</span></div>
-                        <h3 class="vb-subtitle" style="margin-top:20px;">제스처 &amp; 컨트롤러</h3>
-                        <p class="vb-body">[설명 자리] 손 제스처와 컨트롤러를 활용한 조작 방식을 설명합니다.</p>
+                <!-- 캐러셀 (In Stadium Key Features와 동일 구조) -->
+                <div class="vb-group">
+                    <div class="vb-carousel-block reveal">
+                        <div class="vb-group__head vb-group__head--lead vb-carousel-block__eyebrow" style="margin-top:0;">
+                            <span class="vb-group__num">A</span>
+                            <span class="vb-group__name">Key Interactions</span>
+                        </div>
+                        <div class="vb-carousel">
+                            <div class="vb-carousel__track" id="interaction-carousel">
+                                <div class="vb-carousel__item">
+                                    <div class="vb-carousel__media">
+                                        <video muted playsinline loop preload="metadata">
+                                            <source src="media/interaction/ingame_capture.mp4" type="video/mp4">
+                                        </video>
+                                        <button type="button" class="vb-carousel__play" aria-label="재생"><svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><polygon points="5,3 5,13 13,8"></polygon></svg></button>
+                                    </div>
+                                    <p class="vb-carousel__caption"><strong>1. 캡처</strong><br>손가락으로 카메라 모양을 만들어 보고 있는 장면 그대로 캡쳐합니다.<br> 캡쳐 후 연동된 소셜 네트워크에 바로 업로드할 수 있습니다.</p>
+                                </div>
+                                <div class="vb-carousel__item">
+                                    <div class="vb-carousel__media">
+                                        <video muted playsinline loop preload="metadata">
+                                            <source src="media/interaction/ingame_emoji.mp4" type="video/mp4">
+                                        </video>
+                                        <button type="button" class="vb-carousel__play" aria-label="재생"><svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><polygon points="5,3 5,13 13,8"></polygon></svg></button>
+                                    </div>
+                                    <p class="vb-carousel__caption"><strong>2. 이모지</strong><br>손가락을 총 모양으로 만들어서 이모지를 발사합니다.<br>좋아요, 웃겨요, 화나요 등 다양한 감정을 재밌는 방식으로 표현할 수 있습니다.</p>
+                                </div>
+                                <!-- 바이브: 추후 영상 교체 예정 -->
+                                <div class="vb-carousel__item">
+                                    <div class="vb-carousel__media">
+                                        <video muted playsinline loop preload="metadata">
+                                            <source src="media/interaction/ingame_vibe.mp4" type="video/mp4">
+                                        </video>
+                                        <button type="button" class="vb-carousel__play" aria-label="재생"><svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><polygon points="5,3 5,13 13,8"></polygon></svg></button>
+                                    </div>
+                                    <p class="vb-carousel__caption"><strong>3. 다이나믹 햅틱</strong><br>득점 찬스, 실점 위기 등 중요한 순간.<br> 컨트롤러의 진동을 통해 긴장감을 극대화합니다.</p>
+                                </div>
+                                <div class="vb-carousel__item">
+                                    <div class="vb-carousel__media">
+                                        <video muted playsinline loop preload="metadata">
+                                            <source src="media/interaction/ingame_score.mp4" type="video/mp4">
+                                        </video>
+                                        <button type="button" class="vb-carousel__play" aria-label="재생"><svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><polygon points="5,3 5,13 13,8"></polygon></svg></button>
+                                    </div>
+                                    <p class="vb-carousel__caption"><strong>4. 세레머니</strong><br>득점의 순간, 컨트롤러를 머리 위로 들어 올립니다. <br> 축하 이펙트가 재생되며 승리의 기쁨을 더합니다.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="vb-carousel-nav">
+                            <button type="button" class="vb-carousel-nav__arrow" data-carousel-prev="interaction-carousel" aria-label="이전">‹</button>
+                            <button type="button" class="vb-carousel-nav__arrow" data-carousel-next="interaction-carousel" aria-label="다음">›</button>
+                        </div>
                     </div>
-                    <div class="reveal">
-                        <div class="ph ph--16x9"><span class="ph__label">이모지 슈팅</span></div>
-                        <h3 class="vb-subtitle" style="margin-top:20px;">이모지 슈팅</h3>
-                        <p class="vb-body">[설명 자리] 응원 감정을 이모지로 발사하는 소셜 인터랙션입니다.</p>
+                </div>
+
+                <!-- 인터랙션 가이드 하위 섹션 : 튜토리얼 영상 4장 -->
+                <div class="vb-group" style="margin-top: clamp(110px, 14vw, 180px);">
+                    <div class="vb-group__head reveal">
+                        <span class="vb-group__num">B</span>
+                        <span class="vb-group__name">인터랙션 가이드</span>
                     </div>
-                    <div class="reveal">
-                        <div class="ph ph--16x9"><span class="ph__label">캡처</span></div>
-                        <h3 class="vb-subtitle" style="margin-top:20px;">순간 캡처</h3>
-                        <p class="vb-body">[설명 자리] 명장면을 캡처하고 보관·공유하는 기능입니다.</p>
-                    </div>
-                    <div class="reveal">
-                        <div class="ph ph--16x9"><span class="ph__label">VIVA AI</span></div>
-                        <h3 class="vb-subtitle" style="margin-top:20px;">VIVA AI</h3>
-                        <p class="vb-body">[설명 자리] 경기 정보·데이터를 대화로 안내하는 AI 어시스턴트 'VIVA'입니다.</p>
+                    <p class="vb-body reveal" style="margin-bottom: var(--vb-lead-gap);">XR 디바이스와 서비스에 익숙하지 않은 유저들을 위해 3D 애니메이션 기반 인터랙션 가이드를 제작,<br> 필요한 타이밍에 맞춰 튜토리얼 형식으로 제공하였습니다.</p>
+                    <!-- 한 줄에 4개, 하나씩 순서대로 재생(재생 중=컬러, 나머지=흑백 정지). loop 없음 = 'ended'로 다음으로 넘어감 -->
+                    <div class="ig-grid" id="interaction-guide">
+                        <div class="ig-card reveal">
+                            <div class="ig-card__media">
+                                <video muted playsinline preload="metadata">
+                                    <source src="media/interaction/1.click.mp4" type="video/mp4">
+                                </video>
+                            </div>
+                            <p class="ig-card__cap"><span class="ig-card__num">1.</span>클릭</p>
+                        </div>
+                        <div class="ig-card reveal">
+                            <div class="ig-card__media">
+                                <video muted playsinline preload="metadata">
+                                    <source src="media/interaction/2.grab%26move.mp4" type="video/mp4">
+                                </video>
+                            </div>
+                            <p class="ig-card__cap"><span class="ig-card__num">2.</span>잡기 &amp; 이동</p>
+                        </div>
+                        <div class="ig-card reveal">
+                            <div class="ig-card__media">
+                                <video muted playsinline preload="metadata">
+                                    <source src="media/interaction/3.capture.mp4" type="video/mp4">
+                                </video>
+                            </div>
+                            <p class="ig-card__cap"><span class="ig-card__num">3.</span>캡처</p>
+                        </div>
+                        <div class="ig-card reveal">
+                            <div class="ig-card__media">
+                                <video muted playsinline preload="metadata">
+                                    <source src="media/interaction/4.emoji.mp4" type="video/mp4">
+                                </video>
+                            </div>
+                            <p class="ig-card__cap"><span class="ig-card__num">4.</span>이모지</p>
+                        </div>
                     </div>
                 </div>
             </div>
         </section>
 
         <!-- ====================================================
-             FOOTER
+             9. PLAY FILM — 실제 플레이 영상 (반응형 16:9, Concept Film과 동일 양식)
              ==================================================== -->
-        <div class="vb-footer sec-dark">
-            <a href="../../../works.html" class="vb-back-btn hover-trigger">Back to Works</a>
-        </div>
+        <section class="vb-section vb-video-section sec-dark sec-centered">
+            <div class="vb-wrap">
+                <span class="vb-eyebrow reveal">06 — Demo</span>
+                <h2 class="vb-title reveal">Play Film<br><span style="color:var(--vb-muted);font-weight:500;">실제 플레이 영상</span></h2>
+
+                <div class="vb-video reveal">
+                    <div class="vb-video__frame">
+                        <iframe src="https://www.youtube.com/embed/F9UDIkU7Mmw" title="VIBRA — 실제 플레이 영상" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ====================================================
+             10. UI SHOWCASE — 전체화면 UI 모음 이미지.
+             이 이미지를 경계로 배경이 다크 → 밝게 전환 (위 여백은 다크, 아래 여백은 라이트)
+             ==================================================== -->
+        <section class="vb-ui-bridge">
+            <div class="vb-fullbleed reveal">
+                <img src="media/ui.png" alt="VIBRA UI 모음">
+            </div>
+        </section>
+
+        <!-- ====================================================
+             11. BEHIND — 경기장 VR 촬영 이미지 (밝은 구간)
+             ==================================================== -->
+        <section class="vb-section sec-centered" style="padding-bottom: clamp(80px, 10vh, 140px);">
+            <div class="vb-wrap">
+                <span class="vb-eyebrow reveal">Behind</span>
+                <h2 class="vb-title reveal">현장감을 담아낸 360° 레코딩</h2>
+                <p class="vb-body reveal" style="margin-bottom: var(--vb-lead-gap);">더 생생한 현장감, 더 높은 몰입감을 위해 K리그 현장을 직접 담았습니다.<br>한국프로축구연맹 및 강원FC와 협력하여 Insta360 Titan 카메라로 실제 경기장 환경을 촬영했습니다.</p>
+                <div class="vb-archive-media reveal">
+                    <img src="media/vr_titan.jpg" alt="경기장 VR 촬영" loading="lazy">
+                </div>
+            </div>
+        </section>
+
+        <!-- ====================================================
+             11. PROJECT ARCHIVE — GIF
+             ==================================================== -->
+        <section class="vb-section sec-centered">
+            <div class="vb-wrap">
+                <span class="vb-eyebrow reveal">Archive</span>
+                <h2 class="vb-title reveal">Project Archive</h2>
+                <div class="vb-archive-media reveal">
+                    <div class="vb-slideshow" id="archive-slideshow">
+                        <img src="media/archieve_1.jpg" alt="프로젝트 아카이브 1" class="is-active">
+                        <img src="media/archieve_2.jpg" alt="프로젝트 아카이브 2" loading="lazy">
+                        <img src="media/archieve_3.jpg" alt="프로젝트 아카이브 3" loading="lazy">
+                        <img src="media/archieve_4.jpg" alt="프로젝트 아카이브 4" loading="lazy">
+                        <img src="media/archieve_5.jpg" alt="프로젝트 아카이브 5" loading="lazy">
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ====================================================
+             12. CLOSING — 전체화면 이미지 + CTA 오버레이 (맨 아래)
+             ==================================================== -->
+        <section class="vb-closing reveal">
+            <div class="vb-closing__bg">
+                <img src="media/archive/closing.jpg" alt="VIBRA" loading="lazy">
+            </div>
+            <div class="vb-closing__inner">
+                <h2 class="vb-closing__title">
+                <a href="../../../works.html" class="vb-closing__cta hover-trigger">Back to Works</a>
+            </div>
+        </section>
 
     </main>
 
@@ -1975,6 +2545,49 @@
                 });
             }
             // (실패 시에도 .vb-cover는 CSS 기본값으로 항상 보임)
+
+            // ── 히어로 덮기 구간만 스크롤 가속 ──
+            // 히어로는 처음에 100% 그대로 보이고(가리지 않음), 덮는 레이어만 스크롤보다 빠르게 올라옴.
+            // 방식: 레이어의 '흐름상 위치'를 boost만큼 위로 당겨두고, 같은 양을 transform으로 아래로 밀어 시작 위치를 원복.
+            //       스크롤에 따라 그 transform을 0으로 줄이면 → 레이어는 100vh를 이동하는데 스크롤은 (1-boost)*100vh만 하면 됨.
+            (function initHeroBoost() {
+                const stage = document.querySelector('.vb-stage');
+                if (!stage || !cover || reduceMotion) return;
+
+                const boost = parseFloat(getComputedStyle(stage).getPropertyValue('--hero-boost')) || 0;
+                if (!boost) return;
+
+                let ticking = false;
+                let settled = null;
+                function apply() {
+                    ticking = false;
+                    const vh = window.innerHeight;
+                    const shift = boost * vh;            // 시작 시 아래로 밀어둘 양
+                    const travel = vh - shift;           // 이만큼만 스크롤하면 덮기 완료
+                    const t = Math.min(Math.max(window.scrollY / travel, 0), 1);
+                    const offset = (1 - t) * shift;
+                    cover.style.transform = `translate3d(0, ${offset}px, 0)`;
+                    // 커버만 내리면 그 아래 섹션과 겹치므로, 같은 양만큼 뒤 콘텐츠도 함께 내림
+                    stage.style.paddingBottom = offset + 'px';
+
+                    // 가속 구간을 벗어나 레이아웃이 고정되면 ScrollTrigger 위치 재계산
+                    const done = (t === 1);
+                    if (done !== settled) {
+                        settled = done;
+                        if (window.ScrollTrigger) ScrollTrigger.refresh();
+                    }
+                }
+                function onScroll() {
+                    if (ticking) return;
+                    ticking = true;
+                    requestAnimationFrame(apply);
+                }
+
+                apply();                            // 시작 위치를 먼저 잡고
+                stage.classList.add('is-boosted');  // 그 다음 흐름 높이를 줄여 깜빡임 방지
+                window.addEventListener('scroll', onScroll, { passive: true });
+                window.addEventListener('resize', apply);
+            })();
 
             // ── Market Research 타임라인 ──
             // 1) 화면 높이에 맞춰 타임라인 전체를 자동 축소(fit) → 어떤 해상도든 안 잘림
@@ -2053,12 +2666,12 @@
                 });
             }
 
-            // Key Features 캐러셀: 하나씩 순서대로 재생 (재생 중=컬러, 나머지=흑백 정지 프레임)
-            // sky-features(Skybox), stadium-features(In Stadium) 등 .sky-feature 구조를 쓰는 컨테이너에 동일하게 적용
-            function initFeatureCarousel(containerId) {
+            // 하나씩 순서대로 재생 (재생 중=컬러, 나머지=흑백 정지 프레임)
+            // 화면에 들어온 뒤에 시작. itemSelector로 다른 마크업(.ig-card 등)에도 재사용
+            function initFeatureCarousel(containerId, itemSelector = '.sky-feature') {
                 const wrap = document.getElementById(containerId);
                 if (!wrap) return;
-                const features = [...wrap.querySelectorAll('.sky-feature')];
+                const features = [...wrap.querySelectorAll(itemSelector)];
                 const videos = features.map(f => f.querySelector('video'));
                 let started = false;
 
@@ -2080,6 +2693,20 @@
                     v.addEventListener('ended', () => activate((idx + 1) % videos.length));
                 });
 
+                // 카드 클릭 = 그 영상으로 바로 넘기기 (+ 젤리 커서 확대 효과)
+                features.forEach((f, idx) => {
+                    f.classList.add('hover-trigger');
+                    f.setAttribute('role', 'button');
+                    f.setAttribute('tabindex', '0');
+                    f.addEventListener('click', () => { started = true; activate(idx); });
+                    f.addEventListener('keydown', (e) => {
+                        if (e.key !== 'Enter' && e.key !== ' ') return;
+                        e.preventDefault();
+                        started = true;
+                        activate(idx);
+                    });
+                });
+
                 const io = new IntersectionObserver((entries, obs) => {
                     entries.forEach(entry => {
                         if (!entry.isIntersecting || started) return;
@@ -2092,6 +2719,66 @@
             }
 
             initFeatureCarousel('sky-features');
+            initFeatureCarousel('interaction-guide', '.ig-card');
+
+            // 아카이브 슬라이드쇼: 1초 간격 자동 전환.
+            // 원본이 커서(장당 3~5MB) 그냥 돌리면 첫 바퀴가 끊김 → 미리 다 받아둔 뒤 시작.
+            // 재생은 화면에 보일 때만(다른 미디어와 동일 규칙).
+            (function initSlideshow(id, delay) {
+                const wrap = document.getElementById(id);
+                if (!wrap) return;
+                const slides = [...wrap.querySelectorAll('img')];
+                if (slides.length < 2) return;
+
+                let index = 0, timer = null, ready = false, visible = false;
+
+                function show(i) {
+                    slides[index].classList.remove('is-active');
+                    index = (i + slides.length) % slides.length;
+                    slides[index].classList.add('is-active');
+                }
+                function start() {
+                    if (timer || !ready || !visible || reduceMotion) return;
+                    timer = setInterval(() => show(index + 1), delay);
+                }
+                function stop() {
+                    if (!timer) return;
+                    clearInterval(timer);
+                    timer = null;
+                }
+                function preload() {
+                    return Promise.all(slides.map(img => {
+                        img.loading = 'eager';
+                        if (img.complete && img.naturalWidth) return Promise.resolve();
+                        return new Promise(res => {
+                            img.addEventListener('load', res, { once: true });
+                            img.addEventListener('error', res, { once: true });
+                        });
+                    }));
+                }
+
+                if (!('IntersectionObserver' in window)) {
+                    ready = visible = true;
+                    preload().then(start);
+                    return;
+                }
+
+                // 화면에 닿기 한참 전부터 미리 받기
+                const pre = new IntersectionObserver((entries, obs) => {
+                    if (!entries.some(e => e.isIntersecting)) return;
+                    obs.disconnect();
+                    preload().then(() => { ready = true; start(); });
+                }, { rootMargin: '800px' });
+                pre.observe(wrap);
+
+                const io = new IntersectionObserver(entries => {
+                    entries.forEach(e => {
+                        visible = e.isIntersecting;
+                        visible ? start() : stop();
+                    });
+                }, { threshold: 0.25 });
+                io.observe(wrap);
+            })('archive-slideshow', 1000);
 
             // 캐러셀 컨트롤: 이전/다음 화살표 + 5초 자동 전환(끝나면 처음으로 루프)
             function initCarouselControls(trackId) {
@@ -2128,6 +2815,23 @@
                     pauseAllVideos();
                     if (video) video.play().catch(() => {});
                 }
+                // 사진 카드는 볼 게 금방 끝나므로 더 빨리 넘김 (영상 카드는 재생 시간 확보)
+                function currentDelay() {
+                    return getActiveItem().querySelector('video') ? 5000 : 2200;
+                }
+
+                // 카드 클릭 = 그 영상 바로 재생 (+ 젤리 커서 확대 효과)
+                [...track.querySelectorAll('.vb-carousel__item')].forEach(item => {
+                    const v = item.querySelector('video');
+                    if (!v) return;                       // 사진 카드는 재생할 게 없음
+                    item.classList.add('hover-trigger');
+                    item.addEventListener('click', (e) => {
+                        if (e.target.closest('.vb-carousel__play')) return;  // 재생 버튼은 자체 핸들러가 처리
+                        pauseAllVideos();
+                        v.currentTime = 0;
+                        v.play().catch(() => {});
+                    });
+                });
                 function goTo(dir) {
                     pauseAllVideos();
                     if (dir > 0 && atEnd()) {
@@ -2154,16 +2858,8 @@
                         scrollSettleTimer = setTimeout(playActiveVideo, 150);
                     });
                 }
-                // 처음 화면에 들어오면 첫 카드 기준으로 자동 재생 시작
-                new IntersectionObserver((entries, obs) => {
-                    entries.forEach(entry => {
-                        if (!entry.isIntersecting) return;
-                        playActiveVideo();
-                        obs.disconnect();
-                    });
-                }, { threshold: 0.3 }).observe(scroller);
-
                 let isHovering = false;
+                let isVisible = false;      // 화면 안에 들어와 있을 때만 재생·자동전환
                 let autoplayHandle = null;
 
                 function clearAutoplay() {
@@ -2171,12 +2867,28 @@
                 }
                 function scheduleAutoplay() {
                     clearAutoplay();
-                    if (isHovering) return;
+                    if (isHovering || !isVisible) return;
                     autoplayHandle = setTimeout(() => {
                         goTo(1);
                         scheduleAutoplay();
-                    }, 5000);
+                    }, currentDelay());
                 }
+
+                // 화면에 들어오면 재생 시작, 벗어나면 정지 (페이지 진입만으로 재생되지 않도록)
+                new IntersectionObserver(entries => {
+                    entries.forEach(entry => {
+                        isVisible = entry.isIntersecting;
+                        if (isVisible) {
+                            playActiveVideo();
+                            scheduleAutoplay();
+                        } else {
+                            clearAutoplay();
+                            clearTimeout(goToPlayTimer);
+                            clearTimeout(scrollSettleTimer);
+                            pauseAllVideos();
+                        }
+                    });
+                }, { threshold: 0.3 }).observe(scroller);
 
                 [prevBtn, nextBtn].forEach(btn => {
                     if (!btn) return;
@@ -2187,21 +2899,21 @@
                 });
                 scroller.addEventListener('mouseenter', () => { isHovering = true; clearAutoplay(); });
                 scroller.addEventListener('mouseleave', () => { isHovering = false; scheduleAutoplay(); });
-
-                scheduleAutoplay();
             }
             initCarouselControls('stadium-carousel');
+            initCarouselControls('interaction-carousel');
 
             // 카드별 재생 버튼: 클릭한 영상만 재생, 나머지는 정지 + 아이콘 리셋
+            // 버튼은 항상 미디어 박스(.vb-carousel__media / .sky-inter__media 등)의 직계 자식이라 parentElement로 찾음
             document.querySelectorAll('.vb-carousel__play').forEach(btn => {
-                const media = btn.closest('.vb-carousel__media');
-                const video = media.querySelector('video');
+                const media = btn.parentElement;
+                const video = media ? media.querySelector('video') : null;
                 if (!video) return;
                 const allButtons = () => [...document.querySelectorAll('.vb-carousel__play')];
                 btn.addEventListener('click', () => {
                     if (video.paused) {
                         allButtons().forEach(b => {
-                            const v = b.closest('.vb-carousel__media').querySelector('video');
+                            const v = b.parentElement ? b.parentElement.querySelector('video') : null;
                             if (v && v !== video && !v.paused) v.pause();
                         });
                         video.play();
