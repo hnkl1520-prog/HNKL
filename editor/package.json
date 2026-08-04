@@ -1,0 +1,13 @@
+{
+  "name": "hnkl-editor",
+  "version": "0.1.0",
+  "private": true,
+  "description": "HNKL 포트폴리오 로컬 편집 도구 (public/ 밖에 있어 배포되지 않음)",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "parse5": "^7.2.1"
+  }
+}

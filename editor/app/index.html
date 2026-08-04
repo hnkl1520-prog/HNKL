@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>HNKL 에디터</title>
+<link rel="stylesheet" href="/__app/app.css">
+</head>
+<body>
+
+<header class="bar">
+    <span class="brand">HNKL 에디터</span>
+
+    <span class="sep"></span>
+
+    <div class="mode-tabs" role="tablist">
+        <button id="editTab"  class="mode-tab on"  role="tab">편집</button>
+        <button id="dsTab"    class="mode-tab"     role="tab">디자인 시스템</button>
+    </div>
+
+    <span class="sep"></span>
+
+    <select id="pageSelect" class="select" title="편집할 페이지"></select>
+
+    <span class="sep"></span>
+
+    <div class="bp" id="breakpoints" role="group" aria-label="화면 크기">
+        <button data-w="2560" data-h="1440">데스크탑</button>
+        <button data-w="1536" data-h="864" class="on">노트북</button>
+        <button data-w="1024" data-h="768">태블릿</button>
+        <button data-w="390" data-h="844">폰</button>
+    </div>
+
+    <label class="zoomWrap" title="미리보기 축소 배율 (실제 값에는 영향 없음)">
+        보기 <input type="range" id="zoom" min="20" max="100" value="60"> <span id="zoomVal">60%</span>
+    </label>
+
+    <span class="sep"></span>
+
+    <button id="pickBtn" class="btn">요소 고르기</button>
+    <button id="reloadBtn" class="btn ghost">새로고침</button>
+
+    <span class="grow"></span>
+
+    <span id="dirty" class="dirty" hidden>저장 안 된 변경 <b id="dirtyCount">0</b></span>
+    <button id="revertBtn" class="btn ghost" disabled>되돌리기</button>
+    <button id="saveBtn" class="btn primary" disabled>파일에 저장</button>
+</header>
+
+<main class="layout">
+    <section class="stage" id="stage">
+        <div class="frameWrap" id="frameWrap">
+            <iframe id="frame" title="미리보기"></iframe>
+        </div>
+        <div id="stageOverlay" class="stageOverlay"></div>
+        <div class="stageInfo" id="stageInfo"></div>
+    </section>
+
+    <aside class="panel" id="panel">
+        <div class="empty" id="emptyState">
+            <p><b>요소 고르기</b>를 누른 뒤<br>미리보기에서 고칠 부분을 클릭하세요.</p>
+            <p class="hint">값을 바꾸면 미리보기에 바로 보이고,<br><b>파일에 저장</b>을 눌러야 실제 코드가 바뀝니다.</p>
+        </div>
+
+        <div id="inspector" hidden>
+            <div class="selHead">
+                <div class="selTag" id="selTag"></div>
+                <button class="btn tiny ghost" id="parentBtn" title="바깥 요소 선택">↑ 상위</button>
+            </div>
+            <div class="selMeta" id="selMeta"></div>
+
+            <div class="modeRow">
+                <span>적용 범위</span>
+                <div class="seg" id="modeSeg">
+                    <button data-mode="css" class="on">같은 규칙 전체</button>
+                    <button data-mode="inline">이 요소만</button>
+                </div>
+            </div>
+            <p class="modeHelp" id="modeHelp"></p>
+
+            <div id="fields"></div>
+        </div>
+    </aside>
+</main>
+
+<div id="dsView" class="ds-view" hidden>
+    <div class="ds-toolbar">
+        섹션 간격
+        <input type="range" id="dsGap" min="16" max="96" value="40" step="4">
+        <span id="dsGapVal">40px</span>
+    </div>
+    <div class="ds-canvas" id="dsCanvas">
+        <div class="ds-loading" id="dsLoading">데이터를 불러오는 중…</div>
+    </div>
+</div>
+
+<div id="toast" class="toast" hidden></div>
+
+<script src="/__app/app.js" type="module"></script>
+</body>
+</html>
