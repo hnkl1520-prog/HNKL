@@ -1,0 +1,1366 @@
+        /* =========================================================
+           VIBRA Detail — 디자인 시스템 적용
+           첫 번째 코드의 톤앤매너(무채색 기반, 블루 포인트)로 컬러 업데이트
+           ========================================================= */
+        :root {
+            /* 색상 토큰을 첫 번째 코드의 무채색/블루 포인트로 교체 */
+            --vb-bg: #FAFAFB;                 /* 페이지 베이스 연회색 */
+            --vb-bg-tint: #FAFAFB;            /* 디자인 시스템 배경 틴트 */
+            --vb-panel: #F4F4F5;              /* 면·카드 배경 */
+            --vb-line: #E5E7EB;               /* 테두리 연회색 */
+            --vb-text: #111827;               /* 제목·강조 (다크 그레이) */
+            --vb-body: #4B5563;               /* 본문 보조 (회색) */
+            --vb-muted: #9CA3AF;              /* 캡션·라벨 (연한 회색) */
+            --accent-color: #3B82F6;          /* 메인 블루 포인트 컬러 */
+            --qr2-accent: #3B82F6;            /* 차트 블루 컬러 */
+
+            /* ---------------------------------------------------------
+               전역 축소 배율 --vb-s
+               2560px 이상(32" 데스크탑): 1.0  — 현재 크기가 기준
+               1536px 이하(1920×1080@125%, 맥북): 0.8 — 브라우저 80% 보기와 동일
+               그 사이는 폭에 따라 매끄럽게 보간.
+               식: 0.5 + 화면폭/5120  (1536→0.8, 2560→1.0)
+
+               기본값을 1로 두고 아래 @supports에서만 덮어씀
+               → 길이÷길이 계산을 지원하지 않는 브라우저는 현재(100%) 크기로 안전하게 유지
+               --------------------------------------------------------- */
+            --vb-s: 1;
+
+            /* 페이지 고유 레이아웃 리듬 (반응형 대비 clamp)
+               vw 항은 그대로 두고 상·하한만 배율을 곱함 = 브라우저 축소와 같은 결과 */
+            --vb-pad-block: clamp(calc(80px * var(--vb-s)), 11vw, calc(180px * var(--vb-s)));
+            --vb-pad-inline: clamp(calc(24px * var(--vb-s)), 6vw, calc(100px * var(--vb-s)));
+            --vb-maxw: calc(1280px * var(--vb-s));
+            --vb-gap: var(--space-md);        /* 그리드 기본 간격 = 32px */
+            --vb-eyebrow-gap: calc(16px * var(--vb-s));  /* 작은 라벨(eyebrow) ↔ 큰 제목(title) 간격 */
+            --vb-cap-gap: calc(20px * var(--vb-s));      /* 미디어(이미지·영상) ↔ 그 아래 캡션 간격 (전역 통일) */
+            --vb-gray-mid: #b3b5bb;            /* 밝은 구간 → 다크 구간 사이의 회색 (Skybox 이미지가 놓이는 톤) */
+            --vb-lead-gap: clamp(calc(44px * var(--vb-s)), 5vw, calc(72px * var(--vb-s))); /* 설명 문단 ↔ 그 아래 미디어/그리드 간격 */
+
+            /* 타이포 스케일 — common.css 기본값보다 페이지 전역에서 살짝 키움 */
+            --fs-caption: calc(15px * var(--vb-s));   /* 13 → 15 (작은 라벨·에셋 캡션) */
+            --fs-cap: calc(17px * var(--vb-s));       /* 이미지 아래 설명 캡션 — 너무 작지 않게 별도 스케일 */
+            --fs-body: calc(18px * var(--vb-s));      /* 17 → 18 (본문·설명) */
+            --fs-h3: calc(22px * var(--vb-s));        /* 20 → 22 (소제목·카드 제목) */
+            /* common.css 토큰도 같은 배율로 (제목·여백) */
+            --fs-h2: calc(28px * var(--vb-s));
+            --fs-h1: calc(40px * var(--vb-s));
+            --fs-display: calc(64px * var(--vb-s));
+            --space-xs: calc(8px * var(--vb-s));
+            --space-sm: calc(16px * var(--vb-s));
+            --space-md: calc(32px * var(--vb-s));
+            --space-lg: calc(64px * var(--vb-s));
+            --space-xl: calc(128px * var(--vb-s));
+        }
+
+        /* 노트북 구간에서만 배율을 실제로 적용. 태블릿·모바일(1024px 미만)은 기존 반응형 규칙이 담당 */
+        @media (min-width: 1024px) {
+            @supports (width: calc(1px * clamp(0.8, calc(0.5 + 100vw / 5120px), 1))) {
+                :root { --vb-s: clamp(0.8, calc(0.5 + 100vw / 5120px), 1); }
+            }
+        }
+        /* rem으로 쓰인 값(약 70곳)은 루트 폰트 크기로 한 번에 따라오게 함 */
+        html { font-size: calc(16px * var(--vb-s)); }
+
+        /* common.css의 main 기본 패딩 무력화 (히어로 풀스크린을 위해) */
+        /* 스크롤 배경: 화이트 → 은은하게 회색 → (UX Direction 히어로 뒤, 배경이 이미지에 가려지는 구간) 다크로 전환 → 검정.
+           배경을 body가 아닌 html(루트)에 둔다: html에 overflow-x:hidden이 있으면 body 배경이 캔버스로 "전파"되면서
+           스크롤 중 재계산돼 배경이 갑자기 튀는 현상이 생김. 루트에 직접 주면 전파 과정이 없어 안정적. */
+        html {
+            overflow-x: hidden;
+            /* 루트 배경은 '밝은 톤'만 담당(드리프트 무해). 다크 구간은 각 섹션이 직접 칠함.
+               위(인트로·리서치)와 아래(Behind·Archive·Closing) 라이트 섹션이 이 배경 위에 놓임 */
+            background-color: #eceef2;
+            background-image: linear-gradient(to bottom, #ffffff 0%, #f4f5f8 55%, #eceef2 100%);
+            background-repeat: no-repeat;
+        }
+        body {
+            background: transparent;
+            color: var(--vb-text);
+            font-family: 'Pretendard', sans-serif;
+            /* body에 직접 overflow를 주면 sticky/스크롤 기준이 꼬여 히어로 sticky가 깨짐
+               → 가로 넘침 방지는 html에서 처리 (.vb-fullbleed의 100vw가 스크롤바 폭만큼 넘치는 것 차단) */
+        }
+        main { padding: 0; min-height: auto; }
+
+        /* =========================================================
+           공통 레이아웃 유틸 (vb- 접두사로 common.css와 충돌 방지)
+           ========================================================= */
+        .vb-section {
+            padding-block: var(--vb-pad-block);
+            padding-inline: var(--vb-pad-inline);
+        }
+        /* 다크 구간(Skybox~Play Film): 색 토큰을 다크로 반전 + 섹션 자체에 다크 배경을 직접 입힘.
+           (배경을 문서 높이 %로 계산하면 이미지 로드에 따라 높이가 변해 어긋나므로, 섹션에 직접 칠함) */
+        .sec-dark {
+            --vb-bg: #141418;
+            --vb-panel: #212127;
+            --vb-line: #3a3a40;
+            --vb-text: #f4f4f7;
+            --vb-body: #b2b2b9;
+            --vb-muted: #8c8c93;
+        }
+        section.vb-section.sec-dark { background-color: #101115; }
+        /* 밝음→다크 전환: Qualitative 섹션 '맨 아래 빈 여백'에서 길고 점진적으로.
+           바닥 기준 px 앵커라 섹션 높이가 바뀌어도 전환 위치가 안 틀어짐.
+           padding-bottom(최소 520px) > 그라데이션 길이(460px) → 전환은 항상 빈 공간에서만 일어남 */
+        #qualitative {
+            padding-bottom: clamp(460px, 48vh, 640px);
+            background: linear-gradient(to bottom,
+                transparent calc(100% - 420px),
+                #eef0f3 calc(100% - 330px),
+                #dcdee3 calc(100% - 240px),
+                #c6c8ce calc(100% - 140px),
+                var(--vb-gray-mid) 100%);
+        }
+        /* 회색 구간: Skybox 전체화면 이미지가 여기 놓이고, 이미지 바로 아래부터 검정 */
+        .vb-skybox-bridge {
+            background: var(--vb-gray-mid);
+            padding-top: clamp(56px, 7vh, 110px);
+        }
+        /* Play Film까지는 완전 다크 유지 (전환은 아래 UI 브릿지에서) */
+        .vb-video-section.sec-dark { background-color: #101115; }
+        /* 다크→밝음 전환: 전체화면 UI 모음 이미지를 경계로.
+           이미지 위 여백은 다크, 아래 여백은 밝게 → 이미지가 자연스러운 경계 역할 */
+        .vb-ui-bridge {
+            padding-block: clamp(120px, 16vh, 220px);
+            background: linear-gradient(to bottom,
+                #101115 0%,
+                #101115 30%,
+                #43444a 42%,
+                #9d9ea5 52%,
+                #d5d6da 62%,
+                transparent 74%);
+        }
+        .vb-wrap {
+            max-width: var(--vb-maxw);
+            margin-inline: auto;
+        }
+        /* 뷰포트 전체 폭으로 꽉 차게 (vb-wrap 안에서 좌우로 브레이크아웃) */
+        .vb-fullbleed {
+            width: 100vw;
+            margin-left: calc(50% - 50vw);
+            margin-right: calc(50% - 50vw);
+        }
+        .vb-fullbleed img { width: 100%; height: auto; display: block; }
+        /* 콘텐츠 타이포: 디자인 시스템 스케일(--fs-*) 사용 */
+        .vb-eyebrow {
+            display: inline-block;
+            color: var(--vb-muted);
+            font-weight: 600;
+            font-size: var(--fs-caption);
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            margin: 0 0 var(--vb-eyebrow-gap);
+        }
+        .vb-title {           /* 섹션 메인 제목 = h1 스케일 */
+            font-size: var(--fs-h1);
+            font-weight: 600;
+            line-height: 1.25;          /* 한글 제목 보강 */
+            letter-spacing: -0.015em;
+            color: var(--vb-text);
+            word-break: keep-all;
+            margin: 0 0 var(--space-md);
+        }
+        .vb-subtitle {        /* = h3 스케일 */
+            font-size: var(--fs-h3);
+            font-weight: 600;
+            line-height: 1.4;
+            color: var(--vb-text);
+            margin: 0 0 18px;
+        }
+        .vb-body {
+            font-size: var(--fs-body);
+            line-height: 1.7;
+            color: var(--vb-body);
+            word-break: keep-all;
+            max-width: 60ch;
+        }
+        .vb-body + .vb-body { margin-top: 1em; }
+
+        /* =========================================================
+           Placeholder 박스 (이미지/영상 자리)
+           나중에 박스 자리에 실제 미디어를 채움
+           ========================================================= */
+        .ph {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            background-color: var(--vb-panel);
+            background-image:
+                repeating-linear-gradient(45deg,
+                    rgba(255, 255, 255, 0.018) 0,
+                    rgba(255, 255, 255, 0.018) 1px,
+                    transparent 1px,
+                    transparent 11px);
+            border: 1px dashed var(--vb-line);
+            border-radius: 16px;
+            overflow: hidden;
+            color: var(--vb-muted);
+        }
+        .ph__label {
+            font-size: var(--fs-caption);
+            font-weight: 500;
+            letter-spacing: 0.04em;
+            text-align: center;
+            padding: 12px 18px;
+            color: var(--vb-muted);
+        }
+        .ph__label::before {
+            content: "◻";
+            display: block;
+            font-size: 1.4rem;
+            color: var(--vb-muted);
+            margin-bottom: 8px;
+        }
+        /* 비율 modifier */
+        .ph--21x9 { aspect-ratio: 21 / 9; }
+        .ph--16x9 { aspect-ratio: 16 / 9; }
+        .ph--3x2  { aspect-ratio: 3 / 2; }
+        .ph--4x3  { aspect-ratio: 4 / 3; }
+        .ph--1x1  { aspect-ratio: 1 / 1; }
+        .ph--3x4  { aspect-ratio: 3 / 4; }
+        .ph--fill { position: absolute; inset: 0; border-radius: 0; border: none; }
+
+        /* =========================================================
+           1. HERO STAGE (Apple Vision Pro 스타일 스크롤 레이어)
+           ========================================================= */
+        /* .vb-stage = 히어로(sticky) + 그 위를 덮으며 올라오는 레이어를 품음.
+           sticky 기반이라 JS 없이도 동작 → 무조건 렌더됨 */
+        .vb-stage {
+            position: relative;
+            /* 덮기 가속량. 0.35 = 100vh 대신 65vh만 스크롤해도 덮기 완료.
+               JS가 켜졌을 때만(.is-boosted) 적용 → JS 없으면 기존(히어로 100% 노출) 그대로 */
+            --hero-boost: 0.35;
+        }
+        .vb-stage.is-boosted .vb-hero { margin-bottom: calc(var(--hero-boost) * -100vh); }
+        /* 히어로는 흐름상 높이만 줄었을 뿐 실제로는 100vh 그대로라 아래로 그만큼 삐져나옴(sticky는 정적 요소 위에 그려짐).
+           덮개를 같은 양만큼 아래로 늘려 그 구간을 가림. content-box라 안쪽 콘텐츠 중앙 정렬은 100vh 기준 유지 */
+        .vb-stage.is-boosted .vb-cover {
+            will-change: transform;
+            box-sizing: content-box;
+            padding-bottom: calc(var(--hero-boost) * 100vh);
+        }
+        /* sticky 히어로는 정적 요소보다 위에 그려지므로, 바로 다음 섹션에 배경 + 쌓임 순서를 줘서
+           히어로가 비쳐 보이지 않게 함 (이 구간의 페이지 배경은 흰색) */
+        .vb-stage.is-boosted + .vb-section {
+            position: relative;
+            z-index: 6;
+            background: #ffffff;
+        }
+        .vb-hero {
+            position: sticky;          /* 스크롤 동안 화면에 고정 */
+            top: 0;
+            height: 100vh;
+            min-height: 600px;
+            overflow: hidden;          /* 더미 그라데이션 클립 */
+        }
+        /* 더미 키비주얼: 실제 이미지 넣기 전 더미 사진으로 대체
+           (디테일이 있어야 프로스티드 블러가 어떻게 들어가는지 구분됨)
+           → 나중에 url(...) 부분만 실제 키비주얼 경로로 교체 */
+        .vb-hero--dummy {
+            background: #1a1a1a url("media/hero.jpg") center / cover no-repeat;
+        }
+        .vb-hero--dummy .ph__label {
+            color: rgba(255, 255, 255, 0.9);
+            text-shadow: 0 1px 8px rgba(0, 0, 0, 0.5);
+        }
+
+        /* 레이어: 일반 흐름에서 sticky 히어로 위로 스크롤되어 올라옴.
+           DOM상 히어로보다 뒤 → 자연히 히어로 위에 그려짐 (Vision Pro식 덮기) */
+        .vb-cover {
+            position: relative;
+            z-index: 5;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            /* 프로스티드 블러 (뒤의 sticky 히어로가 흐릿하게 비침) */
+            background: rgba(255, 255, 255, 0.72);
+            -webkit-backdrop-filter: blur(24px) saturate(1.2);
+            backdrop-filter: blur(24px) saturate(1.2);
+            border-top: 1px solid var(--vb-line);
+        }
+        .vb-cover__inner {
+            width: 100%;
+            max-width: calc(820px * var(--vb-s));
+            margin-inline: auto;
+            padding: clamp(40px, 7vh, 96px) var(--vb-pad-inline);
+            text-align: center;          /* Overview 가운데 정렬 */
+        }
+        .vb-cover__inner .vb-body { margin-inline: auto; }   /* 60ch 본문 박스도 가운데로 */
+        .vb-cover__inner .vb-subtitle + .vb-body { margin-top: 16px; }
+        /* Overview 텍스트만 전반적으로 1.5배 키우고 굵기도 올림 */
+        .vb-cover__inner .vb-subtitle {
+            font-size: calc(var(--fs-h3) * 1.5);
+            font-weight: 700;
+            margin-bottom: 24px;
+        }
+        .vb-cover__inner .vb-body {
+            font-size: calc(var(--fs-body) * 1.5);
+            font-weight: 500;
+            line-height: 1.6;
+            max-width: none;
+        }
+
+        /* =========================================================
+           2. INFO
+           ========================================================= */
+        .vb-info-grid {
+            display: grid;
+            grid-template-columns: minmax(280px, 0.9fr) minmax(240px, 0.7fr);
+            gap: clamp(calc(40px * var(--vb-s)), 6vw, calc(96px * var(--vb-s)));
+            align-items: start;
+        }
+        /* 프로젝트 인포 — 좌(라벨+메타) / 우(크레딧).
+           좌측 블록은 폭을 좁혀 컬럼 안에서 가운데로: 키↔값 사이가 너무 벌어져 한눈에 안 들어오던 문제 해결
+           (아래 섹션들이 전부 가운데 정렬이라 톤도 맞춤) */
+        .vb-info-col {
+            /* 그리드 항목에 margin:auto를 주면 내용 크기로 줄어버리므로 justify-self로 가운데 정렬 */
+            width: 100%;
+            max-width: calc(400px * var(--vb-s));
+            justify-self: center;
+        }
+        .vb-info-col .vb-info-label { text-align: center; }
+        .vb-meta { display: flex; flex-direction: column; gap: 22px; }
+        .vb-meta__row {
+            display: flex;
+            justify-content: space-between;
+            gap: 16px;
+            padding-bottom: 14px;
+            border-bottom: 1px solid var(--vb-line);
+        }
+        .vb-meta__key { color: var(--vb-muted); font-size: 0.9rem; letter-spacing: 0.03em; }
+        .vb-meta__val { color: var(--vb-text); font-weight: 600; font-size: 0.95rem; text-align: right; }
+
+        /* Contribution 70% 옆 작은 토글 버튼 */
+        .vb-meta__val { display: inline-flex; align-items: center; gap: 8px; justify-content: flex-end; }
+        .vb-toggle-btn {
+            display: inline-flex; align-items: center; justify-content: center;
+            padding: 0; border: none; background: none;
+            color: var(--vb-muted); cursor: pointer;
+            transition: color 0.2s ease;
+        }
+        .vb-toggle-btn:hover { color: var(--vb-text); }
+        .vb-toggle-btn:focus { outline: none; }
+        .vb-toggle-btn:focus-visible { outline: 2px solid var(--vb-text); outline-offset: 2px; border-radius: 4px; }
+        .vb-toggle__icon {
+            display: inline-block; font-size: 1.15rem; line-height: 1;
+            transition: transform 0.35s ease;
+        }
+        .vb-toggle-btn[aria-expanded="true"] .vb-toggle__icon { transform: rotate(180deg); }
+
+        /* 접힘/펼침 (grid-template-rows 0fr→1fr 기법으로 높이 부드럽게) */
+        .vb-roles-wrap {
+            display: grid; grid-template-rows: 0fr;
+            transition: grid-template-rows 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .vb-roles-wrap.is-open { grid-template-rows: 1fr; }
+        .vb-roles-inner { overflow: hidden; }
+
+        /* Role 막대 (실제 데이터 시각화 — placeholder 아님) */
+        /* 폭을 줄여 Contribution '70%'의 시작점에서 끝나도록 정렬 */
+        .vb-roles { margin-top: 18px; display: flex; flex-direction: column; gap: 14px; width: calc(100% - 3em); }
+        .vb-role__head {
+            display: flex; justify-content: space-between;
+            font-size: 0.85rem; margin-bottom: 7px;
+        }
+        .vb-role__name { color: var(--vb-text); font-weight: 500; }
+        .vb-role__pct { color: var(--vb-text); font-weight: 600; }
+        .vb-bar { height: 6px; border-radius: 99px; background: var(--vb-line); overflow: hidden; }
+        .vb-bar__fill {
+            height: 100%; width: 0; border-radius: 99px; background: var(--vb-text);
+            transition: width 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .vb-credits { display: flex; flex-direction: column; gap: clamp(calc(36px * var(--vb-s)), 4vw, calc(52px * var(--vb-s))); }
+        /* 세 라벨(PROJECT INFO · PRODUCED WITH · FEATURED BY) 동일 스타일 + 라벨↔내용 간격 통일 */
+        .vb-info-label,
+        .vb-credit__label {
+            display: block;
+            font-size: 0.78rem; text-transform: uppercase;
+            letter-spacing: 0.1em; color: var(--vb-muted); margin-bottom: 28px;
+        }
+        /* 크레딧 로고 (PNG) */
+        .vb-logos { display: flex; flex-wrap: wrap; align-items: center; gap: 20px; }
+        .vb-logo {
+            height: 64px; width: auto; max-width: calc(280px * var(--vb-s));
+            object-fit: contain;
+            opacity: 0.85;
+            transition: opacity 0.2s ease;
+        }
+        .vb-logo:hover { opacity: 1; }
+
+        .vb-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+        .vb-chip {
+            padding: 7px 14px; border-radius: 99px;
+            border: 1px solid var(--vb-line); background: transparent;
+            color: var(--vb-text);
+            font-size: 0.85rem; font-weight: 500;
+        }
+
+        /* =========================================================
+           공통 카드 / 그리드
+           ========================================================= */
+        .vb-grid { display: grid; gap: var(--vb-gap); }
+        .vb-grid--2 { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+        .vb-grid--3 { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+        .vb-grid--4 { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+        /* 2:1:1 비율 3단 (넓은 첫 칸 + 같은 높이로 나란한 두 칸) */
+        .vb-grid--2-1-1 { grid-template-columns: 2fr 1fr 1fr; align-items: stretch; }
+        @media (max-width: 720px) { .vb-grid--2-1-1 { grid-template-columns: 1fr; } }
+        .vb-grid--2-1-1 > .reveal { display: flex; flex-direction: column; }
+        .vb-grid--2-1-1 > .reveal > div:first-child { flex: 1 1 auto; min-height: 0; }
+
+        .vb-card {
+            background: var(--vb-panel);
+            border: 1px solid var(--vb-line);
+            border-radius: 16px;
+            padding: var(--space-md);
+        }
+        .vb-card__tag {
+            display: inline-block; font-size: 0.75rem; font-weight: 600;
+            color: var(--vb-muted); letter-spacing: 0.08em; margin-bottom: 12px;
+        }
+        .vb-card h3 { margin: 0 0 12px; font-size: var(--fs-h3); font-weight: 600; color: var(--vb-text); }
+        .vb-card p { margin: 0; font-size: var(--fs-body); line-height: 1.7; color: var(--vb-body); word-break: keep-all; }
+
+        /* Apple Vision Pro 페이지 "엔터테인먼트" 캐러셀 레이아웃.
+           세로 스택: eyebrow(위, 좌측 정렬) → 캐러셀(전체 폭) → 화살표(아래, 가운데 정렬)
+           콘텐츠는 max-width 1120px 컨테이너에 맞춰 정렬. 카드 폭은 뷰포트 %, peek으로 다음 카드가 살짝 보임. */
+        .vb-carousel-block { max-width: calc(1120px * var(--vb-s)); margin-inline: auto; }
+        /* 제목↔콘텐츠 간격은 .vb-group__head--lead 하나로 통일(아래 .vb-group__head 규칙 참고) */
+        /* 오른쪽 풀블리드: 왼쪽은 컨테이너 라인에 맞추고(padding-left) 오른쪽은 뷰포트 끝까지.
+           width:100vw + margin-left:calc(50%-50vw)로 모든 상위 max-width/padding을 무시하고 뷰포트 기준으로 재배치.
+           scroll-padding-left를 padding-left와 동일하게 줘서, 스냅 시작점이 패딩 안쪽(진짜 첫 카드 위치)이 되도록 맞춤. */
+        .vb-carousel {
+            box-sizing: border-box;
+            width: 100vw;
+            margin-left: calc(50% - 50vw);
+            padding-left: max(24px, calc((100vw - 1120px * var(--vb-s)) / 2));
+            /* 마지막 카드가 화면 끝에 걸린 채로 멈추지 않도록, 화면 절반만큼 여유를 오른쪽에 줘서
+               끝까지 스크롤하면 마지막 카드가 중앙 부근까지 끌려오게 함 */
+            padding-right: 50vw;
+            scroll-padding-left: max(24px, calc((100vw - 1120px * var(--vb-s)) / 2));
+            overflow-x: scroll;
+            overflow-y: hidden;
+            scroll-snap-type: x mandatory;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none; /* Firefox */
+        }
+        .vb-carousel::-webkit-scrollbar { display: none; } /* Chrome/Safari — 스크롤바 숨김, 스와이프/버튼으로만 이동 */
+        .vb-carousel__track {
+            display: grid;
+            grid-auto-flow: column;
+            grid-auto-columns: max-content;
+            gap: 16px;
+            width: max-content;
+        }
+        .vb-carousel__item {
+            display: flex;
+            flex-direction: column;
+            scroll-snap-align: start;
+        }
+        /* 높이만 고정(반응형 clamp), 폭은 미디어 원본 비율대로 자동 — 자르지 않음 */
+        .vb-carousel__media {
+            position: relative;
+            height: clamp(calc(260px * var(--vb-s)), 48vw, calc(460px * var(--vb-s)));
+            border-radius: 20px;
+            overflow: hidden;
+            background: var(--vb-panel);
+        }
+        .vb-carousel__media img,
+        .vb-carousel__media video {
+            height: 100%;
+            width: auto;
+            display: block;
+        }
+        /* 카드별 재생 버튼 — 모든 카드(이미지 포함) 미디어 우하단에 오버레이.
+           애플 레퍼런스처럼 얇은 선 기반 원(면 채움 없음) + 반투명 블러 */
+        .vb-carousel__play {
+            position: absolute; right: 12px; bottom: 12px; z-index: 2;
+            width: 40px; height: 40px; border-radius: 50%;
+            border: 1.5px solid rgba(255, 255, 255, 0.85);
+            background: rgba(0, 0, 0, 0.12);
+            -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+            color: #fff;
+            font-size: 0.85rem; line-height: 1; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            transition: background 0.2s ease, transform 0.2s ease;
+        }
+        .vb-carousel__play:hover { background: rgba(0, 0, 0, 0.28); transform: scale(1.06); }
+        .vb-carousel__caption {
+            margin: 28px 0 0;
+            font-size: 19px;
+            line-height: 1.5;
+            color: #a1a1a6;
+            word-break: keep-all;
+        }
+        .vb-carousel__caption strong {
+            color: #fff;
+            font-weight: 700;
+        }
+        /* 앞 숫자는 포인트 컬러로 (Skybox Key Features·인터랙션 가이드 카드와 동일 규칙) */
+        .vb-carousel__num { color: var(--accent-color); font-weight: 800; margin-right: 5px; }
+        .vb-carousel-nav {
+            display: flex; justify-content: center; align-items: center;
+            gap: 12px; margin-top: 40px;
+        }
+        .vb-carousel-nav__arrow {
+            width: 44px; height: 44px; border-radius: 50%;
+            border: 1px solid var(--vb-line); background: var(--vb-panel); color: var(--vb-text);
+            font-size: 1.2rem; line-height: 1; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            transition: background 0.2s ease;
+        }
+        .vb-carousel-nav__arrow:hover { background: var(--vb-line); }
+        .vb-carousel-nav__arrow:disabled { opacity: 0.35; cursor: default; }
+
+        /* Functions 4컷 그리드 — 다크 카드, 비율 4:3, 라벨만 하단에 */
+        .vb-func-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+        }
+        .vb-func-card {
+            display: flex; flex-direction: column;
+        }
+        .vb-func-card__media {
+            width: 100%; aspect-ratio: 4 / 3; border-radius: 16px;
+            background: var(--vb-panel); border: 1px solid var(--vb-line);
+        }
+        .vb-func-card__label {
+            margin: 12px 0 0; font-size: var(--fs-caption); font-weight: 600;
+            color: var(--vb-text); word-break: keep-all;
+        }
+        @media (max-width: 768px) { .vb-func-grid { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 480px) { .vb-func-grid { grid-template-columns: 1fr; } }
+
+        /* Skybox — Key Features 3개. 영상은 독립된 박스(테두리·라운드), 캡션은 그 밖으로 분리 (박스 안 박스 금지)
+           순차 재생: is-active인 것만 컬러+재생, 나머지는 흑백+정지 프레임 */
+        .sky-features { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--vb-gap); }
+        @media (max-width: 820px) { .sky-features { grid-template-columns: 1fr; max-width: calc(420px * var(--vb-s)); margin-inline: auto; } }
+        /* 카드 클릭 = 해당 영상으로 바로 전환 (순차 재생 카드 + 캐러셀 영상 카드 공통) */
+        .sky-feature, .ig-card, .vb-carousel__item.hover-trigger { cursor: pointer; outline: none; }
+        .sky-feature:focus-visible .sky-feature__media,
+        .ig-card:focus-visible .ig-card__media { outline: 2px solid var(--accent-color); outline-offset: 3px; }
+        .sky-feature__media {
+            width: 100%; aspect-ratio: 1 / 1; border-radius: 16px; overflow: hidden;
+            border: 1px solid var(--vb-line); background: var(--vb-panel);
+            filter: grayscale(1); transition: filter 0.5s ease;
+        }
+        .sky-feature.is-active .sky-feature__media { filter: grayscale(0); }
+        .sky-feature__media video { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .sky-feature__caption {
+            margin: var(--vb-cap-gap) 0 0; text-align: center; font-size: var(--fs-body); line-height: 1.6;
+            color: var(--vb-muted); word-break: keep-all; transition: color 0.4s ease;
+        }
+        .sky-feature.is-active .sky-feature__caption { color: var(--vb-text); }
+        .sky-feature__num { font-weight: 800; color: var(--vb-text); margin-right: 4px; }
+        .sky-feature.is-active .sky-feature__num { color: var(--accent-color); }
+
+        /* Skybox 리드 문단 — 아래 Key Features 3개와 대응되는 번호 항목 강조 */
+        .sky-lead__n { color: var(--accent-color); font-weight: 800; }
+        .sky-lead__k { color: var(--vb-text); font-weight: 600; }
+
+        /* Skybox — 인터랙션: 영상 1 + 이미지 1.
+           높이는 두 개 동일, 비율은 원본 그대로 → 폭은 각자 다름(잘림·레터박스 없음).
+           높이 기준 배치를 위해 flex 사용(2열 균등 그리드는 폭을 강제로 같게 만들어 불가). */
+        .sky-inter { display: flex; flex-wrap: wrap; gap: var(--vb-gap); align-items: flex-start; justify-content: center; }
+        .sky-inter > div { display: flex; flex-direction: column; align-items: center; max-width: 100%; }
+        .sky-inter__media {
+            position: relative; height: clamp(calc(240px * var(--vb-s)), 30vw, calc(420px * var(--vb-s))); width: fit-content; max-width: 100%;
+            border-radius: 16px; overflow: hidden; line-height: 0;
+            border: 1px solid var(--vb-line); background: var(--vb-panel);
+        }
+        /* 높이 고정 + 폭 auto → 박스가 미디어 원본 비율을 그대로 따르면서 높이만 일치 */
+        .sky-inter__media img,
+        .sky-inter__media video { height: 100%; width: auto; max-width: 100%; display: block; }
+        @media (max-width: 820px) {
+            .sky-inter { flex-direction: column; align-items: center; }
+            .sky-inter > div { width: 100%; max-width: calc(560px * var(--vb-s)); }
+            .sky-inter__media { height: auto; width: 100%; max-width: calc(560px * var(--vb-s)); }
+            .sky-inter__media img, .sky-inter__media video { width: 100%; height: auto; }
+        }
+        /* 캡션은 열 폭 계산에서 빠지고(width:0) 정해진 폭을 채우기만 함(min-width:100%).
+           → 캡션이 길어져도 미디어 원본 비율이 정한 열 폭을 밀지 않음 (두 열 유지) */
+        .sky-inter__caption { width: 0; min-width: 100%; margin: var(--vb-cap-gap) 0 0; text-align: center; font-size: var(--fs-body); line-height: 1.6; color: var(--vb-text); word-break: keep-all; }
+
+        /* Skybox — 3D Asset: 좌 스카이박스(원본 16:9 유지) + 우 에셋 6종(3열×2행).
+           스카이박스는 억지로 세로로 늘리지 않고 자기 비율대로 → 대신 좌우 컬럼 비율로 균형 조정.
+           이미지 독립 박스 + 캡션 밖. 토큰 에셋 6종(투명 PNG)은 안 잘리게 contain */
+        .sky-asset { display: grid; grid-template-columns: 1.3fr 1fr; gap: var(--vb-gap); align-items: stretch; }
+        @media (max-width: 820px) { .sky-asset { grid-template-columns: 1fr; } }
+        .sky-asset__hero-col { display: flex; flex-direction: column; }
+        .sky-asset__hero-media {
+            width: 100%; flex: 1 1 auto; min-height: 0; border-radius: 20px; overflow: hidden;
+            border: 1px solid var(--vb-line); background: var(--vb-panel);
+        }
+        .sky-asset__hero-media img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .sky-asset__hero-cap { margin: var(--vb-cap-gap) 0 0; line-height: 26px; text-align: center; font-size: var(--fs-body); font-weight: 600; color: var(--vb-text); flex: 0 0 auto; }
+
+        .sky-asset__grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: clamp(calc(20px * var(--vb-s)), 2.5vw, calc(28px * var(--vb-s))); align-content: space-between; }
+        @media (max-width: 560px) { .sky-asset__grid { grid-template-columns: repeat(2, 1fr); } }
+        .sky-asset__item-media {
+            aspect-ratio: 1 / 1; border-radius: 14px; overflow: hidden;
+            border: 1px solid var(--vb-line); background: var(--vb-panel);
+            padding: 12%; box-sizing: border-box;
+        }
+        .sky-asset__item-media img { width: 100%; height: 100%; object-fit: contain; display: block; }
+        /* 히어로 캡션과 '간격+줄높이'를 동일하게 맞춤(20+26=46px) → 캡션 블록 높이가 같아져
+           3D Asset 그리드 아랫줄 이미지 하단이 왼쪽 히어로 이미지 하단과 정확히 일치 */
+        .sky-asset__item-cap { margin: var(--vb-cap-gap) 0 0; line-height: 26px; text-align: center; font-size: var(--fs-caption); font-weight: 600; color: var(--vb-text); word-break: keep-all; }
+
+        /* =========================================================
+           AI (VIVA AI) — 풀블리드 블랙 전용 레이아웃.
+           좌: 정방형 원본을 컨테이너 높이에 맞춰 크롭해서 크게 / 우: 텍스트 + 정방형 영상 3개
+           (레퍼런스 시안 기준이라 이 섹션만 좌측 정렬 유지) */
+        /* 위·아래를 투명으로 페이드시켜 인접 섹션과 부드럽게 연결(검정 구간은 넓게, 섹션 경계 안 보이게) */
+        .ai-sec {
+            padding-block: clamp(120px, 18vh, 260px);
+            /* 위아래를 인접 다크 섹션색(#101115)으로 페이드 → 경계 없이 순수 블랙 코어로 */
+            background: linear-gradient(to bottom, #101115 0%, #000 14%, #000 86%, #101115 100%);
+        }
+        .ai-sec__inner {
+            display: grid; grid-template-columns: 0.8fr 1.2fr; align-items: stretch;
+            min-height: clamp(560px, 78vh, 880px);
+        }
+        @media (max-width: 900px) { .ai-sec__inner { grid-template-columns: 1fr; min-height: 0; } }
+        .ai-sec__visual { position: relative; overflow: hidden; min-height: 0; }
+        .ai-sec__visual img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        @media (max-width: 900px) { .ai-sec__visual { aspect-ratio: 1 / 1; } }
+
+        .ai-sec__content {
+            display: flex; flex-direction: column; justify-content: center;
+            padding: clamp(calc(40px * var(--vb-s)), 5vw, calc(80px * var(--vb-s))) clamp(calc(32px * var(--vb-s)), 4vw, calc(64px * var(--vb-s))) clamp(calc(40px * var(--vb-s)), 5vw, calc(80px * var(--vb-s))) clamp(calc(48px * var(--vb-s)), 6vw, calc(96px * var(--vb-s)));
+            text-align: left;
+        }
+        .ai-sec__eyebrow {
+            display: block; font-size: clamp(calc(13px * var(--vb-s)), 1.15vw, calc(17px * var(--vb-s)));
+            letter-spacing: 0.06em; color: #d4d4d8; margin-bottom: 8px;
+        }
+        .ai-sec__title {
+            margin: 0 0 26px; font-size: clamp(calc(28px * var(--vb-s)), 3vw, calc(44px * var(--vb-s)));
+            font-weight: 800; letter-spacing: -0.01em; color: #fff;
+        }
+        .ai-sec__desc {
+            margin: 0 auto; max-width: calc(640px * var(--vb-s)); font-size: var(--fs-body);
+            line-height: 1.7; color: #b4b4ba; word-break: keep-all;
+        }
+        .ai-sec__desc strong { color: #fff; font-weight: 700; font-style: italic; }
+        /* 텍스트 블록을 가운데 정렬하고, 아래 두 번째 영상의 중심선에 맞춤.
+           영상 3개는 translateX(-27%/-54%)로 당겨져 시각적 중심이 컨테이너 폭의 41% 지점(=2번째 영상 중심)이므로,
+           오른쪽에 18%를 비워 텍스트 중심도 41% 지점에 오게 함 */
+        .ai-sec__text { text-align: center; padding-right: 18%; }
+
+        /* 영상 3개: 하단 정렬. 오른쪽 여백은 아래 translateX가 만들어 주므로 padding 불필요
+           (텍스트 중심 계산이 컨테이너 폭 기준이라 padding을 빼야 정확히 맞음) */
+        .ai-sec__grid {
+            display: grid; grid-template-columns: repeat(3, 1fr);
+            gap: 0; margin-top: clamp(calc(40px * var(--vb-s)), 5vw, calc(76px * var(--vb-s)));
+            align-items: end;
+        }
+        /* 세 박스는 항상 동일 크기(1fr) 유지. 간격만 좁히려고 translateX로 시각적으로만 당김
+           (음수 마진은 1fr 트랙 폭을 재분배해 박스 크기를 틀어버리므로 사용 안 함).
+           translateX %는 자기 폭 기준이라 뷰포트가 바뀌어도 간격 비율이 일정 */
+        .ai-sec__item:nth-child(2) { transform: translateX(-27%); }
+        .ai-sec__item:nth-child(3) { transform: translateX(-54%); }
+        @media (max-width: 560px) {
+            .ai-sec__grid { grid-template-columns: 1fr; max-width: calc(300px * var(--vb-s)); }
+            /* 세로로 쌓이면 겹침·중심 오프셋 해제 */
+            .ai-sec__item:nth-child(2), .ai-sec__item:nth-child(3) { transform: none; }
+            .ai-sec__text { padding-right: 0; }
+        }
+        .ai-sec__media { position: relative; width: 100%; aspect-ratio: 1 / 1; overflow: hidden; }
+        .ai-sec__media img,
+        .ai-sec__media video {
+            width: 100%; height: 100%; object-fit: cover; display: block;
+            transform-origin: bottom center;   /* 축소 시 하단 기준 → 구체가 아래로 정렬 */
+        }
+        /* 앞 두 영상의 오브젝트를 세 번째(하트)와 비슷한 크기로 축소 (값은 추후 미세조정) */
+        .ai-sec__media--scale video { transform: scale(0.62); }
+        .ai-sec__cap { margin: var(--vb-cap-gap) 0 0; text-align: center; font-size: var(--fs-cap); font-weight: 600; color: #d4d4d8; word-break: keep-all; }
+
+        /* AI 섹션 하단: 기본 컨테이너(vb-wrap) 폭에 맞춘 이미지 1장 + 그 아래 설명 텍스트 */
+        .ai-sec__below {
+            margin-top: clamp(90px, 13vh, 190px);
+            padding-inline: var(--vb-pad-inline);
+        }
+        .ai-sec__below-media { width: 100%; border-radius: 20px; overflow: hidden; }
+        .ai-sec__below-media img { width: 100%; height: auto; display: block; }
+        .ai-sec__below-desc {
+            margin: clamp(calc(24px * var(--vb-s)), 3vw, calc(44px * var(--vb-s))) auto 0; max-width: calc(760px * var(--vb-s));
+            text-align: center; font-size: var(--fs-body); line-height: 1.7;
+            color: #b4b4ba; word-break: keep-all;
+        }
+
+        /* 인터랙션 가이드: 튜토리얼 영상 카드 4장 (균일 그리드) */
+        .ig-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: clamp(calc(16px * var(--vb-s)), 2vw, calc(28px * var(--vb-s))); }
+        @media (max-width: 900px) { .ig-grid { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 520px) { .ig-grid { grid-template-columns: 1fr; max-width: calc(320px * var(--vb-s)); margin-inline: auto; } }
+        /* 비율 강제·크롭 없이 원본 비율 그대로 */
+        .ig-card__media {
+            position: relative; width: 100%; line-height: 0;
+            border-radius: 8px; overflow: hidden;
+            border: 1px solid var(--vb-line); background: var(--vb-panel);
+        }
+        .ig-card__media img,
+        .ig-card__media video { width: 100%; height: auto; display: block; }
+        /* 순차 재생: 재생 중인 카드만 컬러, 나머지는 흑백 정지 (Key Features와 동일 규칙) */
+        .ig-card__media { filter: grayscale(1); transition: filter 0.5s ease; }
+        .ig-card.is-active .ig-card__media { filter: grayscale(0); }
+        .ig-card__cap { margin: var(--vb-cap-gap) 0 0; text-align: center; font-size: var(--fs-cap); font-weight: 600; color: var(--vb-muted); word-break: keep-all; transition: color 0.4s ease; }
+        .ig-card.is-active .ig-card__cap { color: var(--vb-text); }
+        .ig-card__num { font-weight: 800; margin-right: 5px; }
+        .ig-card.is-active .ig-card__num { color: var(--accent-color); }
+
+        /* 프로젝트 아카이브 GIF (기본 컨테이너 폭) */
+        .vb-archive-media {
+            max-width: var(--vb-maxw); margin: var(--vb-lead-gap) auto 0;
+            border-radius: 20px; overflow: hidden; border: 1px solid var(--vb-line);
+        }
+        .vb-archive-media img { width: 100%; height: auto; display: block; }
+
+        /* 아카이브 슬라이드쇼 — 1초 간격 자동 전환.
+           첫 장이 흐름 안에서 높이를 잡고, 나머지는 그 위에 겹쳐서 페이드 */
+        .vb-slideshow { position: relative; }
+        .vb-slideshow img {
+            display: block; width: 100%; height: auto;
+            opacity: 0; transition: opacity 0.35s ease;
+        }
+        .vb-slideshow img:not(:first-child) {
+            position: absolute; top: 0; left: 0; height: 100%; object-fit: cover;
+        }
+        .vb-slideshow img.is-active { opacity: 1; }
+
+        /* 클로징: 세로로 긴 원본(2400×5240)을 전체폭에 원본 비율 그대로(안 잘림) + 그 위 CTA 오버레이 */
+        .vb-closing {
+            position: relative; width: 100vw; margin-left: calc(50% - 50vw); overflow: hidden;
+        }
+        .vb-closing__bg { display: block; }
+        /* 원본 2400×5240 비율을 지정해 파일 로드 전에도 높이를 확보(레이아웃·배경 % 안정) */
+        .vb-closing__bg img { width: 100%; height: auto; aspect-ratio: 2400 / 5240; object-fit: cover; display: block; }
+        .vb-closing__inner {
+            position: absolute; left: 50%; bottom: clamp(56px, 9vh, 130px); transform: translateX(-50%);
+            z-index: 2; text-align: center; padding: 0 var(--vb-pad-inline); max-width: calc(720px * var(--vb-s));
+        }
+        .vb-closing__title { margin: 0 0 clamp(calc(20px * var(--vb-s)), 3vw, calc(36px * var(--vb-s))); font-size: var(--fs-h2); font-weight: 800; letter-spacing: -0.01em; color: var(--vb-text); word-break: keep-all; }
+        .vb-closing__cta {
+            display: inline-block; padding: 15px 34px; border-radius: 999px;
+            background: var(--vb-text); color: var(--vb-bg);
+            font-size: var(--fs-body); font-weight: 700; text-decoration: none;
+            transition: transform 0.2s ease, opacity 0.2s ease;
+        }
+        .vb-closing__cta:hover { transform: translateY(-2px); opacity: 0.9; }
+
+        /* 하단 솔루션 섹션(Skybox·In Stadium·Interaction)도 상단 섹션과 동일하게 가운데 정렬 (디자인 시스템 통일) */
+        .sec-centered .vb-wrap { text-align: center; }
+        .sec-centered .vb-title { margin-inline: auto; }
+        .sec-centered .vb-body { max-width: calc(760px * var(--vb-s)); margin-inline: auto; }
+        .sec-centered .vb-group__head { justify-content: center; }
+
+        .vb-group { margin-top: var(--space-lg); }
+        .vb-group:first-of-type { margin-top: 0; }
+        .vb-group__head {
+            display: flex; align-items: baseline; gap: 14px; margin-bottom: var(--space-sm);
+        }
+        /* 리드 문단 없이 제목 바로 아래 카드가 오는 그룹 — 간격을 리드 문단 아래(--vb-lead-gap)와 동일하게 */
+        .vb-group__head--lead { margin-bottom: var(--vb-lead-gap); }
+        .vb-group__num { color: var(--vb-text); font-weight: 700; font-size: 0.95rem; }
+        .vb-group__name { font-size: var(--fs-h3); font-weight: 600; color: var(--vb-text); }
+
+        .vb-caption {
+            margin-top: var(--vb-cap-gap); font-size: var(--fs-cap); line-height: 1.65;
+            color: var(--vb-body); letter-spacing: 0.01em; word-break: keep-all;
+        }
+
+        /* UX Direction 키워드 */
+        .vb-keyword {
+            background: var(--vb-panel);
+            border: 1px solid var(--vb-line);
+            border-radius: 14px;
+            padding: 26px 22px;
+            text-align: center;
+        }
+        .vb-keyword__idx { color: var(--vb-muted); font-size: 0.8rem; font-weight: 700; }
+        .vb-keyword__name { margin-top: 10px; font-size: var(--fs-body); font-weight: 600; color: var(--vb-text); }
+
+        /* =========================================================
+           QUALITATIVE — 리서치 방법 카드 · 가설의 진화 · XR 디바이스 문제
+           (Qualitative Research 섹션 전용, vb-group 안에서 사용)
+           ========================================================= */
+        /* 헤더 (가운데 정렬) */
+        .ql-head { text-align: center; max-width: calc(700px * var(--vb-s)); margin: 0 auto clamp(calc(48px * var(--vb-s)), 6vw, calc(80px * var(--vb-s))); }
+        .ql-head .vb-title { margin-inline: auto; }
+        .ql-head .ql-intro { margin: clamp(calc(16px * var(--vb-s)), 2vw, calc(22px * var(--vb-s))) auto 0; max-width: calc(620px * var(--vb-s)); }
+
+        /* Qualitative 섹션 전체 가운데 정렬 + 그룹 간 간격 확대 */
+        #qualitative .vb-group { margin-top: clamp(calc(72px * var(--vb-s)), 9vw, calc(120px * var(--vb-s))); }
+        #qualitative .vb-group__head { justify-content: center; text-align: center; margin-bottom: 40px; }
+        .ql-group-intro { text-align: center; max-width: calc(640px * var(--vb-s)); margin: 0 auto var(--space-md); }
+
+        /* 리서치 방법 3개 (이미지 온전하게 + 아래 텍스트 분리, 박스로 안 감쌈, 가운데 정렬) */
+        .ql-method-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: clamp(calc(28px * var(--vb-s)), 3.5vw, calc(44px * var(--vb-s))); }
+        .ql-method-card { text-align: center; }
+        .ql-method-card__img { width: 100%; height: auto; display: block; border-radius: 16px; border: 1px solid var(--vb-line); }
+        .ql-method-card__body { padding: 16px 6px 0; }
+        .ql-method-card__tag { display: block; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent-color); margin-bottom: 8px; }
+        .ql-method-card__title { margin: 0 0 6px; font-size: var(--fs-body); font-weight: 700; color: var(--vb-text); word-break: keep-all; }
+        .ql-method-card__desc { margin: 0; font-size: var(--fs-caption); line-height: 1.65; color: var(--vb-muted); word-break: keep-all; }
+
+        /* UX Direction — 어피니티 다이어그램을 배경으로, 키워드를 그 위에 오버레이 */
+        .ql-ux-hero {
+            position: relative; overflow: hidden; border-radius: 24px;
+            min-height: clamp(420px, 62vh, 640px);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            text-align: center; padding: clamp(calc(40px * var(--vb-s)), 6vw, calc(64px * var(--vb-s))) clamp(calc(24px * var(--vb-s)), 4vw, calc(48px * var(--vb-s)));
+        }
+        .ql-ux-hero__bg { position: absolute; inset: 0; z-index: 0; }
+        .ql-ux-hero__bg img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .ql-ux-hero__overlay {
+            position: absolute; inset: 0; z-index: 1;
+            background: linear-gradient(180deg, rgba(10, 10, 14, 0.55) 0%, rgba(10, 10, 14, 0.78) 100%);
+        }
+        .ql-ux-hero__content { position: relative; z-index: 2; max-width: calc(720px * var(--vb-s)); }
+        .ql-ux-hero__eyebrow { display: block; font-size: 0.78rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(255, 255, 255, 0.75); margin-bottom: 14px; }
+        .ql-ux-hero__title { margin: 0; font-size: var(--fs-h2); font-weight: 700; color: #fff; word-break: keep-all; }
+        .ql-ux-hero__desc { margin: 16px 0 0; font-size: var(--fs-body); line-height: 1.8; color: rgba(255, 255, 255, 0.82); word-break: keep-all; }
+        /* 키워드 6개는 항상 한 줄 (좁은 화면에선 좌우 스크롤) */
+        .ql-ux-chips {
+            display: flex; flex-wrap: nowrap; justify-content: center;
+            gap: clamp(calc(8px * var(--vb-s)), 1vw, calc(12px * var(--vb-s))); margin-top: clamp(calc(32px * var(--vb-s)), 4vw, calc(48px * var(--vb-s)));
+            max-width: 100%; overflow-x: auto; scrollbar-width: none;
+        }
+        .ql-ux-chips::-webkit-scrollbar { display: none; }
+        .ql-ux-chip {
+            flex: 0 0 auto; white-space: nowrap;
+            padding: 13px clamp(calc(14px * var(--vb-s)), 1.6vw, calc(24px * var(--vb-s))); border-radius: 14px;
+            background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.18);
+            -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+            color: #fff; font-weight: 700; font-size: var(--fs-body);
+            transition: background 0.25s ease, transform 0.25s ease;
+        }
+        .ql-ux-chip:hover { background: var(--accent-color); transform: translateY(-2px); }
+
+        /* C. UX Direction — 전체화면 어피니티 다이어그램 (원본 비율 유지, 크롭 없음) */
+        .vb-affinity {
+            position: relative;
+            width: 100vw;
+            margin-left: calc(50% - 50vw);
+            margin-right: calc(50% - 50vw);
+            background-color: #0a0a0e; /* 좁은 폭에서 콘텐츠가 이미지보다 클 때 이음새 방지 */
+        }
+        /* 이미지가 흐름 안에서 섹션 높이를 결정 → 원본 비율 그대로, 화면 폭에 꽉 참 */
+        .vb-affinity__bg { position: relative; z-index: 0; line-height: 0; }
+        .vb-affinity__bg img { width: 100%; height: auto; display: block; }
+        .vb-affinity__overlay {
+            position: absolute; inset: 0; z-index: 1;
+            background: linear-gradient(180deg, rgba(10,10,14,0.52) 0%, rgba(10,10,14,0.86) 100%);
+        }
+        /* 이미지 위에 겹쳐서 중앙 배치 */
+        .vb-affinity__inner {
+            position: absolute; inset: 0; z-index: 2;
+            display: flex; flex-direction: column;
+            justify-content: center; align-items: center;
+            text-align: center;
+            max-width: var(--vb-maxw);
+            margin-inline: auto;
+            padding-inline: clamp(calc(24px * var(--vb-s)), 6vw, calc(100px * var(--vb-s)));
+        }
+        .vb-affinity__inner .vb-group__head { justify-content: center; margin-bottom: 32px; }
+        .vb-affinity__inner .vb-group__num { color: rgba(255,255,255,0.4); }
+        .vb-affinity__inner .vb-group__name { color: #fff; }
+        .aff-desc {
+            font-size: var(--fs-body); color: rgba(255,255,255,0.78);
+            line-height: 1.8; word-break: keep-all;
+            margin: 0 auto clamp(calc(40px * var(--vb-s)), 5vw, calc(64px * var(--vb-s))); max-width: calc(600px * var(--vb-s));
+        }
+        .aff-kw-row {
+            display: flex; flex-wrap: nowrap; justify-content: center;
+            gap: clamp(calc(10px * var(--vb-s)), 1.2vw, calc(16px * var(--vb-s)));
+            width: 100%; overflow-x: auto; scrollbar-width: none;
+        }
+        .aff-kw-row::-webkit-scrollbar { display: none; }
+        .aff-kw-card {
+            flex: 1 1 0; min-width: calc(140px * var(--vb-s));
+            background: rgba(255,255,255,0.08);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255,255,255,0.14);
+            border-radius: 16px;
+            padding: clamp(calc(20px * var(--vb-s)), 2.2vw, calc(28px * var(--vb-s))) clamp(calc(14px * var(--vb-s)), 1.6vw, calc(20px * var(--vb-s)));
+            text-align: center;
+        }
+        .aff-kw-card__en {
+            display: block;
+            font-size: clamp(1rem, 1.3vw, 1.15rem);
+            font-weight: 700; color: #fff;
+            margin-bottom: 12px; word-break: break-word;
+        }
+        .aff-kw-card__ko {
+            display: block;
+            font-size: clamp(0.85rem, 1.05vw, 0.95rem);
+            color: rgba(255,255,255,0.68);
+            line-height: 1.65; word-break: keep-all;
+        }
+
+        /* =========================================================
+           Service Flow — Pre/In/Post-Match 가로 타임라인 (원형 노드 + XR 디바이스 구간)
+           ========================================================= */
+        .sf-ai-pill {
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+            width: fit-content; margin: 0 auto clamp(calc(32px * var(--vb-s)), 4.5vw, calc(48px * var(--vb-s)));
+            padding: 10px 20px; border-radius: 999px;
+            background: var(--vb-panel); border: 1px solid var(--vb-line);
+            font-size: var(--fs-caption); font-weight: 700; color: var(--vb-text);
+        }
+        .sf-ai-pill__icon { color: var(--accent-color); }
+        /* overflow-x:auto가 있으면 브라우저가 overflow-y도 강제로 auto로 바꿔 세로로 튀어나온 걸 잘라버림
+           → 위로 튀어나오는 요소(XR 박스 라벨)가 없도록 스크롤 컨테이너에 여유 패딩을 둠 */
+        .sf-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; padding-top: 16px; margin-top: -16px; }
+        .sf-track { position: relative; min-width: calc(760px * var(--vb-s)); padding: 52px 20px 28px; }
+
+        /* XR 디바이스 구간 (가운데 3개 노드를 감싸는 점선 박스) */
+        .sf-xr-box {
+            position: absolute; top: 8px; bottom: 0; left: 20%; right: 20%;
+            border: 1px dashed color-mix(in srgb, var(--accent-color) 45%, var(--vb-line));
+            border-radius: 24px;
+        }
+        .sf-xr-box__label {
+            position: absolute; top: -11px; left: 50%; transform: translateX(-50%);
+            background: var(--vb-panel); padding: 2px 12px; border-radius: 999px;
+            font-size: 0.68rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+            color: var(--accent-color); white-space: nowrap;
+        }
+
+        /* 원형 노드 5개 + 연결선 */
+        .sf-circle-row { display: grid; grid-template-columns: repeat(5, 1fr); align-items: center; position: relative; margin-bottom: 22px; }
+        .sf-circle-row::before {
+            content: ""; position: absolute; left: 8%; right: 8%; top: 50%; height: 1px;
+            background: color-mix(in srgb, var(--accent-color) 35%, var(--vb-line)); z-index: 0;
+        }
+        .sf-circle {
+            position: relative; z-index: 1; justify-self: center;
+            width: 84px; height: 84px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.85rem; font-weight: 700; text-align: center; line-height: 1.3;
+            background: var(--vb-bg); border: 1.5px solid color-mix(in srgb, var(--vb-text) 18%, var(--vb-line)); color: var(--vb-text);
+        }
+        .sf-circle--accent {
+            border-color: var(--accent-color); color: var(--accent-color);
+            box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent-color) 10%, transparent);
+        }
+
+        /* 노드 하단 라벨 (구분 · 제목 · 설명) */
+        .sf-labels-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; text-align: center; }
+        .sf-label { padding: 0 8px; }
+        .sf-label__meta { font-size: 0.66rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--vb-muted); margin-bottom: 8px; }
+        .sf-label__title { font-size: var(--fs-body); font-weight: 700; color: var(--vb-text); margin-bottom: 10px; word-break: keep-all; }
+        .sf-label__title--accent { color: var(--accent-color); }
+        .sf-label__desc { font-size: var(--fs-caption); line-height: 1.7; color: var(--vb-muted); word-break: keep-all; }
+
+        /* =========================================================
+           Market Research — 가로 타임라인 (Norgram 스타일)
+           ========================================================= */
+        .mr-section {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            padding-block: var(--space-lg);
+        }
+
+        /* 제목 아래 두괄식 설명 — 결론 먼저, 부연 뒤 (읽기 좋은 폭 유지) */
+        .mr-lead { max-width: calc(760px * var(--vb-s)); margin-top: 20px; }
+        .mr-lead__point {
+            margin: 0 0 12px;
+            font-size: var(--fs-h3);
+            font-weight: 600;
+            line-height: 1.5;
+            letter-spacing: -0.01em;
+            color: var(--vb-text);
+            word-break: keep-all;
+        }
+        .mr-lead__desc {
+            margin: 0;
+            font-size: var(--fs-body);
+            line-height: 1.8;
+            color: var(--vb-body);
+            word-break: keep-all;
+        }
+
+        .mr-timeline {
+            --mr-bar-h: 40px;             /* 가운데 두꺼운 회색 바 */
+            --mr-gut: 30px;               /* 컬럼 좌우 여백 */
+            --mr-gap: 22px;               /* 순번과 바 사이 간격 */
+            position: relative;
+            margin-top: var(--space-lg);
+            overflow: hidden;             /* 스크롤바 없음 — 가로 이동은 스크롤 이펙트가 담당 */
+            display: flex;
+            align-items: center;          /* 축소된 타임라인을 남는 세로 공간 가운데에 */
+            width: auto;
+            margin-left: 0;
+            margin-right: calc(50% - 50vw + clamp(calc(24px * var(--vb-s)), 5vw, calc(72px * var(--vb-s))));
+        }
+        .mr-fit {
+            transform-origin: left center;
+            width: max-content;
+            will-change: transform;
+        }
+        .mr-track {
+            display: grid;
+            grid-template-columns: 300px 300px 340px 1150px 520px;
+            grid-template-rows: auto var(--mr-bar-h) auto;
+            align-items: stretch;
+            width: max-content;
+        }
+
+        /* 가운데 두꺼운 회색 바 */
+        .mr-bar {
+            grid-column: 1 / -1;
+            grid-row: 2;
+            background: color-mix(in srgb, var(--vb-line) 75%, #fff);
+            z-index: 2;
+        }
+        /* 세로 구분선 (전체 높이) */
+        .mr-vline { grid-row: 1 / -1; border-left: 1px solid var(--vb-line); z-index: 0; }
+
+        /* 카드 — 순번은 바 쪽, 이미지는 바깥 끝 (space-between) */
+        .mr-card {
+            padding: 0 var(--mr-gut);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            z-index: 1;
+        }
+        .mr-card--up   { grid-row: 1; padding-bottom: var(--mr-gap); }
+        .mr-card--down { grid-row: 3; padding-top: var(--mr-gap); }
+
+        .mr-card__text { display: flex; flex-direction: column; }
+        .mr-card__num {
+            font-size: var(--fs-h1);
+            font-weight: 700;
+            line-height: 1;
+            letter-spacing: -0.01em;
+            color: var(--vb-text);
+        }
+        .mr-card--down .mr-card__num { margin-bottom: 6px; }  /* 아래 카드: 순번↔연도 간격 */
+        .mr-card__meta { font-size: var(--fs-caption); color: var(--vb-text); margin: 0 0 16px; }
+        .mr-card--up .mr-card__meta { margin: 16px 0 6px; }   /* 위 카드: 설명↑ / 순번↓ */
+        .mr-card__desc { margin: 0; font-size: var(--fs-caption); line-height: 1.9; color: var(--vb-body); word-break: keep-all; }
+        .mr-card__media .ph { max-width: calc(220px * var(--vb-s)); }
+
+        /* Technology Adoption — 순서 없는 그룹 (바 위 패널 + 바 아래 라벨 밴드) */
+        .mr-tech {
+            grid-column: 4;
+            grid-row: 1;
+            align-self: end;                                  /* 바 가까이(아래쪽) 정렬 */
+            margin: 0 var(--mr-gut) var(--mr-gap);
+            padding: 22px;
+            background: color-mix(in srgb, var(--vb-line) 28%, #fff);
+            z-index: 1;
+        }
+        .mr-tech__grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 18px; }
+        .mr-tech__item { position: relative; display: flex; flex-direction: column; }
+        .mr-tech__title {
+            margin: 0 0 8px; font-size: var(--fs-body); font-weight: 600; color: var(--vb-text);
+            word-break: keep-all; display: flex; align-items: baseline; gap: 6px;
+        }
+        /* 호버 힌트 아이콘 (이미지 있음 표시) */
+        .mr-tech__cue { flex: none; font-size: 11px; line-height: 1; color: var(--vb-muted); transition: color .18s ease; }
+        .mr-tech__item:hover .mr-tech__cue,
+        .mr-tech__item:focus-within .mr-tech__cue { color: var(--vb-text); }
+        .mr-tech__sub { margin: 0; font-size: var(--fs-caption); line-height: 1.7; color: var(--vb-body); word-break: keep-all; }
+        /* 평소엔 숨김 · 호버(또는 포커스) 시 아이템 위로 이미지 팝업 */
+        .mr-tech__pop {
+            position: absolute;
+            left: 0;
+            bottom: calc(100% + 12px);
+            width: 200px;
+            max-width: calc(240px * var(--vb-s));
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(8px);
+            transition: opacity .2s ease, transform .2s ease, visibility .2s;
+            pointer-events: none;
+            z-index: 6;
+            filter: drop-shadow(0 10px 26px rgba(0, 0, 0, .14));
+        }
+        .mr-tech__pop .ph { margin: 0; }
+        .mr-tech__item:hover .mr-tech__pop,
+        .mr-tech__item:focus-within .mr-tech__pop {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+        .mr-tech__band {
+            grid-column: 4;
+            grid-row: 3;
+            align-self: start;                                /* 바 바로 아래 */
+            margin: 0 var(--mr-gut);
+            padding: 16px;
+            text-align: center;
+            background: color-mix(in srgb, var(--vb-line) 16%, #fff);
+            z-index: 1;
+        }
+        .mr-tech__band strong { display: block; font-size: var(--fs-body); font-weight: 600; color: var(--vb-text); }
+        .mr-tech__band span { display: block; margin-top: 4px; font-size: var(--fs-caption); color: var(--vb-muted); }
+
+        /* =========================================================
+           BACKGROUND — 매체 진화 카드 + XR 가설 카드 (가로 타임라인 대체)
+           ========================================================= */
+        /* 헤더: 타이틀 → 설명, 전부 가운데 정렬 (흑백) */
+        .bg-head { text-align: center; max-width: calc(720px * var(--vb-s)); margin-inline: auto; }
+        .bg-head .vb-eyebrow { color: var(--vb-muted); }
+        .bg-head .vb-title { margin-top: 0; }
+        .bg-desc {
+            margin: clamp(calc(16px * var(--vb-s)), 2vw, calc(22px * var(--vb-s))) auto 0;
+            max-width: calc(600px * var(--vb-s));
+            font-size: var(--fs-body);
+            line-height: 1.85;
+            color: var(--vb-body);
+            word-break: keep-all;
+        }
+        .bg-desc strong { color: var(--vb-text); font-weight: 700; }
+
+        /* Print → Radio → TV → XR : 가운데 정렬된 흐름 */
+        .bg-flow {
+            margin-top: clamp(calc(40px * var(--vb-s)), 6vw, calc(76px * var(--vb-s)));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: clamp(calc(8px * var(--vb-s)), 1.4vw, calc(18px * var(--vb-s)));
+            flex-wrap: wrap;
+        }
+
+        /* Print/Radio/TV — 동일 사이즈 · 흑백 */
+        .bg-step {
+            flex: 0 0 auto;
+            width: clamp(calc(160px * var(--vb-s)), 17vw, calc(212px * var(--vb-s)));
+            aspect-ratio: 1 / 1;              /* 정방형 */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: calc(12px * var(--vb-s));
+            border: 1px solid var(--vb-line);
+            border-radius: 20px;
+            background: var(--vb-panel);
+        }
+        .bg-step__year { font-size: var(--fs-caption); color: var(--vb-muted); }
+        .bg-step__icon { margin: 6px 0; color: var(--vb-text); }
+        .bg-step__icon svg,
+        .bg-step__icon img { width: clamp(calc(88px * var(--vb-s)), 10vw, calc(120px * var(--vb-s))); height: auto; object-fit: contain; display: block; }
+        .bg-step__label { font-size: var(--fs-body); font-weight: 700; color: var(--vb-text); }
+
+        /* 흐름 화살표 — 흑백 (마지막 XR 앞은 살짝 진하게) */
+        .bg-arrow { flex: 0 0 auto; align-self: center; display: flex; color: var(--vb-line); }
+        .bg-arrow svg { width: calc(22px * var(--vb-s)); height: calc(22px * var(--vb-s)); display: block; }
+        .bg-arrow--key { color: var(--vb-muted); }
+
+        /* XR — 클라이맥스: 약 2배 크기 + 키컬러 그라데이션 (여기에만 컬러) */
+        .bg-xr {
+            flex: 0 0 auto;
+            width: clamp(calc(240px * var(--vb-s)), 25.5vw, calc(318px * var(--vb-s)));   /* 스텝 박스의 약 1.5배 */
+            aspect-ratio: 1 / 1;                  /* 정방형 */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: clamp(calc(24px * var(--vb-s)), 3vw, calc(40px * var(--vb-s))) calc(26px * var(--vb-s));
+            border-radius: 24px;
+            color: #fff;
+            background: linear-gradient(135deg, #7B5EE6 0%, #4F7BF0 55%, #2997ff 100%);
+            box-shadow: 0 18px 46px rgba(70, 110, 230, .32);
+        }
+        .bg-xr__year { font-size: var(--fs-caption); color: rgba(255, 255, 255, .85); letter-spacing: 0.02em; }
+        .bg-xr__icon { margin: clamp(calc(16px * var(--vb-s)), 2vw, calc(24px * var(--vb-s))) 0; color: #fff; }
+        .bg-xr__icon svg,
+        .bg-xr__icon img { width: clamp(calc(140px * var(--vb-s)), 15vw, calc(188px * var(--vb-s))); height: auto; object-fit: contain; display: block; }
+        .bg-xr__label { font-size: var(--fs-h2); font-weight: 800; letter-spacing: -0.01em; color: #fff; }
+
+        /* 마우스 호버 — 살짝 떠오르는 효과 */
+        .bg-step, .bg-xr { transition: transform .32s cubic-bezier(.2,.7,.3,1), box-shadow .32s ease; will-change: transform; }
+        .bg-step:hover { transform: translateY(-8px); box-shadow: 0 16px 34px rgba(0,0,0,.10); }
+        .bg-xr:hover { transform: translateY(-8px); box-shadow: 0 30px 60px rgba(70,110,230,.42); }
+        @media (hover: none) { .bg-step:hover, .bg-xr:hover { transform: none; } }
+
+        /* 모바일: 세로로 쌓고 화살표는 아래 방향 느낌으로 숨김 */
+        @media (max-width: 720px) {
+            .bg-flow { flex-direction: column; align-items: center; gap: 14px; }
+            .bg-step, .bg-xr { width: min(320px, 80vw); }
+            .bg-arrow svg { transform: rotate(90deg); }
+        }
+
+        /* =========================================================
+           VIDEO — 프로젝트 인포 다음 영상 자리 (공간만 확보, 추후 삽입)
+           ========================================================= */
+        .vb-video { max-width: var(--vb-maxw); margin-inline: auto; }
+        .vb-video__frame {
+            position: relative;
+            aspect-ratio: 16 / 9;          /* 화면 크기에 맞게 16:9 유지 */
+            border-radius: 20px;
+            overflow: hidden;
+            border: 1px solid var(--vb-line);
+            background: var(--vb-panel);
+        }
+        .vb-video__frame iframe {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            border: 0;
+            display: block;
+        }
+
+        /* =========================================================
+           PROCESS TIMELINE — 리서치 → 비주얼라이제이션 프로세스
+           ========================================================= */
+        .tl-head { text-align: center; max-width: calc(720px * var(--vb-s)); margin-inline: auto; }
+        .tl-head .vb-eyebrow { color: var(--vb-muted); }
+        .tl-head .vb-title { margin-top: 0; }
+        .tl-grid {
+            margin-top: clamp(calc(56px * var(--vb-s)), 7vw, calc(96px * var(--vb-s)));
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: clamp(calc(16px * var(--vb-s)), 2vw, calc(32px * var(--vb-s)));
+            text-align: left;
+        }
+        .tl-col__head {
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            margin-bottom: 30px;
+        }
+        .tl-col__title {
+            font-size: var(--fs-body);
+            font-weight: 700;
+            letter-spacing: 0.02em;
+            text-transform: uppercase;
+            color: var(--vb-text);
+            word-break: keep-all;
+            margin-bottom: 14px;
+        }
+        /* 제목 아래 가로선 + 끝에 이어지는 화살촉 — 선·화살촉 모두 SVG stroke(1.5px)로 통일 */
+        .tl-col__rule { display: flex; align-items: center; height: 12px; color: var(--vb-text); }
+        .tl-col__line { flex: 1 1 auto; height: 12px; }
+        .tl-col__line svg { display: block; width: 100%; height: 12px; overflow: visible; }
+        .tl-col__tip { flex: 0 0 auto; display: flex; margin-left: -1px; }   /* 선과 살짝 겹쳐 이음새 제거 */
+        .tl-col__tip svg { display: block; width: 10px; height: 12px; overflow: visible; }
+        .tl-col:last-child .tl-col__tip { display: none; }
+        .tl-item { margin-bottom: 24px; }
+        .tl-item:last-child { margin-bottom: 0; }
+        .tl-item__name { font-size: var(--fs-h3); font-weight: 700; color: var(--vb-text); line-height: 1.3; word-break: keep-all; }
+        .tl-item__desc { margin-top: 1px; font-size: var(--fs-caption); line-height: 1.5; color: var(--vb-muted); word-break: keep-all; }
+
+        @media (max-width: 900px) {
+            .tl-grid { grid-template-columns: repeat(2, 1fr); gap: 34px 28px; }
+            .tl-col__arrow { display: none; }
+        }
+        @media (max-width: 520px) {
+            .tl-grid { grid-template-columns: 1fr; }
+        }
+
+        /* =========================================================
+           TASK & GOAL — 가운데 정렬 (Background와 동일 톤)
+           ========================================================= */
+        .tg-head { text-align: center; max-width: calc(760px * var(--vb-s)); margin-inline: auto; }
+        .tg-head .vb-eyebrow { color: var(--vb-muted); }
+        .tg-head .vb-title { margin-top: 0; }
+        .tg-desc {
+            margin: clamp(calc(16px * var(--vb-s)), 2vw, calc(22px * var(--vb-s))) auto 0;
+            max-width: calc(640px * var(--vb-s));
+            font-size: var(--fs-body);
+            line-height: 1.85;
+            color: var(--vb-body);
+            word-break: keep-all;
+        }
+
+        /* =========================================================
+           하단 네비
+           ========================================================= */
+        .vb-footer { text-align: center; padding-block: clamp(calc(80px * var(--vb-s)), 10vw, calc(140px * var(--vb-s))); }
+        .vb-back-btn {
+            display: inline-block;
+            padding: 16px 44px;
+            border: 1px solid var(--vb-line);
+            border-radius: 99px;
+            color: var(--vb-text);
+            text-decoration: none;
+            font-weight: 500;
+            transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+        }
+        .vb-back-btn:hover { background: var(--vb-text); border-color: var(--vb-text); color: var(--vb-bg); }
+
+        /* =========================================================
+           스크롤 등장 애니메이션 초기값
+           ========================================================= */
+        .reveal { opacity: 0; transform: translateY(40px); will-change: opacity, transform; }
+
+        /* =========================================================
+           반응형 (뼈대만 — 추후 확장 지점)
+           ========================================================= */
+        @media (max-width: 768px) {
+            .vb-info-grid { grid-template-columns: 1fr; }
+        }
+
+        /* =========================================================
+           추가된 첫 번째 코드 스타일 (Quantitative & Qualitative 파트용)
+           ========================================================= */
+        .info-card {
+            background-color: #F4F4F5;
+            border-radius: 1.5rem;
+            padding: 2.5rem;
+            border: 1px solid #E5E7EB;
+        }
+
+        .vertical-line {
+            width: 1px;
+            height: 80px;
+            background-color: #D1D5DB;
+            margin: 4rem auto;
+        }
+
+        .circle-chart {
+            width: 130px;
+            height: 130px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.25rem;
+            font-weight: 800;
+            position: relative;
+            margin: 0 auto;
+        }
+
+        .circle-chart::before {
+            content: "";
+            position: absolute;
+            inset: 12px;
+            background-color: #F4F4F5;
+            border-radius: 50%;
+            z-index: 1;
+        }
+
+        .circle-chart span {
+            z-index: 2;
+            color: var(--vb-text);
+        }
+
+        .chart-63 { background: conic-gradient(#3B82F6 0% 63%, #D1D5DB 63% 100%); }
+        .chart-64 { background: conic-gradient(#3B82F6 0% 64%, #D1D5DB 64% 100%); }
+        .chart-blue { background-color: #3B82F6; }
+        .chart-text-blue { color: #3B82F6; }
+
+        /* Tailwind 유틸리티 클래스 대체 */
+        .flex { display: flex; }
+        .flex-col { flex-direction: column; }
+        .items-center { align-items: center; }
+        .justify-center { justify-content: center; }
+        .text-center { text-align: center; }
+        .hidden { display: none; }
+        @media (min-width: 768px) { .md\:block { display: block; } }
+

@@ -1,0 +1,10 @@
+node_modules/
+.next/
+out/
+
+# 원본 폴더를 가리키는 바로가기(정션·하드링크).
+# 실제 파일은 ../public 에 있다. scripts/link-media.cmd 로 다시 만든다.
+/public/media
+/public/assets
+/public/common.css
+/lib/common.js

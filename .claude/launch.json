@@ -12,6 +12,12 @@
       "runtimeExecutable": "node",
       "runtimeArgs": ["editor/server.js"],
       "port": 5180
+    },
+    {
+      "name": "vibra-next",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "vibra-next", "run", "dev"],
+      "port": 3000
     }
   ]
 }

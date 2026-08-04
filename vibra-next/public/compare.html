@@ -1,0 +1,152 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>VIBRA 원본 ↔ Next 대조</title>
+<style>
+    :root { --bar: 46px; }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; }
+    body {
+        font: 13px/1.4 'Pretendard', -apple-system, 'Segoe UI', system-ui, sans-serif;
+        background: #17181b; color: #e8e9ec;
+        display: flex; flex-direction: column; overflow: hidden;
+    }
+
+    .bar {
+        flex: 0 0 auto; height: var(--bar);
+        display: flex; align-items: center; gap: 14px; padding: 0 14px;
+        background: #1f2024; border-bottom: 1px solid #2e3036;
+    }
+    .bar b { font-weight: 700; white-space: nowrap; }
+    .bar label { display: flex; align-items: center; gap: 5px; color: #9a9ca3; white-space: nowrap; cursor: pointer; }
+    .bar input[type=range] { width: 90px; accent-color: #3B82F6; }
+    .grow { flex: 1; }
+    .hint { color: #9a9ca3; font-size: 11px; }
+    kbd {
+        background: #2a2b31; border: 1px solid #3a3c44; border-bottom-width: 2px;
+        border-radius: 4px; padding: 1px 5px; font-size: 11px; font-family: inherit;
+    }
+
+    .stage { flex: 1; min-height: 0; position: relative; display: flex; }
+    .pane { flex: 1; min-width: 0; position: relative; border-right: 1px solid #2e3036; }
+    .pane:last-child { border-right: 0; }
+    .pane > span {
+        position: absolute; top: 8px; left: 8px; z-index: 5;
+        background: rgba(23,24,27,.82); padding: 2px 8px; border-radius: 5px;
+        font-size: 11px; pointer-events: none;
+    }
+    iframe { width: 100%; height: 100%; border: 0; background: #fff; display: block; }
+
+    /* 겹쳐보기: 두 화면을 포개고 차이를 색으로 드러낸다 */
+    body.overlay .stage { display: block; }
+    body.overlay .pane { position: absolute; inset: 0; border: 0; }
+    body.overlay .pane:last-child { mix-blend-mode: difference; }
+    body.overlay .pane > span { display: none; }
+    body.overlay #diffNote { display: block; }
+
+    #diffNote {
+        display: none; position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);
+        background: rgba(23,24,27,.9); padding: 5px 12px; border-radius: 6px;
+        font-size: 11px; color: #9a9ca3; z-index: 10; pointer-events: none;
+    }
+</style>
+
+<div class="bar">
+    <b>원본 ↔ Next 대조</b>
+    <label><input type="checkbox" id="sync" checked> 스크롤 동기화</label>
+    <label><input type="checkbox" id="overlay"> 겹쳐보기</label>
+    <label>너비 <input type="range" id="w" min="360" max="2560" step="10" value="1536"> <span id="wv">1536</span>px</label>
+    <span class="grow"></span>
+    <span class="hint"><kbd>R</kbd> 새로고침 · 겹쳐보기에서 <b>검게</b> 보이면 완전히 같음</span>
+</div>
+
+<div class="stage" id="stage">
+    <div class="pane"><span>원본 (vibra.html)</span><iframe id="a"></iframe></div>
+    <div class="pane"><span>Next</span><iframe id="b"></iframe></div>
+    <div id="diffNote">검은색 = 동일 · 밝게 빛나는 곳 = 차이 나는 부분</div>
+</div>
+
+<script>
+(function () {
+    // 원본은 에디터 서버(5180)가, Next 는 자기 자신(3000)이 띄운다.
+    const ORIGINAL = 'http://localhost:5180/preview/works/projects/vibra/vibra.html';
+    const NEXT = '/';
+
+    const a = document.getElementById('a');
+    const b = document.getElementById('b');
+    a.src = ORIGINAL;
+    b.src = NEXT;
+
+    // ---- 뷰포트 너비 흉내내기 ----
+    // 실제 창 크기를 바꿀 순 없으니, iframe 을 목표 너비로 만든 뒤
+    // 칸에 맞게 축소해서 보여준다. 레이아웃 계산은 목표 너비 기준으로 돈다.
+    const wIn = document.getElementById('w');
+    const wOut = document.getElementById('wv');
+
+    function fit() {
+        const target = +wIn.value;
+        wOut.textContent = target;
+        for (const f of [a, b]) {
+            const box = f.parentElement.getBoundingClientRect();
+            const scale = Math.min(1, box.width / target);
+            f.style.width = target + 'px';
+            f.style.height = (box.height / scale) + 'px';
+            f.style.transformOrigin = 'top left';
+            f.style.transform = 'scale(' + scale + ')';
+        }
+    }
+    wIn.addEventListener('input', fit);
+    window.addEventListener('resize', fit);
+
+    // ---- 스크롤 동기화 ----
+    // 두 문서의 길이가 달라도 비율로 맞춘다. 되먹임을 막으려고 잠금 플래그를 쓴다.
+    let lock = false;
+    const sync = document.getElementById('sync');
+
+    function maxScroll(win) {
+        const d = win.document.documentElement;
+        return Math.max(1, d.scrollHeight - win.innerHeight);
+    }
+
+    function hook(from, to) {
+        let win;
+        try { win = from.contentWindow; } catch { return; }
+        win.addEventListener('scroll', () => {
+            if (!sync.checked || lock) return;
+            lock = true;
+            try {
+                const ratio = win.scrollY / maxScroll(win);
+                const tw = to.contentWindow;
+                tw.scrollTo(0, ratio * maxScroll(tw));
+            } catch {}
+            requestAnimationFrame(() => { lock = false; });
+        }, { passive: true });
+    }
+
+    let hooked = 0;
+    function onLoad() {
+        if (++hooked < 2) return;   // 둘 다 뜬 뒤에 연결
+        hook(a, b);
+        hook(b, a);
+        fit();
+    }
+    a.addEventListener('load', onLoad);
+    b.addEventListener('load', onLoad);
+
+    // ---- 겹쳐보기 ----
+    document.getElementById('overlay').addEventListener('change', e => {
+        document.body.classList.toggle('overlay', e.target.checked);
+        fit();
+    });
+
+    // ---- R 로 양쪽 새로고침 ----
+    addEventListener('keydown', e => {
+        if (e.key !== 'r' && e.key !== 'R') return;
+        if (e.target.tagName === 'INPUT') return;
+        hooked = 0;
+        a.src = ORIGINAL;
+        b.src = NEXT;
+    });
+
+    fit();
+})();
+</script>
