@@ -6,5 +6,7 @@ out/
 # 실제 파일은 ../public 에 있다. scripts/link-media.cmd 로 다시 만든다.
 /public/media
 /public/assets
+/public/works
 /public/common.css
+/public/common.js
 /lib/common.js

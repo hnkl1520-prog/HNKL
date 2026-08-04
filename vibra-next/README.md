@@ -20,16 +20,22 @@ npm run dev
 |---|---|
 | `public/media` | `../public/works/projects/vibra/media` |
 | `public/assets` | `../public/assets` |
+| `public/works/projects/vibra` | `../public/works/projects/vibra` (비교용 원본) |
 | `public/common.css` | `../public/common.css` |
+| `public/common.js` | `../public/common.js` |
 | `lib/common.js` | `../public/common.js` |
 
 ## 원본과 화면 비교
 
-원본 서버(에디터, 5180)와 Next(3000) 를 둘 다 띄운 뒤:
+`npm run dev` 만 띄우면 된다. 원본도 같은 서버에서 나온다.
 
 ```
 http://localhost:3000/compare.html
 ```
+
+원본을 굳이 이쪽 서버에서 서빙하는 이유: 포트가 다르면 브라우저가 남의
+페이지로 막아서(`SecurityError`) 스크롤 위치를 읽을 수 없다. 같은 주소여야
+좌우 스크롤이 붙는다.
 
 - 좌우로 나란히 놓고 **스크롤이 같이** 움직인다
 - **겹쳐보기** 를 켜면 두 화면을 포개서 차이를 색으로 드러낸다 — 검게 보이면 완전히 같다는 뜻

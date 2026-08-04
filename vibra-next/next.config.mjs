@@ -12,6 +12,9 @@ const nextConfig = {
     // 원본이 <img>/<video> 를 직접 쓰므로 next/image 최적화는 켜지 않는다.
     // (최적화가 끼면 크기·화질이 미세하게 달라져 '원본과 동일' 조건이 깨진다)
     images: { unoptimized: true },
+
+    // 화면 왼쪽 아래 뜨는 개발용 N 배지를 끈다. 원본과 나란히 볼 때 가린다.
+    devIndicators: false,
 };
 
 export default nextConfig;
