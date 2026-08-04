@@ -59,7 +59,7 @@ node scripts/extract-css.mjs
 ## 진행 상황
 
 - [x] 1단계 — 세팅 · CSS 이식 · 비교 도구
-- [ ] 2단계 — 공용 컴포넌트 + 레이아웃(헤더·젤리 커서)
+- [x] 2단계 — 공용 컴포넌트 + 레이아웃(헤더·젤리 커서)
 - [ ] 3단계 — Hero + Info (GSAP 1차)
 - [ ] 4단계 — Background · Task&Goal · Process Timeline (GSAP 가로스크롤)
 - [ ] 5단계 — 정량조사 · 정성조사

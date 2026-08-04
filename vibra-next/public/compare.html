@@ -29,10 +29,12 @@
     .stage { flex: 1; min-height: 0; position: relative; display: flex; }
     .pane { flex: 1; min-width: 0; position: relative; border-right: 1px solid #2e3036; }
     .pane:last-child { border-right: 0; }
+    /* 칸 이름표 — 버튼이 아니라 설명. 버튼처럼 안 보이게 둔다. */
     .pane > span {
-        position: absolute; top: 8px; left: 8px; z-index: 5;
-        background: rgba(23,24,27,.82); padding: 2px 8px; border-radius: 5px;
-        font-size: 11px; pointer-events: none;
+        position: absolute; top: 6px; left: 10px; z-index: 5;
+        font-size: 10px; letter-spacing: .08em; text-transform: uppercase;
+        color: rgba(255,255,255,.72); text-shadow: 0 1px 4px rgba(0,0,0,.9);
+        pointer-events: none; user-select: none;
     }
     iframe { width: 100%; height: 100%; border: 0; background: #fff; display: block; }
 

@@ -14,6 +14,9 @@ export const viewport = {
     initialScale: 1,
 };
 
+import JellyCursor from '../components/JellyCursor';
+import GlobalHeader from '../components/GlobalHeader';
+
 export default function RootLayout({ children }) {
     return (
         <html lang="ko">
@@ -30,7 +33,12 @@ export default function RootLayout({ children }) {
                 {/* 페이지 전용 스타일 — vibra.html <style> 블록 원문 */}
                 <link rel="stylesheet" href="/vibra.css" />
             </head>
-            <body>{children}</body>
+            <body>
+                {/* 원본 body 첫머리 순서 그대로: 커서 → 헤더 → 본문 */}
+                <JellyCursor />
+                <GlobalHeader />
+                {children}
+            </body>
         </html>
     );
 }
