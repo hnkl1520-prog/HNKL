@@ -85,6 +85,14 @@
     --space-8:  calc(64px  * var(--s));
     --space-9:  calc(96px  * var(--s));
     --space-10: calc(128px * var(--s));
+
+    /* 하위호환 — 최종 청소 시 제거 예정.
+       _preview_bg.html 이 아직 옛 이름(--space-xs~xl)을 참조하므로 잇는다. */
+    --space-xs: var(--space-2);
+    --space-sm: var(--space-4);
+    --space-md: var(--space-6);
+    --space-lg: var(--space-8);
+    --space-xl: var(--space-10);
 }
 
 /* ----------------------------------------------------------------------
