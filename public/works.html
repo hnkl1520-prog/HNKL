@@ -8,7 +8,8 @@
     <!-- Pretendard Font -->
     <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.8/dist/web/static/pretendard.css" />
     
-    <!-- [연결] 공통 스타일 (common.css) -->
+    <!-- [연결] 디자인 토큰 → 공통 스타일 (tokens.css 가 먼저) -->
+    <link rel="stylesheet" href="tokens.css">
     <link rel="stylesheet" href="common.css">
     
     <!-- GSAP (필수 애니메이션 라이브러리) -->
@@ -352,9 +353,9 @@
             movePill(clickedBtn);
 
             if (category === 'labs') {
-                document.body.classList.add('dark-mode');
+                document.documentElement.classList.add('dark-mode');
             } else {
-                document.body.classList.remove('dark-mode');
+                document.documentElement.classList.remove('dark-mode');
             }
 
             const oldItems = document.querySelectorAll('.work-item');

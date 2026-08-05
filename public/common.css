@@ -1,27 +1,9 @@
 /* 1. 폰트 불러오기 (Pretendard) */
 @import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.8/dist/web/static/pretendard.css");
 
-/* 2. 공통 변수 (Color Theme) */
-:root {
-    /* Light Mode */
-    --bg-color: #F5F5F7;
-    --text-color: #1D1D1F;
-    --accent-color: #2997ff;
-    --sub-color-1: #9c6dff;
-    --sub-color-2: #4fd1c5;
-    --dim-color: #86868b;
-    --text-sub: #6e6e73;
-    --card-bg: #FFFFFF;
-}
-
-/* 다크모드 변수 재정의 */
-body.dark-mode {
-    --bg-color: #050505;
-    --text-color: #f5f5f7;
-    --text-sub: #a1a1a6;
-    --card-bg: #1c1c1e;
-    --dim-color: #636366;
-}
+/* 2. 공통 변수 → tokens.css 로 이동.
+   색·표면·타이포·간격 토큰은 이 파일보다 먼저 link 되는 tokens.css 가 정의한다.
+   (라이트/다크 값 모두 그쪽에 있음) */
 
 /* 3. 기본 설정 (Reset & Base) */
 body, html {
@@ -51,7 +33,7 @@ a, button, .hover-trigger {
     transition: transform 0.3s ease, background-color 0.3s ease, height 0.3s ease, border-bottom 0.3s ease;
 }
 
-body.dark-mode #global-header {
+.dark-mode #global-header {
     background-color: rgba(5, 5, 5, 0.7);
     border-bottom: 1px solid rgba(255,255,255,0.05);
 }
@@ -77,7 +59,7 @@ body.dark-mode #global-header {
     height: 24px; width: auto; display: block;
     transition: height 0.3s cubic-bezier(0.25, 0.1, 0.25, 1), filter 0.3s ease;
 }
-body.dark-mode .header-logo img { filter: invert(1) brightness(2); }
+.dark-mode .header-logo img { filter: invert(1) brightness(2); }
 
 #global-header.at-top .header-logo img { height: 31px; }
 
@@ -236,7 +218,7 @@ main {
     transition: background 0.5s ease, border-color 0.5s ease;
 }
 
-body.dark-mode .floating-dock {
+.dark-mode .floating-dock {
     background: rgba(20, 20, 20, 0.6);
     border: 1px solid rgba(255, 255, 255, 0.1);
     box-shadow: 0 20px 40px rgba(0,0,0,0.4);
@@ -246,7 +228,7 @@ body.dark-mode .floating-dock {
     position: absolute; top: 6px; bottom: 6px; left: 6px; width: 0;
     background-color: #000; border-radius: 999px; z-index: 1;
 }
-body.dark-mode .dock-pill { background-color: #fff; }
+.dark-mode .dock-pill { background-color: #fff; }
 
 .dock-btn {
     position: relative; z-index: 2;
@@ -258,7 +240,7 @@ body.dark-mode .dock-pill { background-color: #fff; }
 }
 
 .dock-btn.active { color: #fff; }
-body.dark-mode .dock-btn.active { color: #000; }
+.dark-mode .dock-btn.active { color: #000; }
 
 .dock-icon {
     width: 18px; height: 18px; display: block;
@@ -266,47 +248,14 @@ body.dark-mode .dock-btn.active { color: #000; }
 }
 
 .dock-btn.active .dock-icon { filter: invert(1); opacity: 1; }
-body.dark-mode .dock-icon { filter: invert(1); }
-body.dark-mode .dock-btn.active .dock-icon { filter: invert(0); opacity: 1; }
+.dark-mode .dock-icon { filter: invert(1); }
+.dark-mode .dock-btn.active .dock-icon { filter: invert(0); opacity: 1; }
 
 /* =========================================================
-   DESIGN SYSTEM TOKENS  (additive — 기존 토큰/컴포넌트 미수정)
-   타이포 / 회색 스케일 / 8px 간격 스케일
-   사용법: 요소에 .text-display / .text-h1 ... .text-caption 클래스 부여.
-          색·면·테두리·간격은 var(--gray-*), var(--space-*) 참조.
+   DESIGN SYSTEM TOKENS  — 변수 정의는 tokens.css 로 이동.
+   아래 .text-* 유틸리티는 그대로 유지하며, tokens.css 의
+   var(--fs-*) / var(--gray-*) 를 참조한다.
    ========================================================= */
-:root {
-    /* --- Typography sizes --- */
-    --fs-display: 64px;   /* 대형 타이틀 */
-    --fs-h1: 40px;
-    --fs-h2: 28px;
-    --fs-h3: 20px;
-    --fs-body: 17px;
-    --fs-caption: 13px;
-
-    /* --- Grayscale (light) --- */
-    --gray-ink: #1D1D1F;   /* 제목·본문 */
-    --gray-700: #515154;   /* 본문 보조 */
-    --gray-500: #86868B;   /* 캡션 */
-    --gray-300: #D2D2D7;   /* 테두리 */
-    --gray-50:  #F5F5F7;   /* 면·카드 */
-
-    /* --- Spacing (8px base) --- */
-    --space-xs: 8px;
-    --space-sm: 16px;
-    --space-md: 32px;
-    --space-lg: 64px;
-    --space-xl: 128px;
-}
-
-/* 다크모드: 회색 스케일 자동 반전 (ink <-> surface) */
-body.dark-mode {
-    --gray-ink: #F5F5F7;
-    --gray-700: #A1A1A6;
-    --gray-500: #8E8E93;
-    --gray-300: #3A3A3C;
-    --gray-50:  #1C1C1E;
-}
 
 /* --- Typography utilities --- */
 .text-display, .text-h1, .text-h2, .text-h3 {
