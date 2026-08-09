@@ -8,45 +8,62 @@
 <body>
 
 <header class="bar">
-    <span class="brand">HNKL 에디터</span>
-
-    <span class="sep"></span>
-
-    <div class="mode-tabs" role="tablist">
-        <button id="editTab"  class="mode-tab on"  role="tab">편집</button>
-        <button id="dsTab"    class="mode-tab"     role="tab">디자인 시스템</button>
+    <!-- 좌: 브랜드 · 모드 스위처 · 파일 · 컴포넌트 토글 -->
+    <div class="bar-zone bar-left">
+        <span class="brand">HNKL</span>
+        <div class="mode-switch" role="tablist" aria-label="작업 모드">
+            <button id="editTab" class="mode-btn on" role="tab">편집</button>
+            <button id="dsTab"   class="mode-btn"    role="tab">디자인 시스템</button>
+        </div>
+        <select id="pageSelect" class="select" title="편집할 페이지"></select>
+        <button id="compToggle" class="btn ghost tiny" aria-pressed="false"
+                title="컴포넌트 패널 열기/닫기">＋ 컴포넌트</button>
     </div>
 
-    <span class="sep"></span>
-
-    <select id="pageSelect" class="select" title="편집할 페이지"></select>
-
-    <span class="sep"></span>
-
-    <div class="bp" id="breakpoints" role="group" aria-label="화면 크기">
-        <button data-w="2560" data-h="1440">데스크탑</button>
-        <button data-w="1536" data-h="864" class="on">노트북</button>
-        <button data-w="1024" data-h="768">태블릿</button>
-        <button data-w="390" data-h="844">폰</button>
+    <!-- 중앙: 뷰포트(브레이크포인트) 제어 + 활성 해상도 -->
+    <div class="bar-zone bar-center">
+        <div class="bp" id="breakpoints" role="group" aria-label="화면 크기">
+            <button data-w="2560" data-h="1440">데스크탑</button>
+            <button data-w="1536" data-h="864" class="on">노트북</button>
+            <button data-w="1024" data-h="768">태블릿</button>
+            <button data-w="390" data-h="844">폰</button>
+        </div>
+        <span class="bp-res" id="bpRes" title="현재 렌더링 기준 해상도">1536 × 864</span>
     </div>
 
-    <label class="zoomWrap" title="미리보기 축소 배율 (실제 값에는 영향 없음)">
-        보기 <input type="range" id="zoom" min="20" max="100" value="60"> <span id="zoomVal">60%</span>
-    </label>
-
-    <span class="sep"></span>
-
-    <button id="pickBtn" class="btn">요소 고르기</button>
-    <button id="reloadBtn" class="btn ghost">새로고침</button>
-
-    <span class="grow"></span>
-
-    <span id="dirty" class="dirty" hidden>저장 안 된 변경 <b id="dirtyCount">0</b></span>
-    <button id="revertBtn" class="btn ghost" disabled>되돌리기</button>
-    <button id="saveBtn" class="btn primary" disabled>파일에 저장</button>
+    <!-- 우: 보기 배율 · 편집 도구 · 상태 · 액션 -->
+    <div class="bar-zone bar-right">
+        <label class="zoomWrap" title="미리보기 축소 배율 (실제 값에는 영향 없음)">
+            <input type="range" id="zoom" min="20" max="100" value="60"> <span id="zoomVal">60%</span>
+        </label>
+        <span class="sep"></span>
+        <button id="pickBtn" class="btn">요소 고르기</button>
+        <button id="reloadBtn" class="btn ghost">새로고침</button>
+        <span class="sep"></span>
+        <span id="dirty" class="dirty" hidden>변경 <b id="dirtyCount">0</b></span>
+        <button id="revertBtn" class="btn ghost" disabled>되돌리기</button>
+        <button id="saveBtn" class="btn primary" disabled>저장</button>
+    </div>
 </header>
 
 <main class="layout">
+    <!-- 좌측 컴포넌트 라이브러리 (기본 닫힘, 상단 '＋ 컴포넌트'로 토글) -->
+    <aside class="left-panel" id="leftPanel" hidden aria-label="컴포넌트 라이브러리">
+        <div class="lp-head">
+            <span>컴포넌트</span>
+            <button class="lp-close" id="compClose" title="닫기" aria-label="닫기">✕</button>
+        </div>
+        <p class="lp-note">캔버스에 끌어다 넣는 블록 라이브러리입니다.<br>(삽입 동작 연결은 준비 중)</p>
+        <div class="lp-list">
+            <div class="lp-item" draggable="true">제목 (H2)</div>
+            <div class="lp-item" draggable="true">본문 문단</div>
+            <div class="lp-item" draggable="true">이미지</div>
+            <div class="lp-item" draggable="true">버튼</div>
+            <div class="lp-item" draggable="true">카드</div>
+            <div class="lp-item" draggable="true">구분선</div>
+        </div>
+    </aside>
+
     <section class="stage" id="stage">
         <div class="frameWrap" id="frameWrap">
             <iframe id="frame" title="미리보기"></iframe>
@@ -84,9 +101,11 @@
 
 <div id="dsView" class="ds-view" hidden>
     <div class="ds-toolbar">
-        섹션 간격
-        <input type="range" id="dsGap" min="16" max="96" value="40" step="4">
-        <span id="dsGapVal">40px</span>
+        <span class="ds-toolbar-src">기준: <b>tokens.css</b> · 사용처 스캔: vibra.html + common.css</span>
+        <span class="grow"></span>
+        <label class="ds-toolbar-toggle" title="코드 변수명(--text-sub 등)을 항상 표시">
+            <input type="checkbox" id="dsShowVars"> 변수명 보기
+        </label>
     </div>
     <div class="ds-canvas" id="dsCanvas">
         <div class="ds-loading" id="dsLoading">데이터를 불러오는 중…</div>

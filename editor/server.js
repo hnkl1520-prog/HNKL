@@ -14,6 +14,7 @@ import fsp from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { patchInlineStyle, patchCssRule } from './lib/patch.js';
+import { buildDesignSystem } from './lib/designsystem.js';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
@@ -110,6 +111,11 @@ const server = http.createServer(async (req, res) => {
         // ---------- API ----------
         if (pathname === '/__api/pages') {
             return sendJson(res, 200, { pages: await listPages() });
+        }
+
+        // 디자인 시스템 (tokens.css 파싱 + vibra/common 사용처 스캔). 표시 전용.
+        if (pathname === '/__api/designsystem') {
+            return sendJson(res, 200, buildDesignSystem());
         }
 
         if (pathname === '/__api/patch' && req.method === 'POST') {
