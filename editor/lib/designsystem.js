@@ -314,13 +314,26 @@ export function buildDesignSystem() {
         { name: '--fs-small', label: '작은 글씨' },
         { name: '--fs-caption', label: '캡션' },
     ];
+    const fontWeights = scanFontWeights(sources);
+
+    // 스케일마다 '실제로 함께 쓰인 굵기' 를 뒤집어 모은다.
+    // (본문 설명처럼 <strong> 이 섞이면 자연히 굵기가 2개가 된다)
+    const weightsByFs = {};
+    for (const w of fontWeights) {
+        for (const sz of w.sizes) {
+            if (!sz.startsWith('--fs-')) continue;
+            (weightsByFs[sz] ||= []).push(w.weight);
+        }
+    }
+    for (const k in weightsByFs) weightsByFs[k].sort((a, b) => b - a);
+
     const typo = typoDefs.filter(t => light[t.name]).map(t => ({
         name: t.name, label: t.label,
         def: light[t.name],                       // 정의값 원문 (calc(...))
         basePx: basePx(light[t.name]),            // × var(--s) 벗긴 기준 px
+        weights: weightsByFs[t.name] || [],       // 이 크기와 함께 쓰이는 굵기들
         count: count(t.name), usage: hintOf(t.name), unused: isUnused(t.name),
     }));
-    const fontWeights = scanFontWeights(sources);
 
     // 4) 간격 · 배율
     const spacing = [];

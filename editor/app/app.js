@@ -727,9 +727,9 @@ $('#compToggle').addEventListener('click', () => leftPanel.hidden ? openLeftPane
 $('#compClose').addEventListener('click', closeLeftPanel);
 
 // ---------------------------------------------------------------- 디자인 시스템
-// 여기는 '기준'을 보는 곳이다. 대시보드가 아니므로 사용처·사용횟수는 보여주지 않는다.
-// 화면: ① 색 · 팔레트(칩 카드)  ② 색 · 역할(어디에 쓰는 색인가)  ③ 타이포
-// 조절: 칩 클릭 = 색 고르기 / 역할 = 팔레트 연결 / 타이포 = 크기 슬라이더
+// ① 색 · 팔레트 — '색 자체'. 이름도 색 이름으로 부른다(용도 이름을 쓰면 역할과 겹쳐 헷갈림).
+// ② 색 · 역할  — '어디에 쓰는지'. 팔레트에서 골라 연결하고, 라이트/다크 값을 같이 보여준다.
+// ③ 타이포     — 크기는 더블클릭해 입력, 굵기는 그 크기와 실제로 함께 쓰이는 것들.
 function el(tag, cls, text) {
     const d = document.createElement(tag);
     if (cls) d.className = cls;
@@ -738,7 +738,6 @@ function el(tag, cls, text) {
 }
 function dEl(tag, cls, key, val) { const d = el(tag, cls); d.dataset[key] = val; return d; }
 
-// 타이포 '현재 px' 계산용 배율 (tokens.css 의 --s 식과 동일)
 function currentScale() {
     const w = bp.w;
     return w < 1024 ? 1 : Math.min(1, Math.max(0.8, 0.5 + w / 5120));
@@ -746,29 +745,44 @@ function currentScale() {
 const round1 = n => Math.round(n * 10) / 10;
 const varName = name => Object.assign(el('span', 'ds-var'), { textContent: name });
 
-// ── 조절 상태 ──
-let dsData = null;
-let dsEdits = {};        // name -> 새 값 (hex | 팔레트이름 | px)
-let dsBaseHex = {};      // 팔레트 이름 -> 원래 hex
-let dsBasePx = {};       // --fs-* -> 원래 px
-let dsBaseLink = {};     // 역할 -> 원래 연결 팔레트
-let dsPalette = [];      // 역할 드롭다운 후보
+// 팔레트에서 쓸 '색 이름' (tokens.css 의 용도 이름 대신)
+const PALETTE_LABEL = {
+    '--surface': '흰색',
+    '--bg': '아주 밝은 회색',
+    '--panel': '연회색',
+    '--blue': '블루',
+    '--purple': '퍼플',
+    '--teal': '틸',
+    '--dark-surface': '먹색',
+};
 
-// 역할 섹션에서 --panel 은 뺀다: 팔레트(표면)에 이미 있고, 2층이 아니라 1층이라 헷갈린다.
+let dsData = null;
+let dsEdits = {};
+let dsBaseHex = {}, dsDarkHex = {}, dsBasePx = {}, dsBaseLink = {};
+let dsPalette = [];
+
+// 역할 목록: 2층 토큰만 (팔레트를 직접 쓰는 --panel 은 제외하고 아래 주석으로 알린다)
 const ROLE_SKIP = new Set(['--panel']);
 
 function buildDsBase(d) {
-    dsBaseHex = {}; dsBasePx = {}; dsBaseLink = {}; dsPalette = [];
-    for (const g of d.ramp) { dsBaseHex[g.name] = g.hex; dsPalette.push({ name: g.name, label: '회색 ' + g.step }); }
-    for (const s of d.surfaces) { dsBaseHex[s.name] = s.hex; dsPalette.push({ name: s.name, label: s.label }); }
-    for (const p of d.primitives) { dsBaseHex[p.name] = p.hex; dsPalette.push({ name: p.name, label: p.label }); }
+    dsBaseHex = {}; dsDarkHex = {}; dsBasePx = {}; dsBaseLink = {}; dsPalette = [];
+    const add = (name, label, hex, darkHex) => {
+        dsBaseHex[name] = hex;
+        if (darkHex) dsDarkHex[name] = darkHex;
+        dsPalette.push({ name, label });
+    };
+    for (const g of d.ramp) add(g.name, '회색 ' + g.step, g.hex, g.darkHex);
+    for (const s of d.surfaces) add(s.name, PALETTE_LABEL[s.name] || s.label, s.hex, s.darkHex);
+    for (const p of d.primitives) add(p.name, PALETTE_LABEL[p.name] || p.label, p.hex, null);
     for (const r of d.roles) if (!ROLE_SKIP.has(r.name) && r.linked) dsBaseLink[r.name] = r.linked;
     for (const t of d.typo) dsBasePx[t.name] = t.basePx;
 }
 const effHex = n => (n in dsEdits && n in dsBaseHex) ? dsEdits[n] : dsBaseHex[n];
+const darkHexOf = n => dsDarkHex[n] || effHex(n);      // 다크값이 따로 없으면 같은 색
 const effLink = r => (r in dsEdits) ? dsEdits[r] : dsBaseLink[r];
 const effPx = n => (n in dsEdits && n in dsBasePx) ? +dsEdits[n] : dsBasePx[n];
 const roleHex = r => effHex(effLink(r));
+const roleDark = r => darkHexOf(effLink(r));
 function isChanged(n) {
     if (!(n in dsEdits)) return false;
     if (n in dsBaseHex) return dsEdits[n] !== dsBaseHex[n];
@@ -778,7 +792,6 @@ function isChanged(n) {
 }
 const changedNames = () => Object.keys(dsEdits).filter(isChanged);
 
-// 대비 (WCAG)
 function lum(hex) {
     const [r, g, b] = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255)
         .map(c => (c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4)));
@@ -789,8 +802,6 @@ function contrast(a, b) {
     const [hi, lo] = [lum(a), lum(b)].sort((x, y) => y - x);
     return Math.round((hi + 0.05) / (lo + 0.05) * 100) / 100;
 }
-const bgHexNow = () => effHex(effLink('--bg-color'));
-const cardHexNow = () => effHex(effLink('--card-bg'));
 
 async function fetchDesignSystem() {
     const canvas = document.getElementById('dsCanvas');
@@ -823,54 +834,48 @@ function dsSection(title, desc) {
     return s;
 }
 
-// ── 칩 카드 (색 하나) ──
-function chipCard(name, step, wide) {
-    const card = el('div', 'ds3-chip' + (wide ? ' is-wide' : ''));
+// ── 칩 카드 (크기 통일 · 색 면적 넓게) ──
+function chipCard(name, label) {
+    const card = el('div', 'ds3-chip');
     card.dataset.cell = name;
     const inp = el('input', 'ds3-chip-color');
     inp.type = 'color';
     inp.dataset.chip = name;
-    inp.title = name + ' — 눌러서 색 고르기';
+    inp.title = label + ' — 눌러서 색 고르기';
     inp.addEventListener('input', () => applyEdit(name, inp.value.toUpperCase()));
     const meta = el('div', 'ds3-chip-meta');
-    meta.append(el('div', 'ds3-chip-step', step), dEl('div', 'ds3-chip-hex', 'hex', name));
+    meta.append(el('div', 'ds3-chip-name', label), dEl('div', 'ds3-chip-hex', 'hex', name));
     card.append(inp, meta);
     const chg = el('span', 'ds3-chg'); chg.dataset.chg = name; card.appendChild(chg);
     return card;
 }
 function chipRow(items) {
     const row = el('div', 'ds3-chips');
-    for (const it of items) row.appendChild(chipCard(it.name, it.step, it.wide));
+    for (const it of items) row.appendChild(chipCard(it.name, it.label));
     return row;
 }
 
 // ① 색 · 팔레트
 function sectionPalette(d) {
-    const s = dsSection('색 · 팔레트', '색의 원본. 칩을 눌러 색을 고칠 수 있습니다.');
-
+    const s = dsSection('색 · 팔레트', '색 자체입니다. 여기서는 색 이름으로만 부르고, 어디에 쓸지는 아래 "역할"에서 정합니다.');
     s.appendChild(el('h3', 'ds3-sub', '회색 — 밝은 것부터'));
-    s.appendChild(chipRow(d.ramp.map(g => ({ name: g.name, step: String(g.step) }))));
-
-    s.appendChild(el('h3', 'ds3-sub', '배경 · 면'));
-    s.appendChild(chipRow(d.surfaces.map(x => ({ name: x.name, step: x.label, wide: true }))));
-
+    s.appendChild(chipRow(d.ramp.map(g => ({ name: g.name, label: '회색 ' + g.step }))));
+    s.appendChild(el('h3', 'ds3-sub', '흰색 계열'));
+    s.appendChild(chipRow(d.surfaces.map(x => ({ name: x.name, label: PALETTE_LABEL[x.name] || x.label }))));
     s.appendChild(el('h3', 'ds3-sub', '포인트 · 서브'));
-    s.appendChild(chipRow(d.primitives.map(x => ({ name: x.name, step: x.label, wide: true }))));
+    s.appendChild(chipRow(d.primitives.map(x => ({ name: x.name, label: PALETTE_LABEL[x.name] || x.label }))));
     return s;
 }
 
 // ② 색 · 역할
 function sectionRoles(d) {
     const s = dsSection('색 · 역할',
-        '"어디에 쓰는 색"인지 정하는 층. 팔레트에서 골라 연결합니다. 직접 색을 넣을 수는 없습니다.');
+        '어디에 쓰는 색인지 정합니다. 팔레트에서 골라 연결하며, 직접 색을 넣을 수는 없습니다. 다크모드 값도 함께 보여줍니다.');
     const grid = el('div', 'ds3-roles');
     for (const r of d.roles) {
         if (ROLE_SKIP.has(r.name) || !dsBaseLink[r.name]) continue;
         const card = el('div', 'ds3-role'); card.dataset.role = r.name;
 
-        const chip = el('div', 'ds3-role-chip'); chip.dataset.rolechip = r.name;
-
-        const body = el('div', 'ds3-role-body');
         const head = el('div', 'ds3-role-head');
         head.append(el('span', 'ds3-role-name', r.label), varName(r.name));
         const chg = el('span', 'ds3-chg'); chg.dataset.chg = r.name; head.appendChild(chg);
@@ -883,83 +888,124 @@ function sectionRoles(d) {
         sel.value = effLink(r.name);
         sel.addEventListener('change', () => applyEdit(r.name, sel.value));
 
-        const foot = el('div', 'ds3-role-foot');
-        foot.append(dEl('span', 'ds3-role-hex', 'rolehex', r.name));
-        if (r.contrast) foot.appendChild(dEl('span', 'ds3-role-contrast', 'contrast', r.name));
-
-        body.append(head, sel, foot);
-        card.append(chip, body);
+        // 라이트 / 다크 두 칸
+        const modes = el('div', 'ds3-modes');
+        for (const m of ['light', 'dark']) {
+            const box = el('div', 'ds3-mode ' + m);
+            box.append(
+                el('div', 'ds3-mode-label', m === 'light' ? '라이트' : '다크'),
+                dEl('div', 'ds3-mode-chip', m === 'light' ? 'rolechip' : 'rolechipdark', r.name),
+                dEl('div', 'ds3-mode-hex', m === 'light' ? 'rolehex' : 'rolehexdark', r.name),
+            );
+            if (r.contrast) box.appendChild(dEl('div', 'ds3-mode-contrast', m === 'light' ? 'contrast' : 'contrastdark', r.name));
+            modes.appendChild(box);
+        }
+        card.append(head, sel, modes);
         grid.appendChild(card);
     }
     s.appendChild(grid);
+    s.appendChild(el('p', 'ds3-foot', '면 배경(--panel)은 역할을 거치지 않고 팔레트를 그대로 쓰고 있어 여기 없습니다.'));
     return s;
 }
 
 // ③ 타이포
 function sectionTypo(d) {
-    const s = dsSection('타이포', '슬라이더로 기준 크기를 조절합니다.');
-    const list = el('div', 'ds3-typo');
-    for (const t of d.typo) {
-        const row = el('div', 'ds3-typo-row');
-        const left = el('div', 'ds3-typo-left');
-        const head = el('div', 'ds3-typo-head');
-        head.append(el('span', 'ds3-typo-label', t.label), varName(t.name));
-        const chg = el('span', 'ds3-chg'); chg.dataset.chg = t.name; head.appendChild(chg);
-        left.append(head, dEl('div', 'ds3-typo-px', 'nums', t.name), pxSlider(t.name, 8, 80));
-        row.append(dEl('div', 'ds3-typo-sample', 'sample', t.name), left);
-        list.appendChild(row);
-    }
-    s.appendChild(list);
+    const s = dsSection('타이포', '크기 숫자를 더블클릭하면 바꿀 수 있습니다. 굵기는 그 크기와 실제로 함께 쓰이는 것들입니다.');
+    const table = el('div', 'ds3-typo');
+    const head = el('div', 'ds3-typo-row is-head');
+    head.append(el('div', 'ds3-th', '이름'), el('div', 'ds3-th', '보기'),
+        el('div', 'ds3-th ta-r', '크기'), el('div', 'ds3-th', '굵기'));
+    table.appendChild(head);
 
-    if (d.fontWeights?.length) {
-        s.appendChild(el('h3', 'ds3-sub', '쓰이는 굵기'));
-        const wr = el('div', 'ds3-weights');
-        for (const w of d.fontWeights) {
-            const c = el('div', 'ds3-weight');
-            const v = el('div', 'ds3-weight-val', '다람쥐'); v.style.fontWeight = w.weight;
-            c.append(v, el('div', 'ds3-weight-num', String(w.weight)));
-            wr.appendChild(c);
-        }
-        s.appendChild(wr);
+    for (const t of d.typo) {
+        const row = el('div', 'ds3-typo-row'); row.dataset.typo = t.name;
+
+        const nameCell = el('div', 'ds3-typo-name');
+        nameCell.append(el('span', 'ds3-typo-label', t.label), varName(t.name));
+        const chg = el('span', 'ds3-chg'); chg.dataset.chg = t.name; nameCell.appendChild(chg);
+
+        const sizeCell = el('div', 'ds3-typo-size ta-r');
+        sizeCell.append(dEl('span', 'ds3-numbox', 'numbox', t.name));
+
+        const wCell = el('div', 'ds3-typo-weights');
+        if (t.weights.length) {
+            for (const w of t.weights) {
+                const b = el('span', 'ds3-wbadge', String(w));
+                b.style.fontWeight = w;
+                wCell.appendChild(b);
+            }
+        } else wCell.appendChild(el('span', 'ds3-wnone', '안 쓰임'));
+
+        row.append(nameCell, dEl('div', 'ds3-typo-sample', 'sample', t.name), sizeCell, wCell);
+        table.appendChild(row);
     }
+    s.appendChild(table);
     return s;
 }
-function pxSlider(name, min, max) {
-    const inp = el('input', 'ds3-slider');
-    inp.type = 'range'; inp.min = min; inp.max = max; inp.step = 1;
-    inp.value = effPx(name); inp.dataset.slider = name;
-    inp.addEventListener('input', () => applyEdit(name, +inp.value));
-    return inp;
-}
 
-// ── 실시간 갱신 (컨트롤은 다시 안 그림) ──
+// 크기 숫자 더블클릭 편집 (위임 — refresh 로 다시 그려도 유지)
+document.addEventListener('dblclick', e => {
+    const box = e.target.closest('[data-numbox]');
+    if (!box || box.querySelector('input')) return;
+    const name = box.dataset.numbox;
+    const inp = el('input', 'ds3-numinput');
+    inp.type = 'text';
+    inp.value = effPx(name);
+    box.innerHTML = '';
+    box.appendChild(inp);
+    inp.focus(); inp.select();
+    let done = false;
+    const commit = () => {
+        if (done) return;            // Enter 뒤 blur 로 두 번 들어오는 것 방지
+        done = true;
+        const v = parseFloat(inp.value);
+        inp.remove();                // 먼저 걷어내야 refresh 가 숫자를 다시 그린다
+        if (!isNaN(v) && v > 0 && v < 400) applyEdit(name, Math.round(v));
+        else refresh();
+    };
+    inp.addEventListener('blur', commit);
+    inp.addEventListener('keydown', ev => {
+        if (ev.key === 'Enter') { ev.preventDefault(); commit(); }
+        if (ev.key === 'Escape') { ev.preventDefault(); done = true; inp.remove(); refresh(); }
+    });
+});
+
+// ── 실시간 갱신 ──
 function refresh() {
     const scale = currentScale();
-    const bg = bgHexNow(), card = cardHexNow();
     const SAMPLE = '다람쥐 헌 쳇바퀴';
     const q = s => document.querySelectorAll(s);
+
+    const lightBg = effHex(effLink('--bg-color'));
+    const darkBg = darkHexOf(effLink('--bg-color'));
 
     q('[data-chip]').forEach(i => { const h = effHex(i.dataset.chip); if (h) i.value = h.toLowerCase(); });
     q('[data-hex]').forEach(e => e.textContent = effHex(e.dataset.hex) || '');
 
     q('[data-rolechip]').forEach(e => e.style.background = roleHex(e.dataset.rolechip) || 'transparent');
+    q('[data-rolechipdark]').forEach(e => e.style.background = roleDark(e.dataset.rolechipdark) || 'transparent');
     q('[data-rolehex]').forEach(e => e.textContent = roleHex(e.dataset.rolehex) || '—');
-    q('[data-contrast]').forEach(box => {
-        const hex = roleHex(box.dataset.contrast);
-        const a = contrast(hex, bg), b = contrast(hex, card);
-        const worst = Math.min(a, b);
-        box.textContent = `대비 ${a} / ${b}` + (worst < 4.5 ? ' ⚠ 낮음' : '');
-        box.classList.toggle('bad', worst < 4.5);
-    });
+    q('[data-rolehexdark]').forEach(e => e.textContent = roleDark(e.dataset.rolehexdark) || '—');
+    const setC = (node, hex, bg) => {
+        const v = contrast(hex, bg);
+        node.textContent = '대비 ' + v + (v < 4.5 ? ' ⚠' : '');
+        node.classList.toggle('bad', v < 4.5);
+    };
+    q('[data-contrast]').forEach(n => setC(n, roleHex(n.dataset.contrast), lightBg));
+    q('[data-contrastdark]').forEach(n => setC(n, roleDark(n.dataset.contrastdark), darkBg));
 
     q('[data-sample]').forEach(e => {
-        const px = effPx(e.dataset.sample);
+        const n = e.dataset.sample, px = effPx(n);
+        const w = (dsData.typo.find(t => t.name === n)?.weights || [])[0] || 400;
         e.textContent = SAMPLE;
         if (px != null) e.style.fontSize = round1(px * scale) + 'px';
+        e.style.fontWeight = w;
     });
-    q('[data-nums]').forEach(e => {
-        const base = effPx(e.dataset.nums);
-        e.innerHTML = `<b>${base}px</b> <span class="ds3-dim">· 화면에선 ${round1(base * scale)}px</span>`;
+    q('[data-numbox]').forEach(box => {
+        if (box.querySelector('input')) return;      // 편집 중이면 건드리지 않는다
+        const n = box.dataset.numbox;
+        box.innerHTML = `<b>${effPx(n)}</b><span class="ds3-unit">px</span>`
+            + `<span class="ds3-onscreen">화면 ${round1(effPx(n) * scale)}</span>`;
     });
 
     q('[data-chg]').forEach(b => {
@@ -974,6 +1020,7 @@ function refresh() {
     });
     q('[data-cell]').forEach(c => c.classList.toggle('is-changed', isChanged(c.dataset.cell)));
     q('[data-role]').forEach(c => c.classList.toggle('is-changed', isChanged(c.dataset.role)));
+    q('[data-typo]').forEach(c => c.classList.toggle('is-changed', isChanged(c.dataset.typo)));
 
     updateDsToolbar();
     pushTokenPreview();
@@ -1042,6 +1089,49 @@ $('#dsConfirmOk')?.addEventListener('click', dsSaveCommit);
 $('#dsShowVars')?.addEventListener('change', e => {
     document.getElementById('dsView').classList.toggle('show-vars', e.target.checked);
 });
+
+// ---------------------------------------------------------------- 칩 모양 조절 인스펙터
+// 칩 크기·색 면적·아래 텍스트 여백을 직접 만져볼 수 있는 작은 창.
+// CSS 변수만 바꾸므로 파일에는 아무 영향이 없다.
+const CHIP_VARS = [
+    { v: '--chip-w', label: '칩 너비', min: 60, max: 200, def: 104 },
+    { v: '--chip-h', label: '색 높이', min: 40, max: 180, def: 104 },
+    { v: '--chip-px', label: '글자 좌우 여백', min: 0, max: 24, def: 9 },
+    { v: '--chip-pt', label: '글자 위 여백', min: 0, max: 24, def: 8 },
+    { v: '--chip-pb', label: '글자 아래 여백', min: 0, max: 24, def: 9 },
+    { v: '--chip-gap', label: '이름 ↔ 코드 간격', min: 0, max: 16, def: 2 },
+    { v: '--chip-radius', label: '모서리', min: 0, max: 24, def: 12 },
+];
+function buildChipTuner() {
+    const host = $('#chipTunerRows');
+    if (!host || host.childElementCount) return;
+    const canvas = document.getElementById('dsCanvas');
+    for (const c of CHIP_VARS) {
+        const row = el('div', 'ct-row');
+        const top = el('div', 'ct-top');
+        const out = el('output', null, c.def + 'px');
+        top.append(el('span', null, c.label), out);
+        const inp = el('input', 'ct-range');
+        inp.type = 'range'; inp.min = c.min; inp.max = c.max; inp.value = c.def; inp.step = 1;
+        inp.addEventListener('input', () => {
+            canvas.style.setProperty(c.v, inp.value + 'px');
+            out.textContent = inp.value + 'px';
+        });
+        row.append(top, inp);
+        host.appendChild(row);
+    }
+}
+$('#chipTunerBtn')?.addEventListener('click', () => {
+    const p = $('#chipTuner');
+    buildChipTuner();
+    p.hidden = !p.hidden;
+    $('#chipTunerBtn').classList.toggle('on', !p.hidden);
+});
+$('#chipTunerClose')?.addEventListener('click', () => {
+    $('#chipTuner').hidden = true;
+    $('#chipTunerBtn').classList.remove('on');
+});
+
 
 
 

@@ -106,9 +106,20 @@
         <label class="ds-toolbar-toggle" title="코드 변수명(--text-sub 등)을 항상 표시">
             <input type="checkbox" id="dsShowVars"> 변수명 보기
         </label>
+        <button id="chipTunerBtn" class="btn ghost tiny" title="칩 크기·여백을 직접 조절">칩 모양</button>
         <span id="dsDirty" class="ds-dirty" hidden>변경 <b id="dsDirtyCount">0</b></span>
         <button id="dsRevert" class="btn ghost tiny" disabled>되돌리기</button>
         <button id="dsSave" class="btn primary tiny" disabled>저장</button>
+    </div>
+
+    <!-- 칩 모양 조절 인스펙터 (CSS 변수만 바꿈 — 파일 영향 없음) -->
+    <div id="chipTuner" class="chip-tuner" hidden>
+        <div class="ct-head">
+            <span>칩 모양</span>
+            <button id="chipTunerClose" class="ct-close" aria-label="닫기">✕</button>
+        </div>
+        <div id="chipTunerRows"></div>
+        <p class="ct-note">보기 설정입니다. 파일에는 저장되지 않습니다.</p>
     </div>
     <div class="ds-canvas" id="dsCanvas">
         <div class="ds-loading" id="dsLoading">데이터를 불러오는 중…</div>

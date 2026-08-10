@@ -333,75 +333,129 @@ body {
 .ds3-section > .ds3-sub:first-of-type { margin-top: 0; }
 .ds3-dim { color: var(--dim); font-weight: 400; }
 
-/* ── 칩 카드 ── */
+/* ── 칩 카드 (크기 통일 · 색 면적 넓게 · 아래 여백은 칩 모양 창에서 조절) ── */
+.ds-canvas {
+    --chip-w: 104px; --chip-h: 104px;
+    --chip-px: 9px; --chip-pt: 8px; --chip-pb: 9px;
+    --chip-gap: 2px; --chip-radius: 12px;
+}
 .ds3-chips { display: flex; flex-wrap: wrap; gap: 10px; }
 .ds3-chip {
-    width: 92px; background: #fff; border-radius: 10px; overflow: hidden;
-    box-shadow: 0 2px 10px rgba(0,0,0,.4);
+    width: var(--chip-w); flex: 0 0 auto;
+    background: #fff; border-radius: var(--chip-radius);
+    overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,.45);
 }
-.ds3-chip.is-wide { width: 132px; }
+/* 색 면. 네이티브 스와치도 같은 모서리를 줘야 위쪽에 흰 테두리가 안 보인다. */
 .ds3-chip-color {
-    display: block; width: 100%; height: 76px;
+    display: block; width: 100%; height: var(--chip-h);
     padding: 0; border: 0; background: none; cursor: pointer;
+    border-radius: var(--chip-radius) var(--chip-radius) 0 0;
 }
 .ds3-chip-color::-webkit-color-swatch-wrapper { padding: 0; }
-.ds3-chip-color::-webkit-color-swatch { border: 0; }
-.ds3-chip-meta { padding: 9px 10px 10px; }
-.ds3-chip-step { font-size: 12px; font-weight: 700; color: #111; line-height: 1.3; }
+.ds3-chip-color::-webkit-color-swatch {
+    border: 0; border-radius: var(--chip-radius) var(--chip-radius) 0 0;
+}
+.ds3-chip-meta { padding: var(--chip-pt) var(--chip-px) var(--chip-pb); }
+.ds3-chip-name { font-size: 12px; font-weight: 700; color: #111; line-height: 1.3; }
 .ds3-chip-hex {
-    font-size: 10px; color: #666; line-height: 1.4;
+    font-size: 10px; color: #666; line-height: 1.4; margin-top: var(--chip-gap);
     font-variant-numeric: tabular-nums; letter-spacing: -.01em;
 }
+.ds3-chip .ds3-chg { padding: 0 var(--chip-px) var(--chip-pb); margin-top: 0; }
 
-/* ── 역할 카드 ── */
-.ds3-roles {
-    display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px;
-}
+/* ── 역할 카드 (라이트 / 다크 함께) ── */
+.ds3-roles { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
 .ds3-role {
-    display: flex; gap: 14px; align-items: flex-start;
     background: #1f2024; border: 1px solid var(--line); border-radius: 12px; padding: 14px;
 }
-.ds3-role-chip {
-    width: 46px; height: 46px; border-radius: 10px; flex: 0 0 auto;
-    border: 1px solid rgba(255,255,255,.14);
-}
-.ds3-role-body { flex: 1; min-width: 0; }
 .ds3-role-head { display: flex; align-items: center; flex-wrap: wrap; }
 .ds3-role-name { font-size: 14px; font-weight: 700; color: var(--text); }
 .ds3-select {
-    width: 100%; margin: 8px 0 6px;
+    width: 100%; margin: 9px 0 0;
     background: #26272c; color: var(--text); border: 1px solid var(--line);
     border-radius: 7px; padding: 6px 8px; font: inherit; font-size: 12px; cursor: pointer;
 }
-.ds3-role-foot { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
-.ds3-role-hex {
-    font-size: 11px; color: var(--dim);
-    font-family: ui-monospace, monospace; font-variant-numeric: tabular-nums;
+.ds3-modes { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+.ds3-mode { border-radius: 9px; padding: 9px 10px; }
+.ds3-mode.light { background: #F5F5F7; }
+.ds3-mode.dark { background: #050505; }
+.ds3-mode-label { font-size: 9px; font-weight: 700; letter-spacing: .05em; }
+.ds3-mode.light .ds3-mode-label { color: #6E6E73; }
+.ds3-mode.dark .ds3-mode-label { color: #8E8E93; }
+.ds3-mode-chip { height: 24px; border-radius: 6px; margin: 6px 0 5px; }
+.ds3-mode.light .ds3-mode-chip { border: 1px solid rgba(0,0,0,.12); }
+.ds3-mode.dark .ds3-mode-chip { border: 1px solid rgba(255,255,255,.16); }
+.ds3-mode-hex {
+    font-size: 9px; font-family: ui-monospace, monospace; font-variant-numeric: tabular-nums;
 }
-.ds3-role-contrast { font-size: 11px; color: var(--dim); }
-.ds3-role-contrast.bad { color: var(--warn); font-weight: 700; }
+.ds3-mode.light .ds3-mode-hex { color: #333; }
+.ds3-mode.dark .ds3-mode-hex { color: #ddd; }
+.ds3-mode-contrast { font-size: 9px; margin-top: 3px; }
+.ds3-mode.light .ds3-mode-contrast { color: #6E6E73; }
+.ds3-mode.dark .ds3-mode-contrast { color: #8E8E93; }
+.ds3-mode-contrast.bad { color: #d98a00 !important; font-weight: 700; }
+.ds3-foot { font-size: 11px; color: var(--dim); margin: 14px 0 0; }
 
-/* ── 타이포 ── */
+/* ── 타이포 (레퍼런스식 표) ── */
+.ds3-typo { display: flex; flex-direction: column; }
 .ds3-typo-row {
-    display: grid; grid-template-columns: 1fr 240px; align-items: center; gap: 28px;
-    padding: 18px 0; border-bottom: 1px solid rgba(255,255,255,.06);
+    display: grid; grid-template-columns: 132px 1fr 96px 130px;
+    gap: 18px; align-items: center;
+    padding: 15px 0; border-bottom: 1px solid rgba(255,255,255,.06);
 }
+.ds3-typo-row.is-head { padding: 0 0 10px; border-bottom: 1px solid var(--line); }
+.ds3-th { font-size: 10px; font-weight: 600; color: var(--dim); letter-spacing: .05em; }
+.ta-r { text-align: right; }
+.ds3-typo-name { display: flex; flex-wrap: wrap; align-items: center; }
+.ds3-typo-label { font-size: 13px; font-weight: 700; color: var(--text); }
 .ds3-typo-sample {
     color: var(--text); line-height: 1.25;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.ds3-typo-head { display: flex; align-items: center; flex-wrap: wrap; }
-.ds3-typo-label { font-size: 13px; font-weight: 700; color: var(--text); }
-.ds3-typo-px { font-size: 12px; color: var(--text); margin: 3px 0 6px; font-variant-numeric: tabular-nums; }
-.ds3-slider { width: 100%; accent-color: var(--accent); }
-
-.ds3-weights { display: flex; flex-wrap: wrap; gap: 10px; }
-.ds3-weight {
-    background: #1f2024; border: 1px solid var(--line); border-radius: 10px;
-    padding: 12px 16px; text-align: center;
+.ds3-numbox {
+    display: inline-block; cursor: pointer; padding: 3px 6px; border-radius: 6px;
+    border: 1px dashed transparent;
 }
-.ds3-weight-val { font-size: 20px; color: var(--text); line-height: 1.2; }
-.ds3-weight-num { font-size: 11px; color: var(--dim); margin-top: 4px; font-variant-numeric: tabular-nums; }
+.ds3-numbox:hover { border-color: var(--line); background: rgba(255,255,255,.04); }
+.ds3-numbox b { font-size: 15px; color: var(--text); font-variant-numeric: tabular-nums; }
+.ds3-unit { font-size: 10px; color: var(--dim); margin-left: 2px; }
+.ds3-onscreen { display: block; font-size: 9px; color: var(--dim); margin-top: 1px; }
+.ds3-numinput {
+    width: 62px; background: #26272c; color: var(--text);
+    border: 1px solid var(--accent); border-radius: 6px; padding: 3px 6px;
+    font: inherit; font-size: 14px; text-align: right; outline: none;
+}
+.ds3-typo-weights { display: flex; flex-wrap: wrap; }
+.ds3-wbadge {
+    background: #26272c; border: 1px solid var(--line); border-radius: 6px;
+    padding: 3px 8px; font-size: 11px; color: var(--text);
+    margin: 0 5px 5px 0; font-variant-numeric: tabular-nums;
+}
+.ds3-wnone { font-size: 11px; color: var(--dim); }
+
+/* ── 칩 모양 조절 창 ── */
+.chip-tuner {
+    position: absolute; right: 16px; top: 50px; width: 230px; z-index: 210;
+    background: rgba(27,28,32,.96); border: 1px solid var(--line); border-radius: 12px;
+    padding: 13px; box-shadow: 0 14px 44px rgba(0,0,0,.6);
+    backdrop-filter: blur(10px);
+}
+.chip-tuner[hidden] { display: none; }
+.ct-head {
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 12px; font-weight: 700; color: var(--text); margin-bottom: 10px;
+}
+.ct-close { background: none; border: 0; color: var(--dim); cursor: pointer; font-size: 12px; padding: 2px 4px; }
+.ct-close:hover { color: var(--text); }
+.ct-row { margin-bottom: 10px; }
+.ct-top {
+    display: flex; justify-content: space-between; align-items: baseline;
+    font-size: 11px; color: var(--dim); margin-bottom: 3px;
+}
+.ct-top output { color: var(--accent); font-weight: 700; font-variant-numeric: tabular-nums; }
+.ct-range { width: 100%; accent-color: var(--accent); margin: 0; }
+.ct-note { font-size: 10px; color: var(--dim); margin: 12px 0 0; line-height: 1.5; }
+#chipTunerBtn.on { background: var(--accent); border-color: var(--accent); color: #fff; }
 
 .ds-dirty { color: var(--warn); font-size: 12px; white-space: nowrap; }
 .ds-dirty b { font-variant-numeric: tabular-nums; }
