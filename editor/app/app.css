@@ -246,6 +246,16 @@ body {
 }
 .field .stepper button:hover { background: #34363d; color: var(--text); }
 
+/* 인스펙터: 토큰 선택 드롭다운 (기본) + '직접' 잠금 해제 버튼 */
+.tokenSel {
+    flex: 1; min-width: 0;
+    background: #26272c; color: var(--text); border: 1px solid var(--line);
+    border-radius: 6px; padding: 5px 6px; font: inherit; font-size: 12px; cursor: pointer;
+}
+.tokenSel:focus { outline: 1px solid var(--accent); border-color: var(--accent); }
+.tokenSel.changed { border-color: var(--warn); color: var(--warn); }
+.freeBtn { flex: 0 0 auto; padding: 4px 7px; font-size: 11px; }
+
 .origin { font-size: 10px; color: var(--dim); margin: -4px 0 8px 100px; opacity: .8; word-break: break-all; }
 .origin b { color: #7ea8f0; font-weight: 600; }
 

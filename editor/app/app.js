@@ -370,7 +370,9 @@ function originOf(prop) {
     //   (padding 처럼 한 줄로 묶여 있어 브라우저가 padding-top 을 못 알려주는 경우)
     const target = (selection.elementRules || []).find(r => !r.media);
     if (target) {
-        return { label: `${target.selector} 에 추가`, selector: target.selector, kind: 'insert' };
+        // 이 속성을 정하는 규칙이 아직 없음 → 고치면 이 규칙에 한 줄이 새로 생긴다.
+        // (디자인 시스템이 아니라 '이 페이지의 CSS'가 바뀐다는 뜻)
+        return { label: `아직 없음 → ${target.selector} 규칙에 새 줄 생김`, selector: target.selector, kind: 'insert' };
     }
     return { label: '계산된 기본값 (규칙 없음)', selector: null, kind: 'none' };
 }
@@ -398,7 +400,98 @@ function alignRow() {
     return g;
 }
 
+// ---------------------------------------------------------------- 토큰 목록 (인스펙터용)
+// 기본은 '디자인 시스템 안에서만' 고르게 한다. 임의 값이 필요하면 '직접' 버튼으로 잠금을 푼다.
+let insTokens = null;                 // { colors:[{label,name}], fs:[...], space:[...] }
+const freeMode = new Set();           // 직접 입력 잠금을 푼 속성들
+
+async function loadInsTokens() {
+    try {
+        const d = await (await fetch('/__api/designsystem')).json();
+        const colors = [
+            ...d.roles.map(r => ({ label: r.label, name: r.name })),
+            ...d.ramp.map(g => ({ label: '회색 ' + g.step, name: g.name })),
+            ...d.surfaces.map(s => ({ label: s.label, name: s.name })),
+            ...d.primitives.map(p => ({ label: p.label, name: p.name })),
+        ];
+        insTokens = {
+            colors,
+            fs: d.typo.map(t => ({ label: `${t.label} (${t.basePx}px)`, name: t.name })),
+            space: d.spacing.map(s => ({ label: `${s.step}단계 (${s.basePx}px)`, name: s.name })),
+        };
+    } catch { insTokens = null; }
+}
+
+const SPACE_PROPS = /^(margin|padding)-(top|right|bottom|left)$|^gap$/;
+function tokenChoicesFor(prop) {
+    if (!insTokens) return null;
+    if (prop === 'color' || prop === 'background-color') return insTokens.colors;
+    if (prop === 'font-size') return insTokens.fs;
+    if (SPACE_PROPS.test(prop)) return insTokens.space;
+    return null;   // line-height·width·display 등은 토큰이 없다 → 자유 입력
+}
+
 function fieldRow(prop) {
+    const choices = tokenChoicesFor(prop);
+    if (choices && !freeMode.has(prop)) return tokenFieldRow(prop, choices);
+    return freeFieldRow(prop);
+}
+
+/** 토큰 중에서만 고르는 줄 */
+function tokenFieldRow(prop, choices) {
+    const wrap = document.createElement('div');
+    const row = document.createElement('div');
+    row.className = 'field';
+
+    const label = document.createElement('label');
+    label.textContent = LABEL[prop] || prop;
+    row.appendChild(label);
+
+    const cur = currentValue(prop);
+    const curVar = (cur.match(/var\(\s*(--[\w-]+)\s*\)/) || [])[1] || null;
+
+    const sel = document.createElement('select');
+    sel.className = 'tokenSel';
+    if (pendingFor(prop)) sel.classList.add('changed');
+    // 토큰이 아닌 값이면 맨 위에 '지금 값'을 보여준다 (고르면 토큰으로 바뀜)
+    if (!curVar) {
+        const o = document.createElement('option');
+        o.value = ''; o.textContent = `지금: ${cur || '없음'} (토큰 아님)`;
+        sel.appendChild(o);
+    }
+    for (const c of choices) {
+        const o = document.createElement('option');
+        o.value = c.name; o.textContent = c.label;
+        sel.appendChild(o);
+    }
+    sel.value = curVar || '';
+    sel.addEventListener('change', () => {
+        if (!sel.value) return;
+        stageEdit(prop, `var(${sel.value})`);
+    });
+    row.appendChild(sel);
+
+    const free = document.createElement('button');
+    free.className = 'btn ghost tiny freeBtn';
+    free.textContent = '직접';
+    free.title = '디자인 시스템 밖의 값을 직접 넣습니다 (권장하지 않음)';
+    free.addEventListener('click', () => {
+        if (!confirm('디자인 시스템 밖의 값을 직접 넣습니다.\n이 값은 토큰과 연결되지 않아 나중에 한꺼번에 못 바꿉니다.\n계속할까요?')) return;
+        freeMode.add(prop);
+        renderInspector();
+    });
+    row.appendChild(free);
+
+    wrap.appendChild(row);
+    const o = document.createElement('div');
+    o.className = 'origin';
+    o.innerHTML = `<b>${originOf(prop).label}</b>`;
+    wrap.appendChild(o);
+    return wrap;
+}
+
+/** 자유 입력 줄 (토큰이 없는 속성, 또는 '직접' 잠금 해제) */
+function freeFieldRow(prop) {
     const row = document.createElement('div');
     row.className = 'field';
 
@@ -457,6 +550,16 @@ function fieldRow(prop) {
         stepper.appendChild(b);
     }
     row.appendChild(stepper);
+
+    // '직접'으로 풀었던 속성은 다시 토큰 선택으로 돌아갈 수 있게
+    if (freeMode.has(prop)) {
+        const back = document.createElement('button');
+        back.className = 'btn ghost tiny freeBtn';
+        back.textContent = '토큰';
+        back.title = '디자인 시스템 값에서 고르기로 돌아갑니다';
+        back.addEventListener('click', () => { freeMode.delete(prop); renderInspector(); });
+        row.appendChild(back);
+    }
 
     const wrap = document.createElement('div');
     wrap.appendChild(row);
@@ -947,3 +1050,5 @@ $('#dsShowVars')?.addEventListener('change', e => {
 updateBpRes();
 applyStage();
 loadPages();
+// 인스펙터가 '토큰 중에서만' 고르게 하려면 토큰 목록이 먼저 필요하다.
+loadInsTokens().then(() => { if (selection) renderInspector(); });
