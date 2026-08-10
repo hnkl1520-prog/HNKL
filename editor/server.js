@@ -14,7 +14,7 @@ import fsp from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { patchInlineStyle, patchCssRule } from './lib/patch.js';
-import { buildDesignSystem } from './lib/designsystem.js';
+import { buildDesignSystem, saveTokens } from './lib/designsystem.js';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
@@ -116,6 +116,17 @@ const server = http.createServer(async (req, res) => {
         // 디자인 시스템 (tokens.css 파싱 + vibra/common 사용처 스캔). 표시 전용.
         if (pathname === '/__api/designsystem') {
             return sendJson(res, 200, buildDesignSystem());
+        }
+
+        // 디자인 시스템 저장 — tokens.css 의 :root 값만 갱신 (백업 남김)
+        if (pathname === '/__api/savetokens' && req.method === 'POST') {
+            const body = JSON.parse(await readBody(req));
+            if (!body || typeof body.edits !== 'object') return sendJson(res, 400, { error: 'edits 없음' });
+            try {
+                return sendJson(res, 200, { ok: true, ...saveTokens(body.edits) });
+            } catch (e) {
+                return sendJson(res, 500, { error: e.message });
+            }
         }
 
         if (pathname === '/__api/patch' && req.method === 'POST') {

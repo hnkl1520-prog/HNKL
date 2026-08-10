@@ -101,14 +101,30 @@
 
 <div id="dsView" class="ds-view" hidden>
     <div class="ds-toolbar">
-        <span class="ds-toolbar-src">기준: <b>tokens.css</b> · 사용처 스캔: vibra.html + common.css</span>
+        <span class="ds-toolbar-src">기준: <b>tokens.css</b> · 스캔: vibra.html + common.css</span>
         <span class="grow"></span>
         <label class="ds-toolbar-toggle" title="코드 변수명(--text-sub 등)을 항상 표시">
             <input type="checkbox" id="dsShowVars"> 변수명 보기
         </label>
+        <span id="dsDirty" class="ds-dirty" hidden>변경 <b id="dsDirtyCount">0</b></span>
+        <button id="dsRevert" class="btn ghost tiny" disabled>되돌리기</button>
+        <button id="dsSave" class="btn primary tiny" disabled>저장</button>
     </div>
     <div class="ds-canvas" id="dsCanvas">
         <div class="ds-loading" id="dsLoading">데이터를 불러오는 중…</div>
+    </div>
+
+    <!-- 저장 확인 모달 -->
+    <div id="dsConfirm" class="ds-confirm" hidden>
+        <div class="ds-confirm-box">
+            <h3>tokens.css 의 :root 를 이렇게 바꿉니다</h3>
+            <p class="ds-confirm-note">주석·나머지 블록은 그대로 두고, 아래 값만 갱신합니다. 저장 전 백업 파일이 남습니다.</p>
+            <div id="dsConfirmList" class="ds-confirm-list"></div>
+            <div class="ds-confirm-actions">
+                <button id="dsConfirmCancel" class="btn ghost">취소</button>
+                <button id="dsConfirmOk" class="btn primary">tokens.css 저장</button>
+            </div>
+        </div>
     </div>
 </div>
 

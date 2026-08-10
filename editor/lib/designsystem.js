@@ -165,6 +165,50 @@ function scanFontWeights(sources) {
         .sort((a, b) => b.weight - a.weight);
 }
 
+// ---------- 저장 (:root 블록만 갱신, 백업 남김) ----------
+// edits: { '--gray-500': '#86868B', '--text-sub': 'var(--gray-700)',
+//          '--fs-body': 'calc(20px * var(--s))', '--s': '0.9', ... }
+// 규칙: tokens.css 의 첫 :root { ... } 안에서만 값(: 와 ; 사이)을 바꾼다.
+//       주석·정렬·.dark-mode·@media 는 손대지 않는다. 토큰 추가/삭제 없음(기존 이름만).
+export function saveTokens(edits) {
+    const css = fs.readFileSync(TOKENS, 'utf8');
+
+    // 첫 :root { ... } 범위
+    const rootStart = css.indexOf(':root');
+    const open = css.indexOf('{', rootStart);
+    let depth = 0, close = -1;
+    for (let i = open; i < css.length; i++) {
+        if (css[i] === '{') depth++;
+        else if (css[i] === '}') { depth--; if (depth === 0) { close = i; break; } }
+    }
+    if (rootStart < 0 || close < 0) throw new Error(':root 블록을 찾지 못했습니다.');
+
+    let block = css.slice(open + 1, close);
+    const applied = [];
+
+    for (const [name, rawVal] of Object.entries(edits)) {
+        const newVal = String(rawVal).trim();
+        // 이 이름이 :root 에 실제로 정의돼 있어야 함 (추가 금지)
+        const re = new RegExp('(' + escapeRe(name) + '\\s*:\\s*)([^;]+)(;)');
+        const m = block.match(re);
+        if (!m) { applied.push({ name, skipped: '정의 없음(추가 안 함)' }); continue; }
+        const before = m[2].trim();
+        if (before === newVal) { applied.push({ name, before, after: newVal, unchanged: true }); continue; }
+        block = block.replace(re, `$1${newVal}$3`);
+        applied.push({ name, before, after: newVal });
+    }
+
+    // 백업 (타임스탬프)
+    const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    const backup = TOKENS + '.bak-' + stamp;
+    fs.writeFileSync(backup, css, 'utf8');
+
+    const out = css.slice(0, open + 1) + block + css.slice(close);
+    fs.writeFileSync(TOKENS, out, 'utf8');
+
+    return { applied: applied.filter(a => !a.unchanged && !a.skipped), backup: path.basename(backup) };
+}
+
 // ---------- 메인 ----------
 export function buildDesignSystem() {
     const tokensCss = fs.readFileSync(TOKENS, 'utf8');

@@ -245,6 +245,16 @@
                 select(selected.parentElement);
             }
         }
+        else if (type === 'tokenPreview') {
+            // 디자인 시스템 조절 미리보기: :root 토큰 값을 임시 <style>로 덮어씀 (파일 저장 아님)
+            let tag = document.getElementById('__ed-token-preview');
+            if (!tag) {
+                tag = document.createElement('style');
+                tag.id = '__ed-token-preview';
+                (document.head || document.documentElement).appendChild(tag);
+            }
+            tag.textContent = payload.css || '';
+        }
         else if (type === 'highlight') showHighlight(payload.area);
         else if (type === 'clearHighlight') clearHighlight();
         else if (type === 'getDesignSystem') post('designSystem', collectDesignSystem());

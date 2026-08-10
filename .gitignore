@@ -67,3 +67,6 @@ node_modules/
 
 # dataconnect generated files
 .dataconnect
+
+# 에디터 디자인 시스템 저장 시 남기는 tokens.css 백업
+public/tokens.css.bak-*

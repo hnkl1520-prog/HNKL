@@ -405,3 +405,56 @@ body {
 .ds2-alias-name { color: var(--text); font-family: ui-monospace, monospace; }
 .ds2-alias-arrow { color: #7ea8f0; font-family: ui-monospace, monospace; }
 .ds2-alias-cnt { color: var(--dim); margin-left: auto; }
+
+/* ── 조절 컨트롤 ── */
+.ds2-note { font-size: 11px; color: var(--dim); margin: 0 0 12px; }
+/* 컬러피커를 스와치 모양으로 */
+.ds2-color { padding: 0; border: none; background: none; cursor: pointer; }
+.ds2-color::-webkit-color-swatch-wrapper { padding: 0; }
+.ds2-color::-webkit-color-swatch { border: 1px solid rgba(255,255,255,.14); border-radius: 8px; }
+.ds2-ramp-chip.ds2-color { width: 100%; height: 52px; display: block; }
+.ds2-prim-chip.ds2-color, input.ds2-prim-chip { width: 44px; height: 44px; flex: 0 0 auto; }
+.ds2-prim-item input.ds2-color::-webkit-color-swatch { border-radius: 10px; }
+
+.ds2-slider { width: 100%; accent-color: var(--accent); margin: 6px 0 2px; }
+.ds2-slider.mini { margin: 0; }
+
+.ds2-link {
+    background: #26272c; color: var(--text); border: 1px solid var(--line);
+    border-radius: 6px; padding: 4px 6px; font: inherit; font-size: 11px; max-width: 100%;
+}
+
+/* 변경 표시 */
+.ds-badge.chg { background: rgba(224,163,62,.18); color: var(--warn); font-weight: 600; }
+.ds2-role-row.is-changed, .ds2-ramp-cell.is-changed, .ds2-bar-row.is-changed { outline: 1px solid rgba(224,163,62,.35); outline-offset: 2px; border-radius: 4px; }
+
+.ds-dirty { color: var(--warn); font-size: 12px; white-space: nowrap; }
+.ds-dirty b { font-variant-numeric: tabular-nums; }
+
+/* 배율 슬라이더 자리 */
+.ds2-scale .ds2-slider { width: 180px; margin: 0 0 0 8px; }
+
+/* ── 저장 확인 모달 ── */
+.ds-confirm {
+    position: absolute; inset: 0; z-index: 200;
+    background: rgba(10,11,13,.6); backdrop-filter: blur(2px);
+    display: flex; align-items: center; justify-content: center;
+}
+.ds-confirm[hidden] { display: none; }
+.ds-confirm-box {
+    width: 560px; max-width: 88vw; max-height: 80vh; display: flex; flex-direction: column;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
+    box-shadow: 0 20px 60px rgba(0,0,0,.6); padding: 20px;
+}
+.ds-confirm-box h3 { margin: 0 0 6px; font-size: 15px; color: var(--text); }
+.ds-confirm-note { margin: 0 0 14px; font-size: 11px; color: var(--dim); line-height: 1.5; }
+.ds-confirm-list { overflow-y: auto; display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+.ds-confirm-row {
+    display: grid; grid-template-columns: 1.2fr 1.4fr 16px 1.4fr; align-items: center; gap: 8px;
+    font-size: 12px; padding: 6px 8px; background: #1f2024; border-radius: 6px;
+}
+.ds-confirm-name { color: #7ea8f0; font-family: ui-monospace, monospace; }
+.ds-confirm-before { color: var(--dim); font-family: ui-monospace, monospace; text-decoration: line-through; }
+.ds-confirm-arrow { color: var(--dim); text-align: center; }
+.ds-confirm-after { color: var(--text); font-family: ui-monospace, monospace; }
+.ds-confirm-actions { display: flex; justify-content: flex-end; gap: 8px; }
