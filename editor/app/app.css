@@ -292,149 +292,109 @@ body {
 .ds-loading { color: var(--dim); font-size: 13px; padding: 60px 0; text-align: center; }
 .ds-inner { max-width: 940px; margin: 0 auto; }
 
-/* 코드 변수명 — 기본 숨김, 호버/토글로만 */
+/* 코드 변수명 — 기본 숨김, 호버/토글로만 (개발자용) */
 .ds-var {
     display: inline-block; margin-left: 6px; vertical-align: middle;
     font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace;
-    font-size: 10px; color: #7ea8f0; opacity: 0; transition: opacity .12s;
-    user-select: text;
+    font-size: 10px; color: #7ea8f0; opacity: 0; transition: opacity .12s; user-select: text;
 }
-.ds2-ramp-cell:hover .ds-var, .ds2-prim-item:hover .ds-var,
-.ds2-role-row:hover .ds-var, .ds2-typo-row:hover .ds-var,
+.ds3-chip:hover .ds-var, .ds3-role:hover .ds-var, .ds3-typo-row:hover .ds-var,
 .ds-view.show-vars .ds-var { opacity: .8; }
 
-.ds-badge {
-    display: inline-block; margin-left: 6px; vertical-align: middle;
-    font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 4px;
-    letter-spacing: .02em;
+/* 바뀜 표시 */
+.ds3-chg {
+    display: block; margin-top: 5px;
+    font-size: 10px; font-weight: 700; color: var(--warn);
 }
-.ds-badge.warn { background: rgba(224,163,62,.18); color: var(--warn); }
+.ds3-chip .ds3-chg { padding: 0 9px 9px; margin-top: 0; }
+.ds3-chip.is-changed, .ds3-role.is-changed { outline: 2px solid rgba(224,163,62,.5); outline-offset: 2px; }
 
-/* 섹션 공통 */
-.ds2-section { margin-bottom: 56px; }
-.ds2-title {
-    font-size: 20px; font-weight: 800; letter-spacing: -.02em;
-    color: var(--text); margin: 0 0 20px; padding-bottom: 12px;
-    border-bottom: 1px solid var(--line);
+/* 섹션 */
+.ds3-section { margin-bottom: 64px; }
+.ds3-title {
+    font-size: 22px; font-weight: 800; letter-spacing: -.02em;
+    color: var(--text); margin: 0 0 6px;
 }
-.ds2-sub {
-    font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
-    color: var(--dim); margin: 26px 0 12px;
+.ds3-desc { font-size: 12px; color: var(--dim); margin: 0 0 24px; line-height: 1.6; }
+.ds3-sub {
+    font-size: 12px; font-weight: 700; color: var(--dim);
+    margin: 28px 0 12px; letter-spacing: .02em;
 }
-.ds2-dim { color: var(--dim); }
-.mono { font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace; font-variant-numeric: tabular-nums; }
+.ds3-section > .ds3-sub:first-of-type { margin-top: 0; }
+.ds3-dim { color: var(--dim); font-weight: 400; }
 
-/* 1) 회색 램프 */
-.ds2-ramp { display: flex; gap: 6px; }
-.ds2-ramp-cell { flex: 1 1 0; min-width: 0; text-align: left; }
-.ds2-ramp-cell.is-unused { opacity: .5; }
-.ds2-ramp-chip { height: 52px; border-radius: 8px; border: 1px solid rgba(255,255,255,.1); }
-.ds2-ramp-step { font-size: 11px; font-weight: 700; color: var(--text); margin-top: 6px; }
-.ds2-ramp-hex { font-size: 10px; color: var(--dim); font-variant-numeric: tabular-nums; }
-
-/* 1) 원시색 */
-.ds2-prim { display: flex; flex-wrap: wrap; gap: 14px; }
-.ds2-prim-item { display: flex; align-items: center; gap: 10px; min-width: 150px; }
-.ds2-prim-chip { width: 44px; height: 44px; border-radius: 10px; border: 1px solid rgba(255,255,255,.1); flex: 0 0 auto; }
-.ds2-prim-label { font-size: 12px; font-weight: 600; color: var(--text); }
-.ds2-prim-hex { font-size: 11px; color: var(--dim); font-variant-numeric: tabular-nums; }
-
-/* 2) 역할 표 */
-.ds2-roles { display: flex; flex-direction: column; }
-.ds2-role-row {
-    display: grid; grid-template-columns: 34px 1.5fr 0.9fr 88px 2fr 1.3fr;
-    align-items: center; gap: 10px;
-    padding: 11px 0; border-bottom: 1px solid rgba(255,255,255,.05);
+/* ── 칩 카드 ── */
+.ds3-chips { display: flex; flex-wrap: wrap; gap: 10px; }
+.ds3-chip {
+    width: 92px; background: #fff; border-radius: 10px; overflow: hidden;
+    box-shadow: 0 2px 10px rgba(0,0,0,.4);
 }
-.ds2-role-row.is-head {
-    font-size: 10px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase;
-    color: var(--dim); padding: 0 0 9px; border-bottom: 1px solid var(--line);
+.ds3-chip.is-wide { width: 132px; }
+.ds3-chip-color {
+    display: block; width: 100%; height: 76px;
+    padding: 0; border: 0; background: none; cursor: pointer;
 }
-.ds2-role-chip { width: 26px; height: 26px; border-radius: 7px; border: 1px solid rgba(255,255,255,.14); }
-.ds2-role-name { font-size: 13px; font-weight: 600; color: var(--text); }
-.ds2-rc.c3, .ds2-rc.c5 { font-size: 12px; color: var(--dim); font-variant-numeric: tabular-nums; }
-.ds2-rc.c2 { font-size: 11px; color: #7ea8f0; }
-.ds2-rc.use { font-size: 11px; color: var(--dim); line-height: 1.5; word-break: break-all; }
-.ds2-contrast { margin-top: 4px; }
-.ds2-cr { font-size: 10px; color: var(--dim); margin-right: 10px; }
-.ds2-cr.bad { color: var(--warn); font-weight: 700; }
-
-/* 3) 타이포 */
-.ds2-typo-row {
-    display: grid; grid-template-columns: 1fr 300px; align-items: center; gap: 24px;
-    padding: 16px 0; border-bottom: 1px solid rgba(255,255,255,.05);
+.ds3-chip-color::-webkit-color-swatch-wrapper { padding: 0; }
+.ds3-chip-color::-webkit-color-swatch { border: 0; }
+.ds3-chip-meta { padding: 9px 10px 10px; }
+.ds3-chip-step { font-size: 12px; font-weight: 700; color: #111; line-height: 1.3; }
+.ds3-chip-hex {
+    font-size: 10px; color: #666; line-height: 1.4;
+    font-variant-numeric: tabular-nums; letter-spacing: -.01em;
 }
-.ds2-typo-sample {
-    color: var(--text); line-height: 1.2; white-space: nowrap;
-    overflow: hidden; text-overflow: ellipsis;
+
+/* ── 역할 카드 ── */
+.ds3-roles {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px;
 }
-.ds2-typo-label { font-size: 13px; font-weight: 600; color: var(--text); }
-.ds2-typo-nums { font-size: 12px; color: var(--text); margin-top: 3px; font-variant-numeric: tabular-nums; }
-.ds2-typo-nums b { font-weight: 700; }
-.ds2-typo-use { font-size: 11px; color: var(--dim); margin-top: 3px; line-height: 1.5; word-break: break-all; }
-
-.ds2-weights { display: flex; flex-wrap: wrap; gap: 10px; }
-.ds2-weight {
-    background: #1f2024; border: 1px solid var(--line); border-radius: 9px;
-    padding: 10px 13px; min-width: 120px;
+.ds3-role {
+    display: flex; gap: 14px; align-items: flex-start;
+    background: #1f2024; border: 1px solid var(--line); border-radius: 12px; padding: 14px;
 }
-.ds2-weight-val { font-size: 22px; color: var(--text); line-height: 1.1; }
-.ds2-weight-cnt { font-size: 11px; color: var(--accent); font-weight: 600; margin-top: 2px; }
-.ds2-weight-sizes { font-size: 10px; color: var(--dim); margin-top: 4px; line-height: 1.4; }
-
-/* 4) 배율 · 간격 */
-.ds2-scale {
-    background: #1f2024; border: 1px solid var(--line); border-radius: 12px;
-    padding: 16px 20px; margin-bottom: 8px;
-    display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap;
+.ds3-role-chip {
+    width: 46px; height: 46px; border-radius: 10px; flex: 0 0 auto;
+    border: 1px solid rgba(255,255,255,.14);
 }
-.ds2-scale-label { font-size: 12px; color: var(--dim); }
-.ds2-scale-val { font-size: 30px; font-weight: 800; color: var(--accent); font-variant-numeric: tabular-nums; }
-.ds2-scale-note { font-size: 11px; color: var(--dim); }
-.ds2-bars { display: flex; flex-direction: column; gap: 8px; }
-.ds2-bar-row { display: grid; grid-template-columns: 28px 1fr 130px 1.2fr; align-items: center; gap: 12px; }
-.ds2-bar-row.is-unused { opacity: .5; }
-.ds2-bar-num { font-size: 12px; font-weight: 700; color: var(--dim); text-align: right; font-variant-numeric: tabular-nums; }
-.ds2-bar-track { height: 14px; background: rgba(255,255,255,.05); border-radius: 4px; overflow: hidden; }
-.ds2-bar-fill { height: 100%; background: linear-gradient(90deg, var(--accent), #6aa2f7); border-radius: 4px; }
-.ds2-bar-px { font-size: 12px; color: var(--text); font-variant-numeric: tabular-nums; }
-.ds2-bar-cnt { font-size: 11px; color: var(--dim); }
-
-.ds2-aliases { margin-top: 30px; border-top: 1px solid var(--line); padding-top: 14px; }
-.ds2-aliases summary { font-size: 12px; color: var(--dim); cursor: pointer; }
-.ds2-alias-list { margin-top: 12px; display: flex; flex-direction: column; gap: 7px; }
-.ds2-alias-row { display: flex; align-items: center; gap: 10px; font-size: 12px; }
-.ds2-alias-name { color: var(--text); font-family: ui-monospace, monospace; }
-.ds2-alias-arrow { color: #7ea8f0; font-family: ui-monospace, monospace; }
-.ds2-alias-cnt { color: var(--dim); margin-left: auto; }
-
-/* ── 조절 컨트롤 ── */
-.ds2-note { font-size: 11px; color: var(--dim); margin: 0 0 12px; }
-/* 컬러피커를 스와치 모양으로 */
-.ds2-color { padding: 0; border: none; background: none; cursor: pointer; }
-.ds2-color::-webkit-color-swatch-wrapper { padding: 0; }
-.ds2-color::-webkit-color-swatch { border: 1px solid rgba(255,255,255,.14); border-radius: 8px; }
-.ds2-ramp-chip.ds2-color { width: 100%; height: 52px; display: block; }
-.ds2-prim-chip.ds2-color, input.ds2-prim-chip { width: 44px; height: 44px; flex: 0 0 auto; }
-.ds2-prim-item input.ds2-color::-webkit-color-swatch { border-radius: 10px; }
-
-.ds2-slider { width: 100%; accent-color: var(--accent); margin: 6px 0 2px; }
-.ds2-slider.mini { margin: 0; }
-
-.ds2-link {
+.ds3-role-body { flex: 1; min-width: 0; }
+.ds3-role-head { display: flex; align-items: center; flex-wrap: wrap; }
+.ds3-role-name { font-size: 14px; font-weight: 700; color: var(--text); }
+.ds3-select {
+    width: 100%; margin: 8px 0 6px;
     background: #26272c; color: var(--text); border: 1px solid var(--line);
-    border-radius: 6px; padding: 4px 6px; font: inherit; font-size: 11px; max-width: 100%;
+    border-radius: 7px; padding: 6px 8px; font: inherit; font-size: 12px; cursor: pointer;
 }
+.ds3-role-foot { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.ds3-role-hex {
+    font-size: 11px; color: var(--dim);
+    font-family: ui-monospace, monospace; font-variant-numeric: tabular-nums;
+}
+.ds3-role-contrast { font-size: 11px; color: var(--dim); }
+.ds3-role-contrast.bad { color: var(--warn); font-weight: 700; }
 
-/* 변경 표시 */
-.ds-badge.chg { background: rgba(224,163,62,.18); color: var(--warn); font-weight: 600; }
-.ds2-role-row.is-changed, .ds2-ramp-cell.is-changed, .ds2-bar-row.is-changed { outline: 1px solid rgba(224,163,62,.35); outline-offset: 2px; border-radius: 4px; }
+/* ── 타이포 ── */
+.ds3-typo-row {
+    display: grid; grid-template-columns: 1fr 240px; align-items: center; gap: 28px;
+    padding: 18px 0; border-bottom: 1px solid rgba(255,255,255,.06);
+}
+.ds3-typo-sample {
+    color: var(--text); line-height: 1.25;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.ds3-typo-head { display: flex; align-items: center; flex-wrap: wrap; }
+.ds3-typo-label { font-size: 13px; font-weight: 700; color: var(--text); }
+.ds3-typo-px { font-size: 12px; color: var(--text); margin: 3px 0 6px; font-variant-numeric: tabular-nums; }
+.ds3-slider { width: 100%; accent-color: var(--accent); }
+
+.ds3-weights { display: flex; flex-wrap: wrap; gap: 10px; }
+.ds3-weight {
+    background: #1f2024; border: 1px solid var(--line); border-radius: 10px;
+    padding: 12px 16px; text-align: center;
+}
+.ds3-weight-val { font-size: 20px; color: var(--text); line-height: 1.2; }
+.ds3-weight-num { font-size: 11px; color: var(--dim); margin-top: 4px; font-variant-numeric: tabular-nums; }
 
 .ds-dirty { color: var(--warn); font-size: 12px; white-space: nowrap; }
 .ds-dirty b { font-variant-numeric: tabular-nums; }
-
-/* 배율 슬라이더 자리 */
-.ds2-scale .ds2-slider { width: 180px; margin: 0 0 0 8px; }
 
 /* ── 저장 확인 모달 ── */
 .ds-confirm {
