@@ -274,6 +274,8 @@ body {
     display: flex; flex-direction: column;
     background: #141518;
 }
+/* hidden 속성이 display:flex 에 덮이지 않게 — 첫 로딩 때 편집 화면과 겹쳐 뜨던 문제 */
+.ds-view[hidden] { display: none; }
 .ds-toolbar {
     flex: 0 0 auto;
     display: flex; align-items: center; gap: 10px;
