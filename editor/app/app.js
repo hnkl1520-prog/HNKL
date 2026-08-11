@@ -748,13 +748,14 @@ const varName = name => Object.assign(el('span', 'ds-var'), { textContent: name 
 // 팔레트에서 쓸 '색 이름' (tokens.css 의 용도 이름 대신)
 const PALETTE_LABEL = {
     '--surface': '흰색',
-    '--bg': '아주 밝은 회색',
-    '--panel': '연회색',
+    '--bg': '회색 50',        // 값(#F5F5F7)은 그대로 두고 램프 50 자리에 표시만 한다
     '--blue': '블루',
     '--purple': '퍼플',
     '--teal': '틸',
     '--dark-surface': '먹색',
 };
+// --panel 은 회색 100 과 같은 값을 가리키게 정리했으므로 팔레트에 따로 두지 않는다.
+const PALETTE_SKIP = new Set(['--panel']);
 
 let dsData = null;
 let dsEdits = {};
@@ -764,16 +765,38 @@ let dsPalette = [];
 // 역할 목록: 2층 토큰만 (팔레트를 직접 쓰는 --panel 은 제외하고 아래 주석으로 알린다)
 const ROLE_SKIP = new Set(['--panel']);
 
+// 팔레트를 3그룹으로 정리해 둔다 (표시용 — tokens.css 는 그대로)
+//   흰색 & 검정 / 회색 램프 50~900 / 포인트 · 서브
+let dsGroups = { whites: [], ramp: [], primitives: [] };
+
 function buildDsBase(d) {
     dsBaseHex = {}; dsDarkHex = {}; dsBasePx = {}; dsBaseLink = {}; dsPalette = [];
-    const add = (name, label, hex, darkHex) => {
+    dsGroups = { whites: [], ramp: [], primitives: [] };
+    const add = (group, name, label, hex, darkHex) => {
+        if (PALETTE_SKIP.has(name)) return;
         dsBaseHex[name] = hex;
         if (darkHex) dsDarkHex[name] = darkHex;
         dsPalette.push({ name, label });
+        group.push({ name, label });
     };
-    for (const g of d.ramp) add(g.name, '회색 ' + g.step, g.hex, g.darkHex);
-    for (const s of d.surfaces) add(s.name, PALETTE_LABEL[s.name] || s.label, s.hex, s.darkHex);
-    for (const p of d.primitives) add(p.name, PALETTE_LABEL[p.name] || p.label, p.hex, null);
+
+    const byName = n => d.surfaces.find(s => s.name === n);
+    const surf = byName('--surface'), bg = byName('--bg');
+
+    // ① 흰색 & 검정 — 흰색만 토큰이 있다. 검정 자리는 회색 900 을 참고로 보여준다.
+    if (surf) add(dsGroups.whites, surf.name, PALETTE_LABEL[surf.name], surf.hex, surf.darkHex);
+
+    // ② 회색 램프 — #F5F5F7(--bg) 을 50 자리에 함께 (값·참조는 그대로)
+    if (bg) add(dsGroups.ramp, bg.name, PALETTE_LABEL[bg.name], bg.hex, bg.darkHex);
+    for (const g of d.ramp) add(dsGroups.ramp, g.name, '회색 ' + g.step, g.hex, g.darkHex);
+
+    // ③ 포인트 · 서브
+    for (const p of d.primitives) add(dsGroups.primitives, p.name, PALETTE_LABEL[p.name] || p.label, p.hex, null);
+
+    // 팔레트에서 뺀 --panel 도 역할 해석에는 필요하므로 색만 등록해 둔다
+    const panel = byName('--panel');
+    if (panel) { dsBaseHex[panel.name] = panel.hex; if (panel.darkHex) dsDarkHex[panel.name] = panel.darkHex; }
+
     for (const r of d.roles) if (!ROLE_SKIP.has(r.name) && r.linked) dsBaseLink[r.name] = r.linked;
     for (const t of d.typo) dsBasePx[t.name] = t.basePx;
 }
@@ -858,12 +881,29 @@ function chipRow(items) {
 // ① 색 · 팔레트
 function sectionPalette(d) {
     const s = dsSection('색 · 팔레트', '색 자체입니다. 여기서는 색 이름으로만 부르고, 어디에 쓸지는 아래 "역할"에서 정합니다.');
-    s.appendChild(el('h3', 'ds3-sub', '회색 — 밝은 것부터'));
-    s.appendChild(chipRow(d.ramp.map(g => ({ name: g.name, label: '회색 ' + g.step }))));
-    s.appendChild(el('h3', 'ds3-sub', '흰색 계열'));
-    s.appendChild(chipRow(d.surfaces.map(x => ({ name: x.name, label: PALETTE_LABEL[x.name] || x.label }))));
+
+    s.appendChild(el('h3', 'ds3-sub', '흰색 & 검정'));
+    const wRow = chipRow(dsGroups.whites);
+    // 검정은 아직 토큰이 없다 → 자리만 두고 가장 어두운 회색을 참고로 보여준다
+    const darkest = dsGroups.ramp.at(-1);
+    if (darkest) {
+        const ref = el('div', 'ds3-chip is-ref');
+        const face = el('div', 'ds3-chip-refface');
+        face.style.background = effHex(darkest.name);
+        const meta = el('div', 'ds3-chip-meta');
+        meta.append(el('div', 'ds3-chip-name', '검정 (없음)'),
+            el('div', 'ds3-chip-hex', darkest.label + ' 참고'));
+        ref.append(face, meta);
+        ref.title = '검정 토큰은 아직 만들지 않았습니다. 가장 어두운 ' + darkest.label + ' 을 참고로 보여줍니다.';
+        wRow.appendChild(ref);
+    }
+    s.appendChild(wRow);
+
+    s.appendChild(el('h3', 'ds3-sub', '회색 램프 — 밝은 것부터'));
+    s.appendChild(chipRow(dsGroups.ramp));
+
     s.appendChild(el('h3', 'ds3-sub', '포인트 · 서브'));
-    s.appendChild(chipRow(d.primitives.map(x => ({ name: x.name, label: PALETTE_LABEL[x.name] || x.label }))));
+    s.appendChild(chipRow(dsGroups.primitives));
     return s;
 }
 

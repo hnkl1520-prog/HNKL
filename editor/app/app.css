@@ -363,6 +363,15 @@ body {
 }
 .ds3-chip .ds3-chg { padding: 0 var(--chip-px) var(--chip-pb); margin-top: 0; }
 
+/* 토큰이 없는 '참고' 칩 (검정 자리) — 고를 수 없으므로 점선으로 구분 */
+.ds3-chip.is-ref { background: #1f2024; border: 1px dashed var(--line); box-shadow: none; }
+.ds3-chip-refface {
+    height: var(--chip-h); opacity: .45;
+    border-radius: var(--chip-radius) var(--chip-radius) 0 0;
+}
+.ds3-chip.is-ref .ds3-chip-name { color: var(--dim); }
+.ds3-chip.is-ref .ds3-chip-hex { color: var(--dim); }
+
 /* ── 역할 카드 (라이트 / 다크 함께) ── */
 .ds3-roles { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
 .ds3-role {

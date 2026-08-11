@@ -264,13 +264,18 @@ export function buildDesignSystem() {
         count: count(p.name), usage: hintOf(p.name), unused: isUnused(p.name),
     }));
 
-    // 표면 (배경/카드/면) — 1층, 다크값 있음
+    // 다크값 해석용: 다크 블록이 덮은 값 위에서 var() 체인을 따라간다.
+    // (--panel 처럼 var(--gray-100) 을 가리키는 토큰도 올바른 다크 hex 로 풀린다)
+    const darkMap = { ...light, ...dark };
+    const resolveDark = name => resolveColor(darkMap[name], darkMap);
+
+    // 표면 (배경/카드/면) — 1층
     const surfaces = [
         { name: '--bg', label: '페이지 배경' },
         { name: '--surface', label: '카드 배경' },
         { name: '--panel', label: '면 배경' },
     ].filter(s => light[s.name]).map(s => ({
-        ...s, hex: normHex(light[s.name]), darkHex: dark[s.name] ? normHex(dark[s.name]) : null,
+        ...s, hex: resolveColor(light[s.name], light), darkHex: resolveDark(s.name),
         count: count(s.name), usage: hintOf(s.name), unused: isUnused(s.name),
     }));
 
