@@ -209,6 +209,30 @@ export function saveTokens(edits) {
     return { applied: applied.filter(a => !a.unchanged && !a.skipped), backup: path.basename(backup) };
 }
 
+/**
+ * (크기 토큰, 굵기) 짝이 몇 번 쓰였는지 센다.
+ * 단계별 '기본 굵기'를 규칙이 아니라 실제 현황에서 뽑기 위한 것.
+ *   { '--fs-body': { 700: 6, 600: 4, ... } }
+ */
+function scanFsWeightPairs(sources) {
+    const out = {};        // fs -> weight -> { count, selectors:Set }
+    const bump = (fs, w, sel) => {
+        ((out[fs] ||= {})[w] ||= { count: 0, selectors: new Set() });
+        out[fs][w].count++;
+        if (sel) out[fs][w].selectors.add(sel);
+    };
+    const scan = (decl, sel) => {
+        const fs = decl.match(/font-size\s*:\s*[^;]*var\(\s*(--fs-[\w-]+)\s*\)/);
+        const fw = decl.match(/font-weight\s*:\s*(\d{3})\b/);
+        if (fs && fw) bump(fs[1], +fw[1], sel);
+    };
+    for (const src of sources) {
+        for (const { sel, body } of src.rules) scan(body, sel.split(',')[0].trim());
+        for (const style of src.inline || []) scan(style, '본문 inline');
+    }
+    return out;
+}
+
 // ---------- 메인 ----------
 export function buildDesignSystem() {
     const tokensCss = fs.readFileSync(TOKENS, 'utf8');
@@ -332,13 +356,42 @@ export function buildDesignSystem() {
     }
     for (const k in weightsByFs) weightsByFs[k].sort((a, b) => b - a);
 
+    // 단계별 굵기 현황: 그 크기에서 실제로 쓰이는 굵기들 + 각 굵기가 붙은 요소
+    const fsWeightPairs = scanFsWeightPairs(sources);
+    const dominantWeight = fs => {
+        const m = fsWeightPairs[fs];
+        if (!m) return null;
+        return +Object.entries(m).sort((a, b) => b[1].count - a[1].count || +b[0] - +a[0])[0][0];
+    };
+    // [{ weight, selectors:[...] }] — 굵은 것부터
+    const weightRows = fs => Object.entries(fsWeightPairs[fs] || {})
+        .map(([w, v]) => ({ weight: +w, selectors: [...v.selectors] }))
+        .sort((a, b) => b.weight - a.weight);
+
     const typo = typoDefs.filter(t => light[t.name]).map(t => ({
         name: t.name, label: t.label,
         def: light[t.name],                       // 정의값 원문 (calc(...))
         basePx: basePx(light[t.name]),            // × var(--s) 벗긴 기준 px
         weights: weightsByFs[t.name] || [],       // 이 크기와 함께 쓰이는 굵기들
+        weightRows: weightRows(t.name),           // 굵기별 사용 요소 (표의 굵기·용도 칸)
+        defaultWeight: dominantWeight(t.name),    // 이름 샘플을 어떤 굵기로 보일지
         count: count(t.name), usage: hintOf(t.name), unused: isUnused(t.name),
     }));
+
+    // 굵기 토큰 (tokens.css 에 이름만 추가한 상태 — 요소 적용 안 됨)
+    const usedWeightCount = {};
+    for (const w of fontWeights) usedWeightCount[w.weight] = w.count;
+    const weightTokens = Object.keys(light)
+        .filter(n => /^--fw-/.test(n))
+        .map(n => {
+            const value = parseInt(light[n], 10);
+            return {
+                name: n, value,
+                inCode: usedWeightCount[value] || 0,   // 지금 코드에서 이 굵기가 쓰인 횟수
+                reserved: (usedWeightCount[value] || 0) <= 2,   // 사실상 미사용 → 예약 표시
+            };
+        })
+        .sort((a, b) => a.value - b.value);
 
     // 4) 간격 · 배율
     const spacing = [];
@@ -384,7 +437,7 @@ export function buildDesignSystem() {
 
     return {
         ramp, primitives, surfaces, roles,
-        typo, fontWeights,
+        typo, fontWeights, weightTokens,
         spacing, scale,
         aliases,
         meta: { source: 'tokens.css', scanned: ['vibra.html', 'common.css'] },

@@ -300,7 +300,8 @@ body {
 
 .ds-canvas { flex: 1; min-height: 0; overflow: auto; padding: 36px 40px 90px; }
 .ds-loading { color: var(--dim); font-size: 13px; padding: 60px 0; text-align: center; }
-.ds-inner { max-width: 940px; margin: 0 auto; }
+/* 타이포 표의 첫 칸(64px 글자)이 잘리지 않을 만큼 넉넉히 */
+.ds-inner { max-width: 1120px; margin: 0 auto; }
 
 /* 코드 변수명 — 기본 숨김, 호버/토글로만 (개발자용) */
 .ds-var {
@@ -372,75 +373,140 @@ body {
 .ds3-chip.is-ref .ds3-chip-name { color: var(--dim); }
 .ds3-chip.is-ref .ds3-chip-hex { color: var(--dim); }
 
-/* ── 역할 카드 (라이트 / 다크 함께) ── */
-.ds3-roles { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
+/* ── 역할 테이블 (리스트형 가로 배치 - 라이트/다크 독립 선택) ── */
+.ds3-roles { 
+    display: flex; 
+    flex-direction: column; 
+    border-top: 1px solid var(--line); 
+}
 .ds3-role {
-    background: #1f2024; border: 1px solid var(--line); border-radius: 12px; padding: 14px;
+    display: flex; 
+    align-items: center; 
+    gap: 20px;
+    padding: 12px 10px;
+    border-bottom: 1px solid var(--line);
+    background: transparent;
 }
-.ds3-role-head { display: flex; align-items: center; flex-wrap: wrap; }
-.ds3-role-name { font-size: 14px; font-weight: 700; color: var(--text); }
+.ds3-role:hover { background: rgba(255, 255, 255, 0.02); }
+
+/* 1. 역할 이름 (2층) */
+.ds3-role-head { 
+    flex: 0 0 130px; 
+    display: flex; 
+    flex-direction: column; 
+    gap: 4px; 
+}
+.ds3-role-name { font-size: 13px; font-weight: 700; color: var(--text); }
+
+/* 2. 라이트 / 다크 독립 제어부 */
+.ds3-modes { 
+    flex: 1;
+    display: flex; 
+    align-items: center; 
+    gap: 32px; 
+}
+
+/* 개별 모드 (라이트 또는 다크) 영역 */
+.ds3-mode { 
+    display: flex; 
+    align-items: center; 
+    gap: 10px;
+    background: transparent !important; 
+    padding: 0;
+}
+
+/* 모드 라벨 (라이트/다크) */
+.ds3-mode-label { 
+    font-size: 11px; font-weight: 600; letter-spacing: .05em; 
+    color: var(--dim) !important;
+    width: 36px;
+}
+
+/* ⚠️ 핵심 변경: 각 모드별 독립 셀렉트 박스 */
 .ds3-select {
-    width: 100%; margin: 9px 0 0;
+    width: 120px; margin: 0;
     background: #26272c; color: var(--text); border: 1px solid var(--line);
-    border-radius: 7px; padding: 6px 8px; font: inherit; font-size: 12px; cursor: pointer;
+    border-radius: 6px; padding: 5px 6px; font: inherit; font-size: 11px; cursor: pointer;
 }
-.ds3-modes { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
-.ds3-mode { border-radius: 9px; padding: 9px 10px; }
-.ds3-mode.light { background: #F5F5F7; }
-.ds3-mode.dark { background: #050505; }
-.ds3-mode-label { font-size: 9px; font-weight: 700; letter-spacing: .05em; }
-.ds3-mode.light .ds3-mode-label { color: #6E6E73; }
-.ds3-mode.dark .ds3-mode-label { color: #8E8E93; }
-.ds3-mode-chip { height: 24px; border-radius: 6px; margin: 6px 0 5px; }
-.ds3-mode.light .ds3-mode-chip { border: 1px solid rgba(0,0,0,.12); }
-.ds3-mode.dark .ds3-mode-chip { border: 1px solid rgba(255,255,255,.16); }
+.ds3-select:focus { outline: 1px solid var(--accent); border-color: var(--accent); }
+
+/* 색상 칩 (결과 미리보기) */
+.ds3-mode-chip { 
+    width: 24px; height: 20px; 
+    border-radius: 4px; margin: 0; 
+    border: 1px solid rgba(255,255,255,.1);
+}
+
+/* 헥스 코드 및 대비 */
 .ds3-mode-hex {
-    font-size: 9px; font-family: ui-monospace, monospace; font-variant-numeric: tabular-nums;
+    font-size: 11px; font-family: ui-monospace, monospace; font-variant-numeric: tabular-nums;
+    color: var(--text) !important;
+    width: 54px;
 }
-.ds3-mode.light .ds3-mode-hex { color: #333; }
-.ds3-mode.dark .ds3-mode-hex { color: #ddd; }
-.ds3-mode-contrast { font-size: 9px; margin-top: 3px; }
-.ds3-mode.light .ds3-mode-contrast { color: #6E6E73; }
-.ds3-mode.dark .ds3-mode-contrast { color: #8E8E93; }
+.ds3-mode-contrast { 
+    font-size: 10px; margin-top: 0; color: var(--dim) !important;
+    white-space: nowrap;
+}
 .ds3-mode-contrast.bad { color: #d98a00 !important; font-weight: 700; }
 .ds3-foot { font-size: 11px; color: var(--dim); margin: 14px 0 0; }
 
-/* ── 타이포 (레퍼런스식 표) ── */
+/* ── 타이포 표 ──
+   정렬 규칙(눈대중 금지):
+   · 컬럼 폭 고정 → 행마다 시작 위치가 절대 안 흔들린다
+   · 모든 칸 왼쪽 정렬 + 위쪽(top) 정렬
+   · 샘플도 같은 칸에 들어가므로 크기가 달라도 왼쪽 시작선이 동일
+   · 헤더도 같은 그리드를 써서 본문 컬럼과 같은 선에 맞는다 */
 .ds3-typo { display: flex; flex-direction: column; }
 .ds3-typo-row {
-    display: grid; grid-template-columns: 132px 1fr 96px 130px;
-    gap: 18px; align-items: center;
-    padding: 15px 0; border-bottom: 1px solid rgba(255,255,255,.06);
+    display: grid;
+    /* 첫 칸은 64px 글자가 잘리지 않게 넉넉히. 폭은 전부 고정. */
+    grid-template-columns: 440px 72px 88px minmax(0, 1fr);
+    gap: 20px;
+    align-items: start;               /* 세로 중앙정렬 금지 — 위쪽 기준 */
+    justify-items: start;             /* 모든 칸 왼쪽 정렬 */
+    padding: 18px 0;
+    border-bottom: 1px solid rgba(255,255,255,.06);
 }
-.ds3-typo-row.is-head { padding: 0 0 10px; border-bottom: 1px solid var(--line); }
-.ds3-th { font-size: 10px; font-weight: 600; color: var(--dim); letter-spacing: .05em; }
-.ta-r { text-align: right; }
-.ds3-typo-name { display: flex; flex-wrap: wrap; align-items: center; }
-.ds3-typo-label { font-size: 13px; font-weight: 700; color: var(--text); }
-.ds3-typo-sample {
-    color: var(--text); line-height: 1.25;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+.ds3-typo-row.is-head {
+    padding: 0 0 10px;
+    border-bottom: 1px solid var(--line);
+    position: sticky; top: 0; background: #141518; z-index: 1;
 }
+/* 큰 묶음 사이 굵은 구분선 */
+.ds3-typo-row.is-groupstart { border-top: 2px solid var(--line); margin-top: 6px; padding-top: 22px; }
+.ds3-th {
+    font-size: 10px; font-weight: 600; color: var(--dim);
+    letter-spacing: .05em; text-align: left;
+}
+.ds3-tc { min-width: 0; width: 100%; text-align: left; }
+
+/* ① 카테고리 이름 = 샘플. 잘리면 안 되므로 줄바꿈·말줄임 없이 그대로 둔다. */
+.ds3-catname {
+    color: var(--text); line-height: 1.15; text-align: left;
+    white-space: nowrap; letter-spacing: -.01em;
+}
+/* ③ 굵기 · ④ 용도 — 줄 단위로 짝이 맞게 (같은 줄 높이) */
+.ds3-wline, .ds3-useline { line-height: 1.6; min-height: 21px; }
+.ds3-wline {
+    font-size: 13px; color: var(--text); font-variant-numeric: tabular-nums;
+}
+.ds3-wline.is-none { color: var(--dim); }
+.ds3-useline {
+    font-size: 11px; color: var(--dim);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
+}
+.ds3-useline.is-none { font-style: normal; }
 .ds3-numbox {
     display: inline-block; cursor: pointer; padding: 3px 6px; border-radius: 6px;
     border: 1px dashed transparent;
 }
 .ds3-numbox:hover { border-color: var(--line); background: rgba(255,255,255,.04); }
-.ds3-numbox b { font-size: 15px; color: var(--text); font-variant-numeric: tabular-nums; }
-.ds3-unit { font-size: 10px; color: var(--dim); margin-left: 2px; }
-.ds3-onscreen { display: block; font-size: 9px; color: var(--dim); margin-top: 1px; }
+.ds3-numbox b { font-size: 14px; color: var(--text); font-variant-numeric: tabular-nums; font-weight: 600; }
 .ds3-numinput {
-    width: 62px; background: #26272c; color: var(--text);
-    border: 1px solid var(--accent); border-radius: 6px; padding: 3px 6px;
-    font: inherit; font-size: 14px; text-align: right; outline: none;
+    width: 58px; background: #26272c; color: var(--text);
+    border: 1px solid var(--accent); border-radius: 6px; padding: 2px 6px;
+    font: inherit; font-size: 14px; text-align: left; outline: none;
 }
-.ds3-typo-weights { display: flex; flex-wrap: wrap; }
-.ds3-wbadge {
-    background: #26272c; border: 1px solid var(--line); border-radius: 6px;
-    padding: 3px 8px; font-size: 11px; color: var(--text);
-    margin: 0 5px 5px 0; font-variant-numeric: tabular-nums;
-}
-.ds3-wnone { font-size: 11px; color: var(--dim); }
 
 /* ── 칩 모양 조절 창 ── */
 .chip-tuner {

@@ -949,34 +949,50 @@ function sectionRoles(d) {
 }
 
 // ③ 타이포
+// 큰 묶음 구분선을 넣을 위치 (제목군 → 본문군)
+const TYPO_GROUP_BREAK = new Set(['--fs-body']);
+
 function sectionTypo(d) {
-    const s = dsSection('타이포', '크기 숫자를 더블클릭하면 바꿀 수 있습니다. 굵기는 그 크기와 실제로 함께 쓰이는 것들입니다.');
+    const s = dsSection('타이포', '크기 숫자를 더블클릭하면 바꿀 수 있습니다.');
+
     const table = el('div', 'ds3-typo');
     const head = el('div', 'ds3-typo-row is-head');
-    head.append(el('div', 'ds3-th', '이름'), el('div', 'ds3-th', '보기'),
-        el('div', 'ds3-th ta-r', '크기'), el('div', 'ds3-th', '굵기'));
+    for (const h of ['카테고리', '크기', '굵기', '용도']) head.appendChild(el('div', 'ds3-th', h));
     table.appendChild(head);
 
     for (const t of d.typo) {
-        const row = el('div', 'ds3-typo-row'); row.dataset.typo = t.name;
+        const row = el('div', 'ds3-typo-row');
+        row.dataset.typo = t.name;
+        if (TYPO_GROUP_BREAK.has(t.name)) row.classList.add('is-groupstart');
 
-        const nameCell = el('div', 'ds3-typo-name');
-        nameCell.append(el('span', 'ds3-typo-label', t.label), varName(t.name));
+        // ① 카테고리 이름 — 그 이름 자체를 정의된 크기로 렌더
+        const nameCell = el('div', 'ds3-tc');
+        const nameSample = dEl('div', 'ds3-catname', 'sample', t.name);
+        nameSample.textContent = t.label;
+        nameCell.appendChild(nameSample);
+        nameCell.appendChild(varName(t.name));
         const chg = el('span', 'ds3-chg'); chg.dataset.chg = t.name; nameCell.appendChild(chg);
 
-        const sizeCell = el('div', 'ds3-typo-size ta-r');
-        sizeCell.append(dEl('span', 'ds3-numbox', 'numbox', t.name));
+        // ② 크기 — 정의된 px 숫자만
+        const sizeCell = el('div', 'ds3-tc');
+        sizeCell.appendChild(dEl('span', 'ds3-numbox', 'numbox', t.name));
 
-        const wCell = el('div', 'ds3-typo-weights');
-        if (t.weights.length) {
-            for (const w of t.weights) {
-                const b = el('span', 'ds3-wbadge', String(w));
-                b.style.fontWeight = w;
-                wCell.appendChild(b);
+        // ③ 굵기 — 쓰이는 굵기를 세로로 나열 / ④ 용도 — 각 굵기가 붙은 요소
+        const wCell = el('div', 'ds3-tc');
+        const useCell = el('div', 'ds3-tc');
+        if (t.weightRows.length) {
+            for (const r of t.weightRows) {
+                const w = el('div', 'ds3-wline', String(r.weight));
+                w.style.fontWeight = r.weight;
+                wCell.appendChild(w);
+                useCell.appendChild(el('div', 'ds3-useline', r.selectors.slice(0, 3).join(', ') || '—'));
             }
-        } else wCell.appendChild(el('span', 'ds3-wnone', '안 쓰임'));
+        } else {
+            wCell.appendChild(el('div', 'ds3-wline is-none', '—'));
+            useCell.appendChild(el('div', 'ds3-useline is-none', '아직 쓰이지 않음'));
+        }
 
-        row.append(nameCell, dEl('div', 'ds3-typo-sample', 'sample', t.name), sizeCell, wCell);
+        row.append(nameCell, sizeCell, wCell, useCell);
         table.appendChild(row);
     }
     s.appendChild(table);
@@ -1034,18 +1050,16 @@ function refresh() {
     q('[data-contrast]').forEach(n => setC(n, roleHex(n.dataset.contrast), lightBg));
     q('[data-contrastdark]').forEach(n => setC(n, roleDark(n.dataset.contrastdark), darkBg));
 
+    // 카테고리 이름을 '정의된 크기 그대로' 보여준다 (화면 배율 계산은 표시하지 않음)
     q('[data-sample]').forEach(e => {
         const n = e.dataset.sample, px = effPx(n);
-        const w = (dsData.typo.find(t => t.name === n)?.weights || [])[0] || 400;
-        e.textContent = SAMPLE;
-        if (px != null) e.style.fontSize = round1(px * scale) + 'px';
-        e.style.fontWeight = w;
+        const t = dsData.typo.find(x => x.name === n);
+        if (px != null) e.style.fontSize = px + 'px';
+        e.style.fontWeight = t?.defaultWeight || 400;
     });
     q('[data-numbox]').forEach(box => {
         if (box.querySelector('input')) return;      // 편집 중이면 건드리지 않는다
-        const n = box.dataset.numbox;
-        box.innerHTML = `<b>${effPx(n)}</b><span class="ds3-unit">px</span>`
-            + `<span class="ds3-onscreen">화면 ${round1(effPx(n) * scale)}</span>`;
+        box.innerHTML = `<b>${effPx(box.dataset.numbox)}</b>`;
     });
 
     q('[data-chg]').forEach(b => {
