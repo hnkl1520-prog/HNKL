@@ -311,6 +311,8 @@ export function buildDesignSystem() {
         { name: '--text-color', label: '본문 글자', text: true },
         { name: '--text-sub', label: '보조 글자', text: true },
         { name: '--dim-color', label: '흐린 글자', text: true },
+        { name: '--label-color', label: '라벨 글자', text: true },
+        { name: '--line-color', label: '선·테두리' },
         { name: '--accent-color', label: '포인트' },
     ];
     const bgHex = resolveColor('var(--bg-color)', light) || normHex(light['--bg'] || '#FFFFFF');

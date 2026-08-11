@@ -22,12 +22,12 @@
        1층 · 회색 램프 (라이트) — 콘텐츠용: 글자·선
        ------------------------------------------------------------------ */
     --gray-100: #EFEFF1;
-    --gray-200: #E3E3E6;
-    --gray-300: #D2D2D7;   /* 기존 --gray-300 (선) */
+    --gray-200: #E3E3E6;   /* 현재 --line-color (선·테두리) */
+    --gray-300: #D2D2D7;   /* vibra 차트 트랙·일부 구분선(인라인) */
     --gray-400: #ACACB1;
-    --gray-500: #86868B;   /* 기존 --gray-500 / --dim-color */
-    --gray-600: #6E6E73;   /* 기존 --text-sub */
-    --gray-700: #515154;   /* 기존 --gray-700 */
+    --gray-500: #86868B;   /* 현재 --label-color (기존 dim → 대비 위해 600으로 이관) */
+    --gray-600: #6E6E73;   /* 현재 --dim-color (기존 --text-sub) */
+    --gray-700: #515154;   /* 현재 --text-sub (기존 --gray-700) */
     --gray-800: #363639;
     --gray-900: #1D1D1F;   /* 기존 --gray-ink / --text-color */
 
@@ -51,8 +51,10 @@
     --bg-color:     var(--bg);
     --card-bg:      var(--surface);
     --text-color:   var(--gray-900);
-    --text-sub:     var(--gray-600);
-    --dim-color:    var(--gray-600);
+    --text-sub:     var(--gray-700);   /* 보조 텍스트(nav·라벨·본문보조). 다크는 원본과 동일, 라이트는 한 단계 진하게 */
+    --dim-color:    var(--gray-600);   /* 흐린 텍스트(캡션). 대비 4.5 확보 위해 gray-500이 아닌 600 (커밋 317f0b1) */
+    --label-color:  var(--gray-500);   /* 가장 연한 글자 — eyebrow·메타 키·태그·캡션 등 라벨류. vibra --vb-muted 기존값과 동일 */
+    --line-color:   var(--gray-200);   /* 선·테두리. vibra --vb-line 기존값과 동일 */
     --accent-color: var(--blue);
     --sub-color-1:  var(--purple);
     --sub-color-2:  var(--teal);
