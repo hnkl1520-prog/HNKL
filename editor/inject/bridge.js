@@ -130,6 +130,55 @@
         'border-radius', 'background-color', 'opacity',
     ];
 
+    /**
+     * 위·아래 형제와 눈에 보이는 간격을 잰다.
+     * 텍스트 사이 간격은 보통 '위 요소의 margin-bottom + 아래 요소의 margin-top'이라
+     * 둘을 따로 찾아다녀야 했다. 여기서 한 번에 계산해 인스펙터가 한 줄로 다루게 한다.
+     */
+    function neighborGaps(el) {
+        const out = { up: null, down: null };
+        const mine = el.getBoundingClientRect();
+        const myCS = getComputedStyle(el);
+        const prev = el.previousElementSibling, next = el.nextElementSibling;
+        const label = n => n.tagName.toLowerCase() + (n.classList[0] ? '.' + n.classList[0] : '');
+
+        if (prev && prev.offsetHeight >= 0) {
+            const r = prev.getBoundingClientRect();
+            out.up = {
+                gap: Math.round(mine.top - r.bottom),          // 실제 눈에 보이는 틈
+                path: pathOf(prev), name: label(prev),
+                theirBottom: Math.round(parseFloat(getComputedStyle(prev).marginBottom)) || 0,
+                myTop: Math.round(parseFloat(myCS.marginTop)) || 0,
+            };
+        }
+        if (next) {
+            const r = next.getBoundingClientRect();
+            out.down = {
+                gap: Math.round(r.top - mine.bottom),
+                path: pathOf(next), name: label(next),
+                theirTop: Math.round(parseFloat(getComputedStyle(next).marginTop)) || 0,
+                myBottom: Math.round(parseFloat(myCS.marginBottom)) || 0,
+            };
+        }
+        return out;
+    }
+
+    /** 간격 토큰(--space-*)의 지금 화면 기준 실제 px 값 */
+    function spaceTokens() {
+        const probe = document.createElement('div');
+        probe.style.cssText = 'position:absolute;visibility:hidden;height:0';
+        document.body.appendChild(probe);
+        const out = [];
+        for (let i = 1; i <= 10; i++) {
+            const name = `--space-${i}`;
+            probe.style.marginTop = `var(${name})`;
+            const px = Math.round(parseFloat(getComputedStyle(probe).marginTop)) || 0;
+            if (px > 0) out.push({ name, label: `간격 ${i}`, px });
+        }
+        probe.remove();
+        return out;
+    }
+
     function describe(el) {
         const cs = getComputedStyle(el);
         const computed = {};
@@ -159,6 +208,11 @@
             elementRules: rulesForElement(el).slice(0, 8),
             rect: { w: Math.round(r.width), h: Math.round(r.height) },
             childCount: el.children.length,
+            // 이미지·영상 링크를 인스펙터에서 바로 고치기 위해
+            attrs: { src: el.getAttribute('src') || '', href: el.getAttribute('href') || '', alt: el.getAttribute('alt') || '' },
+            // 위/아래 형제와의 '실제 간격' — 두 요소의 margin 을 따로 찾아다니지 않게
+            neighbors: neighborGaps(el),
+            spaceTokens: spaceTokens(),
         };
     }
 
@@ -183,6 +237,8 @@
 
     document.addEventListener('click', e => {
         if (!picking) return;
+        // 캐러셀 화살표는 눌러서 넘겨봐야 하므로 선택보다 우선한다
+        if (e.target.closest && e.target.closest('[data-carousel-prev],[data-carousel-next]')) return;
         e.preventDefault(); e.stopPropagation();
         select(e.target);
     }, true);
@@ -194,6 +250,370 @@
         selected.classList.add('__ed-selected');
         post('selected', describe(el));
     }
+
+    /**
+     * 삽입한 요소를 즉시 보이게 한다.
+     * vibra 의 .reveal 은 opacity:0 으로 시작해 스크롤 애니메이션이 켜주는데,
+     * 나중에 끼워 넣은 노드는 그 등록을 못 받아 계속 투명하다.
+     * (미리보기 화면에서만 인라인으로 풀어주고, 저장되는 HTML 에는 안 들어간다)
+     */
+    function revealNow(root) {
+        const fix = n => {
+            if (!n.classList || !n.classList.contains('reveal')) return;
+            n.style.opacity = '1';
+            n.style.transform = 'none';
+        };
+        fix(root);
+        root.querySelectorAll && root.querySelectorAll('.reveal').forEach(fix);
+    }
+
+    /**
+     * 인터랙션이 붙었는지 눈으로 확인시켜 준다.
+     * 호버·클릭 효과는 마우스를 올려야 보여서, 적용 직후엔 화면에 아무 변화가 없다.
+     * → 테두리로 대상을 표시하고, 그 효과를 한 번 실제로 재생해 보여준다.
+     */
+    function demoMotion(el, className) {
+        const badge = document.createElement('div');
+        badge.textContent = '인터랙션 적용됨 · ' + className.replace('ed-', '');
+        badge.style.cssText =
+            'position:absolute;z-index:2147483647;background:#3B82F6;color:#fff;' +
+            'font:600 11px/1.7 system-ui,sans-serif;padding:2px 8px;border-radius:6px;' +
+            'pointer-events:none;transition:opacity .3s;box-shadow:0 2px 8px rgba(0,0,0,.25)';
+        const r = el.getBoundingClientRect();
+        badge.style.top = (r.top + window.scrollY - 24) + 'px';
+        badge.style.left = (r.left + window.scrollX + 6) + 'px';
+        document.body.appendChild(badge);
+
+        const prevOutline = el.style.outline;
+        el.style.outline = '2px solid #3B82F6';
+        el.style.outlineOffset = '-2px';
+
+        // 효과 한 번 시연 (호버/클릭 상태를 흉내)
+        const prevT = el.style.transition, prevX = el.style.transform;
+        el.style.transition = 'transform .32s cubic-bezier(.2,.7,.3,1), box-shadow .32s ease';
+        if (className.includes('grow')) el.style.transform = 'scale(1.04)';
+        else if (className.includes('lift')) el.style.transform = 'translateY(-8px)';
+        else if (className.includes('pulse')) el.style.transform = 'scale(.96)';
+        setTimeout(() => { el.style.transform = prevX || ''; }, 420);
+        setTimeout(() => {
+            el.style.transition = prevT || '';
+            el.style.outline = prevOutline || '';
+            badge.style.opacity = '0';
+            setTimeout(() => badge.remove(), 320);
+        }, 1400);
+    }
+
+    // ---------- 섹션 간격 조절 핸들 ----------
+    // 큰 덩어리(.vb-section) 사이 경계에 막대를 띄우고, 끌어서 위아래 여백을 조절한다.
+    //   전체 모드: --vb-pad-block 토큰을 바꿔 모든 섹션이 함께 움직인다
+    //   개별 모드: 그 섹션에만 padding 을 덮어씌운다
+    let gapOn = false, gapBars = [], gapScopeLocal = 'all';
+    const GAP_SEL = '.vb-section';
+
+    function basePadPx() {
+        const s = document.querySelector(GAP_SEL);
+        return s ? Math.round(parseFloat(getComputedStyle(s).paddingTop)) || 0 : 0;
+    }
+    function clearGapBars() {
+        gapBars.forEach(b => b.remove());
+        gapBars = [];
+    }
+    /**
+     * 섹션을 반투명 색 박스로 덮고, 그 안의 '위·아래 여백'을 다른 색 띠로 보여준다.
+     * 조절되는 건 경계선이 아니라 이 여백이므로, 여백 자체를 잡아 끌게 한다.
+     */
+    function buildGapBars() {
+        clearGapBars();
+        if (!gapOn) return;
+        const secs = [...document.querySelectorAll(GAP_SEL)];
+        secs.forEach((sec, i) => {
+            const r = sec.getBoundingClientRect();
+            const cs = getComputedStyle(sec);
+            const padT = parseFloat(cs.paddingTop) || 0;
+            const padB = parseFloat(cs.paddingBottom) || 0;
+            const top = r.top + window.scrollY;
+
+            // ① 섹션 본체 박스 (파란 반투명)
+            const box = document.createElement('div');
+            box.className = '__ed-gap-bar';
+            box.style.cssText =
+                'position:absolute;z-index:2147483630;pointer-events:none;' +
+                'border:1.5px solid rgba(59,130,246,.5);border-radius:10px;' +
+                'background:rgba(59,130,246,.07);';
+            box.style.top = top + 'px';
+            box.style.left = r.left + window.scrollX + 'px';
+            box.style.width = r.width + 'px';
+            box.style.height = r.height + 'px';
+
+            // 섹션 이름표
+            const name = document.createElement('span');
+            name.style.cssText =
+                'position:absolute;top:6px;left:8px;background:#3B82F6;color:#fff;' +
+                'font:700 12px/1.7 system-ui,sans-serif;padding:1px 9px;border-radius:6px;white-space:nowrap';
+            name.textContent = `섹션 ${i + 1}`;
+            box.appendChild(name);
+            box.__sec = sec; box.__kind = 'box';
+            document.body.appendChild(box);
+            gapBars.push(box);
+
+            // ② 위·아래 여백 띠 (주황) — 이걸 잡아 끈다
+            [['top', padT], ['bottom', padB]].forEach(([side, pad]) => {
+                if (pad < 4) return;
+                const band = document.createElement('div');
+                band.className = '__ed-gap-bar';
+                band.style.cssText =
+                    'position:absolute;z-index:2147483640;cursor:ns-resize;' +
+                    'background:repeating-linear-gradient(45deg,rgba(245,158,11,.22) 0 8px,rgba(245,158,11,.10) 8px 16px);' +
+                    'border:1px dashed rgba(245,158,11,.75);' +
+                    'display:flex;align-items:center;justify-content:center;transition:background .12s';
+                band.style.left = r.left + window.scrollX + 'px';
+                band.style.width = r.width + 'px';
+                band.style.height = pad + 'px';
+                band.style.top = (side === 'top' ? top : top + r.height - pad) + 'px';
+
+                const tag = document.createElement('span');
+                tag.style.cssText =
+                    'background:#B45309;color:#fff;font:700 12px/1.8 system-ui,sans-serif;' +
+                    'padding:1px 10px;border-radius:6px;white-space:nowrap;pointer-events:none;' +
+                    'box-shadow:0 1px 4px rgba(0,0,0,.25)';
+                tag.textContent = `여백 ${Math.round(pad)}px  ↕ 끌어서 조절`;
+                band.appendChild(tag);
+
+                band.addEventListener('mouseenter', () => {
+                    band.style.background = 'repeating-linear-gradient(45deg,rgba(245,158,11,.38) 0 8px,rgba(245,158,11,.20) 8px 16px)';
+                });
+                band.addEventListener('mouseleave', () => {
+                    if (!band.__dragging) band.style.background =
+                        'repeating-linear-gradient(45deg,rgba(245,158,11,.22) 0 8px,rgba(245,158,11,.10) 8px 16px)';
+                });
+                // 위쪽 띠는 위로 끌면 넓어지고, 아래쪽 띠는 아래로 끌면 넓어진다
+                band.addEventListener('mousedown', e => startGapDrag(e, sec, band, tag, side));
+                band.__sec = sec; band.__kind = 'band'; band.__side = side;
+                document.body.appendChild(band);
+                gapBars.push(band);
+            });
+        });
+    }
+    /**
+     * 오버레이(섹션 박스·여백 띠)를 실제 요소 위치에 다시 맞춘다.
+     * 새로 만들지 않고 좌표만 갱신하므로 드래그 중에도 끊기지 않는다.
+     */
+    function syncGapBars() {
+        for (const el of gapBars) {
+            const sec = el.__sec;
+            if (!sec || !sec.isConnected) continue;
+            const r = sec.getBoundingClientRect();
+            const cs = getComputedStyle(sec);
+            const top = r.top + window.scrollY;
+            el.style.left = (r.left + window.scrollX) + 'px';
+            el.style.width = r.width + 'px';
+            if (el.__kind === 'box') {
+                el.style.top = top + 'px';
+                el.style.height = r.height + 'px';
+            } else {
+                const pad = parseFloat(el.__side === 'top' ? cs.paddingTop : cs.paddingBottom) || 0;
+                el.style.height = pad + 'px';
+                el.style.top = (el.__side === 'top' ? top : top + r.height - pad) + 'px';
+                const t = el.querySelector('span');
+                if (t) t.textContent = `여백 ${Math.round(pad)}px  ↕ 끌어서 조절`;
+            }
+        }
+    }
+
+    function startGapDrag(e, sec, band, tag, side) {
+        e.preventDefault(); e.stopPropagation();
+        band.__dragging = true;
+        band.style.background =
+            'repeating-linear-gradient(45deg,rgba(245,158,11,.5) 0 8px,rgba(245,158,11,.3) 8px 16px)';
+        const startY = e.clientY;
+        const cs = getComputedStyle(sec);
+        const start = Math.round(parseFloat(side === 'top' ? cs.paddingTop : cs.paddingBottom)) || 0;
+
+        // 위쪽 띠: 위로 끌면(음수) 넓어진다 / 아래쪽 띠: 아래로 끌면(양수) 넓어진다
+        const calc = ev => {
+            const d = ev.clientY - startY;
+            const delta = (side === 'top') ? -d : d;
+            return Math.max(0, Math.round(start + delta));
+        };
+        const onMove = ev => {
+            const next = calc(ev);
+            tag.textContent = `여백 ${next}px  ↕ 끌어서 조절`;
+            // 여백을 여기서 바로 적용한다. 호스트를 거쳐 돌아오면 한 박자 늦어
+            // 띠와 실제 콘텐츠가 어긋나 겹쳐 보인다.
+            if (gapScopeLocal === 'all') {
+                document.documentElement.style.setProperty('--vb-pad-block', next + 'px');
+            } else {
+                if (side === 'bottom') sec.style.paddingBottom = next + 'px';
+                else sec.style.paddingTop = next + 'px';
+                const mate = side === 'bottom' ? sec.nextElementSibling : sec.previousElementSibling;
+                if (mate && mate.classList.contains('vb-section')) {
+                    if (side === 'bottom') mate.style.paddingTop = next + 'px';
+                    else mate.style.paddingBottom = next + 'px';
+                }
+            }
+            syncGapBars();                       // 적용 뒤 곧바로 오버레이를 맞춘다
+            post('gapDragMove', { path: pathOf(sec), px: next, side });
+        };
+        const onUp = ev => {
+            band.__dragging = false;
+            document.removeEventListener('mousemove', onMove, true);
+            document.removeEventListener('mouseup', onUp, true);
+            post('gapDragEnd', { path: pathOf(sec), px: calc(ev), side });
+            setTimeout(buildGapBars, 80);
+        };
+        document.addEventListener('mousemove', onMove, true);
+        document.addEventListener('mouseup', onUp, true);
+    }
+
+    /**
+     * 나중에 넣은 캐러셀의 좌우 화살표를 살린다.
+     * 원본 JS 는 페이지 로드 때 한 번만 연결하므로, 삽입된 것은 여기서 직접 붙인다.
+     */
+    function bindCarouselNav(root) {
+        if (!root || !root.querySelectorAll) return;
+        root.querySelectorAll('[data-carousel-prev],[data-carousel-next]').forEach(btn => {
+            if (btn.__edBound) return;
+            btn.__edBound = true;
+            const next = btn.hasAttribute('data-carousel-next');
+            const id = btn.getAttribute(next ? 'data-carousel-next' : 'data-carousel-prev');
+            btn.addEventListener('click', e => {
+                e.preventDefault(); e.stopPropagation();
+                const track = document.getElementById(id);
+                if (!track) return;
+                const box = track.parentElement;              // .vb-carousel (스크롤 되는 쪽)
+                // scroll-snap 이 걸려 있어 임의 위치로 밀면 되돌아온다 → 카드 위치로 정확히 맞춘다
+                const items = [...track.querySelectorAll('.vb-carousel__item')];
+                if (!items.length) return;
+                // 카드 하나 폭(+간격)만큼 이동한다. 스냅이 가까운 카드로 붙여 준다.
+                const w = items[0].getBoundingClientRect().width;
+                const gap = items.length > 1
+                    ? items[1].getBoundingClientRect().left - items[0].getBoundingClientRect().right
+                    : 16;
+                const step = Math.round(w + Math.max(0, gap));
+                const max = box.scrollWidth - box.clientWidth;
+                const target = Math.max(0, Math.min(max, box.scrollLeft + (next ? step : -step)));
+                box.scrollLeft = target;      // 스냅과 싸우지 않게 즉시 이동
+            }, true);
+        });
+    }
+
+    // ---------- 컴포넌트 드롭 (라이브러리에서 끌어다 넣기) ----------
+    // 드롭 지점에서 '어느 블록의 위/아래인지'를 정해 파란 선으로 보여준다.
+    let dropLine = null;
+    function ensureDropLine() {
+        if (dropLine) return dropLine;
+        dropLine = document.createElement('div');
+        dropLine.id = '__ed-drop-line';
+        dropLine.style.cssText =
+            'position:absolute;left:0;right:0;height:3px;background:#3B82F6;z-index:2147483646;' +
+            'pointer-events:none;box-shadow:0 0 8px rgba(59,130,246,.8);border-radius:2px;display:none';
+        document.body.appendChild(dropLine);
+        return dropLine;
+    }
+    /** 드롭 기준이 될 '블록' 요소 (너무 작은 인라인 요소는 위로 올라가며 찾는다) */
+    function blockAt(x, y) {
+        let el = document.elementFromPoint(x, y);
+        while (el && el !== document.body) {
+            const r = el.getBoundingClientRect();
+            const disp = getComputedStyle(el).display;
+            if (r.height > 24 && disp !== 'inline') return el;
+            el = el.parentElement;
+        }
+        return document.body.firstElementChild || document.body;
+    }
+    /**
+     * 드롭 대상 보정.
+     * 그리드(.vb-grid, .ig-grid …) 나 캐러셀 트랙 '안'에 새 섹션을 꽂으면
+     * 그 레이아웃의 한 칸으로 들어가 버려 구조가 깨진다.
+     * → 그런 컨테이너 안이면 컨테이너 자체를 기준으로 올려 잡는다.
+     */
+    const LAYOUT_PARENT = '.vb-grid, .ig-grid, .sky-features, .vb-carousel__track, .bg-flow, .tl-grid, .sf-track, .vb-carousel';
+    function liftOutOfLayout(el) {
+        let cur = el;
+        while (cur && cur !== document.body) {
+            if (cur.parentElement && cur.parentElement.closest &&
+                cur.parentElement.matches && cur.parentElement.matches(LAYOUT_PARENT)) {
+                cur = cur.parentElement;      // 컨테이너 자체로 올린다
+                continue;
+            }
+            const p = cur.closest(LAYOUT_PARENT);
+            if (p && p !== cur) { cur = p; continue; }
+            break;
+        }
+        return cur || el;
+    }
+    function dropTargetAt(x, y) {
+        const el = liftOutOfLayout(blockAt(x, y));
+        const r = el.getBoundingClientRect();
+        const position = (y < r.top + r.height / 2) ? 'before' : 'after';
+        return { el, r, position };
+    }
+    // 대상 '덩어리'를 색면으로 덮어 어디까지가 한 블록인지 보여준다 (선만으론 구분이 안 됨)
+    let dropZone = null;
+    function ensureDropZone() {
+        if (dropZone) return dropZone;
+        dropZone = document.createElement('div');
+        dropZone.id = '__ed-drop-zone';
+        dropZone.style.cssText =
+            'position:absolute;z-index:2147483645;pointer-events:none;display:none;' +
+            'background:rgba(59,130,246,.10);border:1.5px solid rgba(59,130,246,.55);border-radius:8px;';
+        const label = document.createElement('span');
+        label.id = '__ed-drop-label';
+        label.style.cssText =
+            'position:absolute;top:0;left:0;transform:translateY(-100%);' +
+            'background:#3B82F6;color:#fff;font:600 11px/1.6 system-ui,sans-serif;' +
+            'padding:1px 7px;border-radius:5px 5px 0 0;white-space:nowrap';
+        dropZone.appendChild(label);
+        document.body.appendChild(dropZone);
+        return dropZone;
+    }
+    function showDropAt(x, y) {
+        const t = dropTargetAt(x, y);
+        const line = ensureDropLine();
+        const top = (t.position === 'before' ? t.r.top : t.r.bottom) + window.scrollY;
+        line.style.top = (top - 1) + 'px';
+        line.style.display = 'block';
+
+        const zone = ensureDropZone();
+        zone.style.display = 'block';
+        zone.style.top = (t.r.top + window.scrollY) + 'px';
+        zone.style.left = (t.r.left + window.scrollX) + 'px';
+        zone.style.width = t.r.width + 'px';
+        zone.style.height = t.r.height + 'px';
+        const el = t.el;
+        const name = el.tagName.toLowerCase() +
+            (el.classList[0] ? '.' + el.classList[0] : '');
+        zone.querySelector('#__ed-drop-label').textContent =
+            `${name} ${t.position === 'before' ? '위' : '아래'}에 넣기`;
+        return t;
+    }
+    function hideDrop() {
+        if (dropLine) dropLine.style.display = 'none';
+        if (dropZone) dropZone.style.display = 'none';
+    }
+
+    document.addEventListener('dragover', e => {
+        e.preventDefault();
+        if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
+        showDropAt(e.clientX, e.clientY);
+    });
+    document.addEventListener('dragleave', e => { if (!e.relatedTarget) hideDrop(); });
+    document.addEventListener('drop', e => {
+        e.preventDefault();
+        const t = dropTargetAt(e.clientX, e.clientY);
+        hideDrop();
+        let key = '', kind = 'component';
+        try {
+            const dt = e.dataTransfer;
+            if (dt.getData('text/x-hnkl-media')) { key = dt.getData('text/x-hnkl-media'); kind = 'media'; }
+            else if (dt.getData('text/x-hnkl-motion')) { key = dt.getData('text/x-hnkl-motion'); kind = 'motion'; }
+            else key = dt.getData('text/x-hnkl-component') || dt.getData('text/plain') || '';
+        } catch (_) {}
+        if (!key) return;
+        // 인터랙션은 '그 요소 자체'에 붙이므로 정확한 대상이 필요하다
+        const el = kind === 'motion' ? (document.elementFromPoint(e.clientX, e.clientY) || t.el) : t.el;
+        post('componentDropped', { key, kind, path: pathOf(el), position: t.position });
+    });
 
     // ---------- 부모와 대화 ----------
     const post = (type, payload) => parent.postMessage({ source: '__hnkl_editor', type, payload }, '*');
@@ -235,6 +655,132 @@
             const tag = document.getElementById('__ed-preview-css');
             if (tag) tag.textContent = '';
             if (selected) post('previewApplied', describe(selected));
+        }
+        else if (type === 'insertPreview') {
+            // 컴포넌트 삽입 미리보기 — 저장 전이라 화면에만 넣는다
+            const el = elementAtPath(payload.path);
+            if (!el) return;
+            const tpl = document.createElement('template');
+            tpl.innerHTML = String(payload.html || '').trim();
+            const node = tpl.content.firstElementChild;
+            if (!node) return;
+            node.setAttribute('data-ed-inserted', '1');
+            if (payload.position === 'before') el.parentNode.insertBefore(node, el);
+            else if (payload.position === 'firstChild') el.insertBefore(node, el.firstChild);
+            else if (payload.position === 'lastChild') el.appendChild(node);
+            else el.parentNode.insertBefore(node, el.nextSibling);
+            // .reveal 은 스크롤 애니메이션이 켜줘야 보이는데, 나중에 넣은 건 등록이 안 돼
+            // 영원히 투명하게 남는다 → 삽입한 것은 바로 보이게 해 준다.
+            revealNow(node);
+            node.scrollIntoView({ block: 'center', behavior: 'smooth' });
+            post('inserted', { path: pathOf(node) });
+            setTimeout(reportHeight, 80);
+            bindCarouselNav(node);
+        }
+        else if (type === 'undoInserts') {
+            document.querySelectorAll('[data-ed-inserted]').forEach(n => n.remove());
+        }
+        else if (type === 'setGapScope') {
+            gapScopeLocal = payload || 'all';
+        }
+        else if (type === 'listGapExceptions') {
+            // 토큰(--vb-pad-block)을 따르지 않고 값이 따로 박힌 섹션을 찾아 알린다.
+            // 토큰 값은 clamp(...) 문자열이라 px 로 못 읽는다 → 가장 많이 쓰인 실제 값을 기준으로 삼는다.
+            const counts = {};
+            document.querySelectorAll(GAP_SEL).forEach(s => {
+                const v = Math.round(parseFloat(getComputedStyle(s).paddingTop)) || 0;
+                counts[v] = (counts[v] || 0) + 1;
+            });
+            const base = +(Object.entries(counts).sort((a, b) => b[1] - a[1])[0] || [0])[0];
+            const out = [];
+            document.querySelectorAll(GAP_SEL).forEach((s, i) => {
+                const cs = getComputedStyle(s);
+                const t = Math.round(parseFloat(cs.paddingTop)) || 0;
+                const b = Math.round(parseFloat(cs.paddingBottom)) || 0;
+                if (Math.abs(t - base) > 2 || Math.abs(b - base) > 2) {
+                    out.push({
+                        index: i + 1, path: pathOf(s), top: t, bottom: b,
+                        name: s.className.toString().replace('vb-section', '').trim().split(/\s+/)[0] || '기본',
+                    });
+                }
+            });
+            post('gapExceptions', { base, list: out });
+        }
+        else if (type === 'focusSection') {
+            // 예외 목록에서 고른 섹션으로 이동하고 잠깐 강조한다
+            const el = elementAtPath(payload.path);
+            if (!el) return;
+            const r = el.getBoundingClientRect();
+            post('scrollToY', { y: r.top + window.scrollY, h: r.height });
+            const mark = document.createElement('div');
+            mark.style.cssText =
+                'position:absolute;z-index:2147483646;pointer-events:none;border-radius:10px;' +
+                'background:rgba(59,130,246,.22);border:2px solid rgba(59,130,246,.9);transition:opacity .4s';
+            mark.style.top = (r.top + window.scrollY) + 'px';
+            mark.style.left = (r.left + window.scrollX) + 'px';
+            mark.style.width = r.width + 'px';
+            mark.style.height = r.height + 'px';
+            document.body.appendChild(mark);
+            setTimeout(() => { mark.style.opacity = '0'; }, 1200);
+            setTimeout(() => mark.remove(), 1700);
+        }
+        else if (type === 'setGapMode') {
+            gapOn = !!payload;
+            document.documentElement.classList.toggle('__ed-gapping', gapOn);
+            buildGapBars();
+            // 켜져 있는 동안에는 어떤 경로로 값이 바뀌든(슬라이더·저장·리플로우)
+            // 오버레이가 항상 실제 여백을 따라가게 한다.
+            clearInterval(window.__edGapTimer);
+            if (gapOn) window.__edGapTimer = setInterval(syncGapBars, 120);
+        }
+        else if (type === 'gapPreview') {
+            // 조절 중 실시간 반영 — 전체는 토큰, 개별은 그 섹션에만
+            let tag = document.getElementById('__ed-gap-css');
+            if (!tag) {
+                tag = document.createElement('style');
+                tag.id = '__ed-gap-css';
+                (document.head || document.documentElement).appendChild(tag);
+            }
+            if (payload.scope === 'all') {
+                // 토큰은 위·아래를 함께 정하므로 모든 섹션이 같이 움직인다
+                tag.textContent = `:root{--vb-pad-block:${payload.px}px !important}`;
+            } else {
+                const el = elementAtPath(payload.path);
+                if (el) {
+                    if (payload.side === 'bottom') el.style.paddingBottom = payload.px + 'px';
+                    else el.style.paddingTop = payload.px + 'px';
+                    // 섹션 사이엔 빈 틈이 없다. 눈에 보이는 '간격'은 맞닿은 두 여백의 합이므로
+                    // 짝이 되는 쪽도 같이 움직여야 실제로 간격을 조절하는 느낌이 난다.
+                    const mate = payload.side === 'bottom' ? el.nextElementSibling : el.previousElementSibling;
+                    if (mate && mate.classList.contains('vb-section')) {
+                        if (payload.side === 'bottom') mate.style.paddingTop = payload.px + 'px';
+                        else mate.style.paddingBottom = payload.px + 'px';
+                    }
+                }
+            }
+            requestAnimationFrame(syncGapBars);
+        }
+        else if (type === 'setAttr') {
+            const el = elementAtPath(payload.path);
+            if (!el) return;
+            if (payload.value == null || payload.value === '') el.removeAttribute(payload.name);
+            else el.setAttribute(payload.name, payload.value);
+        }
+        else if (type === 'motionPreview') {
+            // 인터랙션 미리보기 — 클래스만 붙이고, 규칙은 임시 <style> 로 넣는다
+            const el = elementAtPath(payload.path);
+            if (!el) return;
+            if (payload.className) el.classList.add(payload.className);
+            let tag = document.getElementById('__ed-motion-css');
+            if (!tag) {
+                tag = document.createElement('style');
+                tag.id = '__ed-motion-css';
+                (document.head || document.documentElement).appendChild(tag);
+            }
+            if (payload.css && !tag.textContent.includes(payload.css)) tag.textContent += '\n' + payload.css;
+            // 호버 효과는 마우스를 올려야 보이므로, 적용됐는지 알 수가 없다.
+            // → 적용 직후 한 번 '시연'해 주고, 어느 요소에 붙었는지 배지로 알린다.
+            if (payload.className) demoMotion(el, payload.className);
         }
         else if (type === 'reselect') {
             const el = elementAtPath(payload.path);
@@ -409,7 +955,11 @@
     let _htReported = false;
 
     function freezeVhUnits() {
-        const vpH = window.innerHeight;
+        // iframe 은 페이지 전체 높이로 늘어나므로, 그 시점의 innerHeight 로 vh 를 굳히면
+        // 100vh 가 수만 px 이 된다. 브레이크포인트의 '기기 높이'를 기준으로 삼는다.
+        const fromUrl = +(new URLSearchParams(location.search).get('__edvh') || 0);
+        const vpH = fromUrl > 200 ? fromUrl
+            : Math.min(window.innerHeight, Math.round(window.innerWidth * 2.2) || 900);
         if (vpH < 50) return;
         const vhPx = vpH / 100;
         const replaceVh = v =>
@@ -432,32 +982,105 @@
         }
     }
 
-    function reportHeight() {
-        if (_htReported) return;
-        _htReported = true;
-        freezeVhUnits();
-        const h = Math.max(
+    /**
+     * 에디터 미리보기에서는 스크롤 애니메이션이 돌지 않는다(iframe 을 전체 높이로 펼쳐 보여주므로).
+     * 그래서 .reveal 이 opacity:0 인 채로 남아 '공간만 있고 안 보이는' 상태가 된다.
+     * 편집 중에는 전부 보이게 덮어쓴다 — 원본 파일에는 영향 없음.
+     */
+    function revealAllForEditing() {
+        const tag = document.createElement('style');
+        tag.id = '__ed-reveal-all';
+        tag.textContent =
+            '.reveal{opacity:1 !important;transform:none !important}' +
+            /* 에디터 미리보기에는 브라우저 스크롤바가 필요 없다 (휠·드래그로 움직인다) */
+            '::-webkit-scrollbar{width:0 !important;height:0 !important;display:none !important}' +
+            'html,body,*{scrollbar-width:none !important;-ms-overflow-style:none !important}';
+        (document.head || document.documentElement).appendChild(tag);
+    }
+
+    /**
+     * 스크롤 연출이 iframe 높이를 '화면 높이'로 착각해 만드는 거대한 빈 공간을 없앤다.
+     *
+     * 예) vibra 의 히어로 덮기 효과는 stage.paddingBottom 을 window.innerHeight 기준으로 잡는데,
+     *     에디터는 iframe 을 페이지 전체 높이(수만 px)로 펼치므로 그 값이 1만 px 넘게 들어간다.
+     *     실제 사이트에서는 정상이고 편집 화면에서만 생기는 문제라, 여기서만 되돌린다.
+     */
+    function stripScrollFillers() {
+        const tag = document.createElement('style');
+        tag.id = '__ed-no-filler';
+        tag.textContent =
+            '.vb-stage{padding-bottom:0 !important}' +
+            '.vb-stage.is-boosted .vb-hero{margin-bottom:0 !important}' +
+            '.vb-stage.is-boosted .vb-cover{padding-bottom:0 !important;transform:none !important}';
+        (document.head || document.documentElement).appendChild(tag);
+        // JS 가 인라인으로 다시 써 넣으므로, 인라인 값도 계속 지운다
+        const clear = () => {
+            document.querySelectorAll('.vb-stage').forEach(s => {
+                if (s.style.paddingBottom) s.style.paddingBottom = '';
+            });
+            document.querySelectorAll('.vb-cover').forEach(c => {
+                if (c.style.transform) c.style.transform = '';
+            });
+        };
+        clear();
+        setInterval(clear, 400);
+    }
+
+    let _lastH = 0;
+    function measure() {
+        return Math.max(
             document.documentElement.scrollHeight,
             document.body ? document.body.scrollHeight : 0
         );
-        if (h > 200) post('pageHeight', h);
+    }
+    function reportHeight() {
+        // vh 고정은 '측정 전에 딱 한 번'. 이게 끝나야 높이가 안정된다.
+        if (!_htReported) {
+            _htReported = true;
+            revealAllForEditing();
+            stripScrollFillers();
+            freezeVhUnits();
+        }
+        const h = measure();
+        // 호스트가 iframe 을 늘리면 100vh 요소가 따라 커져서 다시 더 커지는 되먹임이 생긴다.
+        // → '늘어나기만' 하는 변화는 무시하고, 의미 있게 달라졌을 때만 알린다.
+        if (h <= 200) return;
+        const grew = h - _lastH;
+        if (_lastH && grew > 0 && grew < _lastH * 0.02) return;   // 2% 미만의 증가는 되먹임으로 본다
+        if (Math.abs(h - _lastH) <= 8) return;
+        _lastH = h;
+        post('pageHeight', h);
     }
     if (document.readyState === 'complete') {
         setTimeout(reportHeight, 200);
     } else {
         window.addEventListener('load', () => setTimeout(reportHeight, 200));
     }
+    // 늦게 로드되는 이미지·영상만 따라간다 (ResizeObserver 는 되먹임을 일으켜 쓰지 않는다)
+    document.addEventListener('load', e => {
+        if (/^(IMG|VIDEO|IFRAME)$/.test(e.target.tagName)) setTimeout(reportHeight, 80);
+    }, true);
+    [800, 2000, 4000].forEach(ms => setTimeout(reportHeight, ms));
 
     // ---------- 스크롤 → 캔버스 이동 ----------
-    window.addEventListener('wheel', e => {
-        e.preventDefault();
-        post('wheel', { dx: e.deltaX, dy: e.deltaY });
-    }, { passive: false });
+    // 에디터 iframe 안일 때만 가로챈다.
+    // (브라우저에서 /preview/ 주소를 직접 열었을 땐 페이지가 정상 스크롤돼야 한다)
+    const IN_EDITOR = window.parent !== window;
+    if (IN_EDITOR) {
+        window.addEventListener('wheel', e => {
+            e.preventDefault();
+            // Ctrl(⌘) 를 같이 눌렀으면 확대/축소 — 호스트가 마우스 위치 기준으로 처리한다
+            post('wheel', {
+                dx: e.deltaX, dy: e.deltaY, zoom: e.ctrlKey || e.metaKey,
+                sx: e.clientX, sy: e.clientY,
+            });
+        }, { passive: false });
+    }
 
     // ---------- 가운데 마우스 패닝 (screenX/Y 는 프레임 간 좌표 통일) ----------
     let _midDown = false;
     document.addEventListener('mousedown', e => {
-        if (e.button !== 1) return;
+        if (!IN_EDITOR || e.button !== 1) return;
         e.preventDefault();
         _midDown = true;
         post('panStart', { sx: e.screenX, sy: e.screenY });

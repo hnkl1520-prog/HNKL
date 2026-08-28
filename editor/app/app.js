@@ -35,22 +35,93 @@ window.addEventListener('message', e => {
     else if (msg.type === 'pageHeight') {
         if (msg.payload > 100) {
             pageH = msg.payload;
-            if (needsCenter) { needsCenter = false; centerFrame(); }
-            else applyStage();
+            const stageEl = document.getElementById('stage');
+            // 첫 로드일 때만 스크롤 초기화 + 가운데 정렬.
+            // (늦게 로드된 이미지로 높이만 갱신될 때 보던 위치가 튀지 않게)
+            if (needsCenter) {
+                if (stageEl) { stageEl.scrollTop = 0; stageEl.scrollLeft = 0; }
+                needsCenter = false;
+                centerFrame();
+            } else applyStage();
         }
     }
     else if (msg.type === 'panStart') startPan(msg.payload.sx, msg.payload.sy);
     else if (msg.type === 'panMove') { if (isPanning) movePan(msg.payload.sx, msg.payload.sy); }
     else if (msg.type === 'panEnd') endPan();
     else if (msg.type === 'wheel') {
-        canvasY -= msg.payload.dy;
-        canvasX -= msg.payload.dx;
+        const p = msg.payload;
+        if (p.zoom) {
+            // iframe 안 좌표 → 화면 좌표로 옮겨서 그 지점 기준 확대
+            const fr = frame.getBoundingClientRect();
+            zoomAt(zoom * (p.dy < 0 ? 1.1 : 1 / 1.1), fr.left + p.sx * zoom, fr.top + p.sy * zoom);
+            return;
+        }
+        canvasY -= p.dy;
+        canvasX -= p.dx;
         applyStage();
     }
     else if (msg.type === 'designSystem') {
         renderDesignSystem(msg.payload);
     }
+    else if (msg.type === 'componentDropped') {
+        onComponentDropped(msg.payload);
+    }
+    else if (msg.type === 'gapDragMove') onGapMove(msg.payload);
+    else if (msg.type === 'gapDragEnd') { onGapEnd(msg.payload); refreshGapExceptions(); }
+    else if (msg.type === 'gapExceptions') renderGapExceptions(msg.payload);
+    else if (msg.type === 'scrollToY') {
+        // 미리보기 안 좌표 → 캔버스 이동 (화면 가운데에 오도록)
+        const stageEl = document.getElementById('stage');
+        const target = msg.payload.y * zoom;
+        canvasY = -(target - stageEl.clientHeight / 2 + (msg.payload.h * zoom) / 2);
+        applyStage();
+    }
 });
+
+// 라이브러리에서 미리보기로 떨어뜨렸을 때: 화면에 바로 넣고, 저장 대기열에 쌓는다.
+function onComponentDropped({ key, kind, path, position }) {
+    // ① 인터랙션 — 그 요소에 클래스를 붙이고, 필요한 CSS 를 페이지에 넣는다
+    if (kind === 'motion') {
+        const def = MOTION_DEFS[key];
+        if (!def) return;
+        pending.push({ kind: 'motion', path, className: def.className, css: def.css });
+        toFrame('motionPreview', { path, className: def.className, css: def.css });
+        updateDirty();
+        toast(`인터랙션 적용 — ${def.className}`, 'ok');
+        return;
+    }
+    // ② 미디어 / 컴포넌트 — HTML 조각을 삽입
+    let src = kind === 'media' ? MEDIA_HTML[key] : COMPONENT_HTML[key];
+    if (!src) return;
+    // 개수를 고를 수 있는 컴포넌트는 카드에서 고른 값을 쓴다 (카드 안 −/+ 로 조절)
+    const n = (typeof src === 'function')
+        ? (compCount[key] || COMPONENT_COUNT[key] || 3)
+        : 0;
+    const html = (typeof src === 'function') ? src(n) : src;
+    // 자리표시(ed-ph) 스타일은 미디어·컴포넌트 둘 다 필요하다.
+    // (캐러셀·카드 안의 빈 이미지가 0px 로 찌그러지는 걸 막는다)
+    if (html.includes('ed-ph')) {
+        pending.push({ kind: 'motion', path, className: '', css: MEDIA_PH_CSS });
+        toFrame('motionPreview', { path, className: '', css: MEDIA_PH_CSS });
+    }
+    pending.push({ kind: 'insert', path, html, position });
+    toFrame('insertPreview', { path, html, position });
+    updateDirty();
+    toast(kind === 'media' ? '미디어를 넣었습니다 — 링크는 인스펙터에서' : '넣었습니다 — 저장해야 파일에 반영됩니다', 'ok');
+}
+
+/** 현재 파일 위치를 경로로 보여준다 (works/projects/vibra/vibra.html → Works / Projects / Vibra / vibra.html) */
+function renderCrumb(rel) {
+    const host = $('#crumbPath');
+    if (!host || !rel) return;
+    const parts = rel.split('/');
+    const file = parts.pop();
+    const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+    host.innerHTML =
+        parts.map(p => `<span>${cap(p)}</span>`).join('<span class="cr-sep"> / </span>') +
+        (parts.length ? '<span class="cr-sep"> / </span>' : '') +
+        `<span class="cr-last">${file}</span>`;
+}
 
 // ---------------------------------------------------------------- 페이지 목록
 async function loadPages() {
@@ -78,13 +149,16 @@ function openPage(rel) {
     pending = []; selection = null; updateDirty(); renderInspector();
     needsCenter = true;
     currentPage = rel;
-    frame.src = '/preview/' + rel;
+    renderCrumb(rel);
+    // 브릿지가 100vh 를 '기기 높이' 기준으로 굳히도록 알려준다 (iframe 은 전체 높이로 늘어나므로)
+    frame.src = '/preview/' + rel + '?__edvh=' + bp.h;
 }
 
 $('#pageSelect').addEventListener('change', e => openPage(e.target.value));
-$('#reloadBtn').addEventListener('click', () => {
+$('#reloadBtn')?.addEventListener('click', () => {
     if (pending.length && !confirm('저장하지 않은 변경이 사라집니다. 계속할까요?')) return;
     pending = []; updateDirty();
+    needsCenter = true;
     frame.src = frame.src;
 });
 
@@ -94,10 +168,36 @@ function applyStage() {
     frame.style.height = pageH + 'px';
     frameWrap.style.width = bp.w + 'px';
     frameWrap.style.height = pageH + 'px';
+    clampCanvas();
+    // canvasX/Y 는 '화면에서 몇 px 옮길지'다. translate 를 먼저 걸어야 그 값이 그대로 화면 이동량이 된다.
+    frameWrap.style.transformOrigin = 'top left';
     frameWrap.style.transform =
         `translate(${Math.round(canvasX)}px, ${Math.round(canvasY)}px) scale(${zoom})`;
+    // overflow:hidden 이어도 브라우저가 iframe 안 포커스를 따라 스테이지를 스크롤시킬 때가 있다.
+    // (긴 페이지에서 리로드 직후 화면이 엉뚱한 곳에 가 있는 원인)
+    const stageEl = document.getElementById('stage');
+    if (stageEl && (stageEl.scrollTop || stageEl.scrollLeft)) { stageEl.scrollTop = 0; stageEl.scrollLeft = 0; }
     $('#stageInfo').textContent =
-        `${bp.w}px 기준 렌더링 · ${Math.round(zoom * 100)}%로 표시`;
+        `${bp.w}px 기준 렌더링 · ${Math.round(zoom * 100)}% · Ctrl+휠로 확대`;
+}
+
+/**
+ * 캔버스 이동 범위 제한.
+ * 제한이 없으면 휠·패닝으로 프레임이 화면 밖까지 밀려나 '화면이 깨진 것처럼' 보인다.
+ * 항상 프레임의 일부가 스테이지 안에 남도록 잡아 준다.
+ */
+function clampCanvas() {
+    const stageEl = document.getElementById('stage');
+    if (!stageEl) return;
+    const sw = stageEl.clientWidth, sh = stageEl.clientHeight;
+    const scaledW = bp.w * zoom, scaledH = pageH * zoom;
+    const keep = 120;                       // 최소한 이만큼은 화면에 남긴다
+
+    if (scaledW <= sw) canvasX = Math.min(Math.max(canvasX, 0), sw - scaledW);
+    else canvasX = Math.min(Math.max(canvasX, sw - scaledW), 0);
+
+    if (scaledH <= sh) canvasY = Math.min(Math.max(canvasY, 0), sh - scaledH);
+    else canvasY = Math.min(Math.max(canvasY, sh - scaledH - keep), keep);
 }
 
 function centerFrame() {
@@ -114,12 +214,20 @@ function centerFrame() {
 // ---------- 패닝 ----------
 function startPan(sx, sy) {
     isPanning = true;
-    panStart = { sx, sy, cx: canvasX, cy: canvasY };
+    // 기준점은 첫 mousemove 에서 다시 잡는다.
+    // (iframe 안/밖에서 온 이벤트의 좌표계가 어긋나면 누르자마자 화면이 튄다)
+    panStart = { sx, sy, cx: canvasX, cy: canvasY, primed: false };
     const ov = document.getElementById('stageOverlay');
     ov.style.pointerEvents = 'auto';
     ov.style.cursor = 'grabbing';
 }
 function movePan(sx, sy) {
+    if (!panStart.primed) {
+        panStart.sx = sx; panStart.sy = sy;
+        panStart.cx = canvasX; panStart.cy = canvasY;
+        panStart.primed = true;
+        return;
+    }
     canvasX = panStart.cx + sx - panStart.sx;
     canvasY = panStart.cy + sy - panStart.sy;
     applyStage();
@@ -133,10 +241,12 @@ function endPan() {
 
 const stageEl = document.getElementById('stage');
 stageEl.addEventListener('mousedown', e => {
-    if (e.button !== 1) return;
+    // 가운데 버튼은 항상, 손 도구일 땐 왼쪽 버튼으로도 화면을 끈다
+    if (e.button !== 1 && !(e.button === 0 && tool === 'pan')) return;
     e.preventDefault();
     startPan(e.screenX, e.screenY);
 });
+window.addEventListener('mouseup', e => { if (e.button === 0 && isPanning) endPan(); });
 document.getElementById('stageOverlay').addEventListener('mousemove', e => {
     if (isPanning) movePan(e.screenX, e.screenY);
 });
@@ -149,6 +259,10 @@ window.addEventListener('mouseup', e => { if (e.button === 1 && isPanning) endPa
 // 스크롤 휠 → 캔버스 세로 이동
 stageEl.addEventListener('wheel', e => {
     e.preventDefault();
+    if (e.ctrlKey || e.metaKey) {          // Ctrl(⌘) + 휠 = 확대/축소
+        zoomAt(zoom * (e.deltaY < 0 ? 1.1 : 1 / 1.1), e.clientX, e.clientY);
+        return;
+    }
     canvasY -= e.deltaY;
     canvasX -= e.deltaX;
     applyStage();
@@ -161,6 +275,8 @@ $('#breakpoints').addEventListener('click', e => {
     updateBpRes();
     needsCenter = true;
     applyStage();
+    // 100vh 기준이 기기마다 달라지므로 다시 읽어 온다 (저장 안 한 변경은 지키기 위해 물어봄)
+    if (!pending.length) frame.src = '/preview/' + currentPage + '?__edvh=' + bp.h;
 });
 
 // 중앙 뷰포트 제어기: 활성 브레이크포인트의 실제 해상도 표시
@@ -169,38 +285,163 @@ function updateBpRes() {
     if (el) el.textContent = `${bp.w} × ${bp.h}`;
 }
 
-$('#zoom').addEventListener('input', e => {
-    const newZoom = +e.target.value / 100;
+/**
+ * 확대/축소 — Ctrl(⌘) + 휠.
+ * 마우스가 가리키는 지점을 기준으로 확대돼서 보던 곳이 그대로 남는다.
+ * (상단 슬라이더를 없애고 이 방식만 쓴다 — 손이 캔버스를 떠나지 않는다)
+ */
+function zoomAt(nextZoom, sx, sy) {
     const stEl = document.getElementById('stage');
-    const cx = stEl.clientWidth / 2;
-    const cy = stEl.clientHeight / 2;
-    const px = (cx - canvasX) / zoom;
+    const r = stEl.getBoundingClientRect();
+    const cx = sx - r.left, cy = sy - r.top;          // 스테이지 안 좌표
+    const px = (cx - canvasX) / zoom;                 // 그 지점의 문서 좌표
     const py = (cy - canvasY) / zoom;
-    zoom = newZoom;
+    zoom = Math.min(2, Math.max(0.1, nextZoom));
     canvasX = cx - px * zoom;
     canvasY = cy - py * zoom;
-    $('#zoomVal').textContent = e.target.value + '%';
     applyStage();
-});
+}
 
-// ---------------------------------------------------------------- 요소 고르기
-let pickOn = false;
-$('#pickBtn').addEventListener('click', () => {
-    pickOn = !pickOn;
-    $('#pickBtn').classList.toggle('on', pickOn);
-    $('#pickBtn').textContent = pickOn ? '고르는 중… (끄기)' : '요소 고르기';
+// ---------------------------------------------------------------- 캔버스 도구 (선택 / 손)
+// 요소 선택은 한 번 누르는 '동작'이 아니라 커서의 '상태'다.
+// 그래서 캔버스 안 플로팅 툴바에 두고 V·H 단축키로도 바꾼다.
+let pickOn = true, tool = 'select';
+function setTool(next) {
+    tool = next;
+    pickOn = (next === 'select');
+    $('#pickBtn')?.classList.toggle('on', pickOn);
+    $('#pickBtn')?.setAttribute('aria-pressed', pickOn ? 'true' : 'false');
+    $('#panBtn')?.classList.toggle('on', !pickOn);
+    $('#panBtn')?.setAttribute('aria-pressed', !pickOn ? 'true' : 'false');
+    const st = document.getElementById('stage');
+    if (st) st.style.cursor = pickOn ? '' : 'grab';
     toFrame('setPicking', pickOn);
+}
+$('#pickBtn')?.addEventListener('click', () => setTool('select'));
+$('#panBtn')?.addEventListener('click', () => setTool('pan'));
+document.addEventListener('keydown', e => {
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    const t = e.target;
+    if (t && /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) return;   // 입력 중엔 무시
+    if (e.key === 'v' || e.key === 'V') setTool('select');
+    if (e.key === 'h' || e.key === 'H') setTool('pan');
 });
 $('#parentBtn')?.addEventListener('click', () => toFrame('selectParent'));
 
+// ---------------------------------------------------------------- 섹션 간격 조절
+// 큰 덩어리(.vb-section) 사이를 끌어서 위아래 여백을 조절한다.
+//   전체 섹션 : --vb-pad-block 토큰을 바꿔 모든 섹션이 같이 움직인다 (리듬 유지)
+//   이 섹션만 : 그 섹션에만 값을 덮어씌운다 (예외)
+let gapOn = false, gapScope = 'all', gapLast = null;
+function setGapMode(on) {
+    gapOn = on;
+    if (on && pickOn) setTool('pan');   // 여백을 끄는 동안엔 요소 선택을 꺼 둔다
+    toFrame('setGapMode', on);
+}
+$('#gapScope')?.addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    gapScope = b.dataset.scope;
+    [...e.currentTarget.children].forEach(x => x.classList.toggle('on', x === b));
+    toFrame('setGapScope', gapScope);
+});
+// 빠른 설정 · 슬라이더 — 전체 여백을 한 번에
+function applyGapAll(px) {
+    const i = pending.findIndex(p => p.kind === 'css' && p.selector === ':root' && p.prop === '--vb-pad-block');
+    const edit = { kind: 'css', selector: ':root', prop: '--vb-pad-block', value: px + 'px' };
+    if (i >= 0) pending[i] = edit; else pending.push(edit);
+    toFrame('gapPreview', { scope: 'all', px });
+    const r = $('#gapRange'), o = $('#gapRangeVal');
+    if (r) r.value = px;
+    if (o) o.textContent = px + 'px';
+    updateDirty();
+}
+$('#gapRange')?.addEventListener('input', e => applyGapAll(+e.target.value));
+$('#gapRange')?.addEventListener('change', () => setTimeout(refreshGapExceptions, 200));
+// 미리보기에서 여백을 보여주고 끌어서 조절할지
+$('#gapShow')?.addEventListener('change', e => {
+    setGapMode(e.target.checked);
+    const row = $('#gapScopeRow'); if (row) row.hidden = !e.target.checked;
+    if (e.target.checked) setTimeout(refreshGapExceptions, 300);
+});
+// 여백 블록을 펼치면 예외 목록을 불러온다 (표시를 안 켜도 확인 가능)
+$('#spBlock')?.addEventListener('toggle', e => {
+    if (e.target.open) setTimeout(refreshGapExceptions, 200);
+});
+
+/**
+ * 토큰을 따르지 않는 섹션 목록.
+ * 이게 있으면 슬라이더가 일부에만 먹혀 '왜 얘만 안 움직이지?' 가 된다 → 눈에 보이게 알린다.
+ */
+function renderGapExceptions({ base, list }) {
+    const box = $('#gapExc'), host = $('#gapExcList'), cnt = $('#gapExcCount');
+    const applied = $('#gapApplyCount');
+    const total = (dsData && 0) || null;   // 총 개수는 아래에서 목록으로 계산
+    if (applied) applied.textContent = list.length ? `(${list.length}개 제외)` : '';
+    if (!box || !host) return;
+    if (!list.length) { box.hidden = true; return; }
+    box.hidden = false;
+    cnt.textContent = list.length;
+    host.innerHTML = '';
+    for (const it of list) {
+        const row = el('button', 'sp-exc__item');
+        row.type = 'button';
+        const 값 = it.top === it.bottom ? `${it.top}px` : `↑${it.top} ↓${it.bottom}`;
+        row.innerHTML =
+            `<span class="sp-exc__name">섹션 ${it.index} · ${it.name}</span>` +
+            `<span class="sp-exc__val">${값}</span>`;
+        row.title = `기본값 ${base}px 과 다릅니다 — 눌러서 위치 보기`;
+        row.addEventListener('click', () => {
+            toFrame('focusSection', { path: it.path });
+            toast(`섹션 ${it.index} 로 이동`, 'ok');
+        });
+        host.appendChild(row);
+    }
+}
+function refreshGapExceptions() { toFrame('listGapExceptions', {}); }
+
+function onGapMove({ path, px, side }) {
+    gapLast = { path, px, side };
+    toFrame('gapPreview', { scope: gapScope, path, px, side });
+}
+function onGapEnd({ path, px, side }) {
+    gapLast = null;
+    if (gapScope === 'all') {
+        // 토큰 한 줄만 바꾸면 13개 섹션이 함께 움직인다
+        const i = pending.findIndex(p => p.kind === 'css' && p.selector === ':root' && p.prop === '--vb-pad-block');
+        const edit = { kind: 'css', selector: ':root', prop: '--vb-pad-block', value: px + 'px' };
+        if (i >= 0) pending[i] = edit; else pending.push(edit);
+        toast(`모든 섹션 여백 ${px}px — 저장해야 반영됩니다`, 'ok');
+    } else {
+        // 눈에 보이는 간격 = 맞닿은 두 여백의 합. 짝이 되는 섹션도 같이 저장한다.
+        const put = (p, prop) => {
+            let e = pending.find(x => x.kind === 'inline' && samePath(x.path, p));
+            if (!e) { e = { kind: 'inline', path: p, changes: {} }; pending.push(e); }
+            e.changes[prop] = px + 'px';
+        };
+        put(path, side === 'bottom' ? 'padding-bottom' : 'padding-top');
+        const mate = side === 'bottom'
+            ? path.slice(0, -1).concat(path[path.length - 1] + 1)
+            : path.slice(0, -1).concat(path[path.length - 1] - 1);
+        if (mate[mate.length - 1] >= 0) put(mate, side === 'bottom' ? 'padding-top' : 'padding-bottom');
+        toast(`이 경계 여백 ${px}px (양쪽)`, 'ok');
+    }
+    updateDirty();
+}
+
 // ---------------------------------------------------------------- 속성 정의
+// 인스펙터 그룹.
+//   when : 어떤 요소일 때 보여줄지 (없으면 항상)
+//   adv  : 고급 — 기본은 접어 두고 '고급 속성 보기'로 펼친다
+// 선택한 게 무엇이든 24개를 다 쏟아내면 정작 필요한 값을 못 찾는다.
 const GROUPS = [
-    { title: '타이포', props: ['font-size', 'line-height', 'font-weight', 'color'] },
-    { title: '바깥 여백 (margin)', props: ['margin-top', 'margin-right', 'margin-bottom', 'margin-left'] },
-    { title: '안쪽 여백 (padding)', props: ['padding-top', 'padding-right', 'padding-bottom', 'padding-left'] },
-    { title: '크기', props: ['width', 'max-width', 'min-width', 'height'] },
-    { title: '배치', props: ['gap', 'justify-content', 'align-items'] },
-    { title: '기타', props: ['border-radius', 'background-color', 'opacity'] },
+    { key: 'typo',    title: '텍스트',  props: ['font-size', 'line-height', 'font-weight', 'color'], when: s => s.hasText },
+    { key: 'margin',  title: '바깥 여백',  props: ['margin-top', 'margin-bottom'] },
+    { key: 'padding', title: '안쪽 여백',  props: ['padding-top', 'padding-bottom'] },
+    { key: 'margin2', title: '바깥 여백 (좌·우)', props: ['margin-left', 'margin-right'], adv: true },
+    { key: 'padding2',title: '안쪽 여백 (좌·우)', props: ['padding-left', 'padding-right'], adv: true },
+    { key: 'layout',  title: '배치',    props: ['gap', 'justify-content', 'align-items'], when: s => s.isFlexOrGrid },
+    { key: 'size',    title: '크기',    props: ['width', 'height', 'max-width', 'min-width'], adv: true },
+    { key: 'look',    title: '모양',    props: ['background-color', 'border-radius', 'opacity'] },
 ];
 const LABEL = {
     'font-size': '글자 크기', 'line-height': '줄 간격', 'font-weight': '굵기', 'color': '글자색',
@@ -330,19 +571,131 @@ function renderInspector() {
     const box = $('#fields');
     box.innerHTML = '';
 
+    // 선택한 요소가 어떤 성격인지 — 이걸로 보여줄 항목을 고른다
+    const ctx = {
+        hasText: !!(selection.text && selection.text.trim()) || /^(H1|H2|H3|H4|H5|H6|P|SPAN|A|LI|BUTTON|EM|STRONG)$/i.test(selection.tag),
+        isFlexOrGrid: /flex|grid/.test(selection.computed?.display || ''),
+        isMedia: /^(IMG|VIDEO|IFRAME|SOURCE)$/i.test(selection.tag),
+    };
+
+    // 이미지·영상이면 링크(src)부터 — 제일 자주 바꾸는 값
+    if (ctx.isMedia) box.appendChild(mediaRow());
+
+    // 위/아래 이웃과의 간격 — 가장 자주 만지는 값이라 맨 앞에 둔다
+    const nb = neighborRow();
+    if (nb) box.appendChild(nb);
+
     // 박스 모델 시각화
     box.appendChild(boxModelWidget());
 
-    // 정렬은 버튼으로
-    box.appendChild(alignRow());
+    // 텍스트 요소일 때만 정렬 버튼
+    if (ctx.hasText) box.appendChild(alignRow());
 
     for (const g of GROUPS) {
+        if (g.when && !g.when(ctx)) continue;
+        if (g.adv && !inspShowAdvanced) continue;
         const wrap = document.createElement('div');
         wrap.className = 'group';
-        wrap.innerHTML = `<h3>${g.title}</h3>`;
+        const h = document.createElement('h3');
+        h.textContent = g.title;
+        h.addEventListener('click', () => wrap.classList.toggle('is-collapsed'));
+        wrap.appendChild(h);
         for (const prop of g.props) wrap.appendChild(fieldRow(prop));
         box.appendChild(wrap);
     }
+
+    const moreBtn = $('#inspMore');
+    if (moreBtn) {
+        moreBtn.textContent = inspShowAdvanced ? '고급 속성 접기' : '고급 속성 보기';
+        moreBtn.setAttribute('aria-expanded', inspShowAdvanced ? 'true' : 'false');
+    }
+}
+
+let inspShowAdvanced = false;
+$('#inspMore')?.addEventListener('click', () => {
+    inspShowAdvanced = !inspShowAdvanced;
+    renderInspector();
+});
+
+/**
+ * 위·아래 이웃과의 간격을 한 줄로 조절한다.
+ *
+ * 텍스트 사이 간격은 '위 요소의 margin-bottom + 아래 요소의 margin-top'이라,
+ * 예전엔 두 요소를 각각 선택해 서로 다른 항목을 찾아야 했다.
+ * 여기서는 지금 보이는 간격을 그대로 보여주고, 조절하면 '이 요소 쪽' 값만 바꾼다.
+ */
+function neighborRow() {
+    const nb = selection.neighbors;
+    if (!nb || (!nb.up && !nb.down)) return null;
+    const SPACE_TOKENS = selection.spaceTokens || [];
+
+    const g = el('div', 'group');
+    const h = el('h3', null, '위·아래 간격');
+    h.addEventListener('click', () => g.classList.toggle('is-collapsed'));
+    g.appendChild(h);
+
+    const mk = (side, info) => {
+        if (!info) return;
+        const row = el('div', 'field nb-row');
+        row.appendChild(el('label', null, side === 'up' ? '위 사이' : '아래 사이'));
+
+        // 간격도 디자인 시스템 안에서 고른다 (다른 여백 항목과 같은 규칙).
+        // 이 요소가 가진 몫(margin)만 바꾸고, 상대 요소는 건드리지 않는다.
+        const prop = side === 'up' ? 'margin-top' : 'margin-bottom';
+        const mine = side === 'up' ? info.myTop : info.myBottom;
+        const sel = el('select', 'tokenSel');
+        // 지금 값이 토큰과 맞는지 표시
+        const hit = SPACE_TOKENS.find(t => Math.abs(t.px - info.gap) <= 1);
+        sel.appendChild(Object.assign(el('option'), {
+            value: '', textContent: hit ? `지금: ${info.gap}px (${hit.label})` : `지금: ${info.gap}px (토큰 아님)`,
+        }));
+        for (const t of SPACE_TOKENS) {
+            sel.appendChild(Object.assign(el('option'), {
+                value: t.name, textContent: `${t.label} · ${t.px}px`,
+            }));
+        }
+        sel.addEventListener('change', () => {
+            const t = SPACE_TOKENS.find(x => x.name === sel.value);
+            if (!t) return;
+            // 목표 간격(t.px)이 되도록 내 margin 을 맞춘다
+            stageEdit(prop, Math.max(0, Math.round(mine + (t.px - info.gap))) + 'px');
+        });
+        row.appendChild(sel);
+
+        const who = el('span', 'nb-who', info.name);
+        who.title = '이 요소를 선택합니다';
+        who.addEventListener('click', () => toFrame('reselect', { path: info.path }));
+        row.appendChild(who);
+        g.appendChild(row);
+    };
+    mk('up', nb.up);
+    mk('down', nb.down);
+
+    const note = el('p', 'nb-note', '눈에 보이는 간격입니다. 디자인 시스템의 간격 단계에서 고릅니다.');
+    g.appendChild(note);
+    return g;
+}
+
+/** 이미지·영상 링크 편집 줄 (src 를 직접 고친다) */
+function mediaRow() {
+    const g = el('div', 'group');
+    g.innerHTML = '<h3>미디어</h3>';
+    const row = el('div', 'field');
+    const label = el('label', null, '링크(src)');
+    const inp = el('input');
+    inp.type = 'text';
+    inp.value = selection.attrs?.src || '';
+    inp.placeholder = 'media/…';
+    inp.addEventListener('change', () => {
+        const v = inp.value.trim();
+        pending.push({ kind: 'attr', path: selection.path, name: 'src', value: v });
+        toFrame('setAttr', { path: selection.path, name: 'src', value: v });
+        updateDirty();
+        toast('링크를 바꿨습니다 — 저장해야 반영됩니다', 'ok');
+    });
+    row.append(label, inp);
+    g.appendChild(row);
+    return g;
 }
 
 function currentValue(prop) {
@@ -411,6 +764,9 @@ async function loadInsTokens() {
         const colors = [
             ...d.roles.map(r => ({ label: r.label, name: r.name })),
             ...d.ramp.map(g => ({ label: '회색 ' + g.step, name: g.name })),
+            ...d.primary.map(g => ({ label: 'Primary ' + g.step, name: g.name })),
+            ...d.purpleRamp.map(g => ({ label: '퍼플 ' + g.step, name: g.name })),
+            ...d.tealRamp.map(g => ({ label: '틸 ' + g.step, name: g.name })),
             ...d.surfaces.map(s => ({ label: s.label, name: s.name })),
             ...d.primitives.map(p => ({ label: p.label, name: p.name })),
         ];
@@ -627,16 +983,46 @@ function updateDirty() {
     const n = pending.reduce((s, p) => s + (p.kind === 'inline' ? Object.keys(p.changes).length : 1), 0);
     $('#dirty').hidden = n === 0;
     $('#dirtyCount').textContent = n;
+    const dot = $('#crumbDot'); if (dot) dot.hidden = n === 0;   // 파일명 옆 '수정됨' 점
     $('#saveBtn').disabled = n === 0;
     $('#revertBtn').disabled = n === 0;
 }
 
 // ---------------------------------------------------------------- 저장 / 되돌리기
-$('#revertBtn').addEventListener('click', () => {
-    pending = [];
+/**
+ * 되돌리기 — Ctrl+Z 처럼 '마지막 한 걸음'만 취소한다.
+ * 예전엔 전부 비우고 새로고침해서, 한 글자 고친 걸 취소하려다 작업을 통째로 잃었다.
+ */
+function undoLast() {
+    if (!pending.length) return;
+    const last = pending[pending.length - 1];
+
+    // 인라인 편집은 한 요소에 여러 속성이 쌓이므로, 그 중 마지막 속성만 뺀다
+    if (last.kind === 'inline') {
+        const keys = Object.keys(last.changes);
+        const k = keys[keys.length - 1];
+        delete last.changes[k];
+        toFrame('clearPreview', { path: last.path, props: [k] });
+        if (!Object.keys(last.changes).length) pending.pop();
+    } else {
+        pending.pop();
+        // 삽입·인터랙션은 화면에서 되돌리기 어려우니 그 요소만 지우고 다시 그린다
+        if (last.kind === 'insert' || last.kind === 'motion') toFrame('undoInserts', {});
+    }
+
     updateDirty();
-    toFrame('clearPreview', {});
-    frame.src = frame.src;
+    applyPendingPreview();       // 남은 변경은 그대로 유지
+    toast(pending.length ? '한 단계 되돌림' : '모두 되돌림', 'ok');
+}
+$('#revertBtn').addEventListener('click', undoLast);
+
+// Ctrl/Cmd + Z 로도 되돌리기
+document.addEventListener('keydown', e => {
+    if (!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== 'z') return;
+    const t = e.target;
+    if (t && /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) return;   // 입력 중엔 기본 동작
+    e.preventDefault();
+    undoLast();
 });
 
 $('#saveBtn').addEventListener('click', async () => {
@@ -649,9 +1035,13 @@ $('#saveBtn').addEventListener('click', async () => {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 page: currentPage,
-                edits: pending.map(p => p.kind === 'css'
-                    ? { kind: 'css', selector: p.selector, prop: p.prop, value: p.value }
-                    : { kind: 'inline', path: p.path, changes: p.changes })
+                edits: pending.map(p => {
+                    if (p.kind === 'css') return { kind: 'css', selector: p.selector, prop: p.prop, value: p.value };
+                    if (p.kind === 'insert') return { kind: 'insert', path: p.path, html: p.html, position: p.position };
+                    if (p.kind === 'attr') return { kind: 'attr', path: p.path, name: p.name, value: p.value };
+                    if (p.kind === 'motion') return { kind: 'motion', path: p.path, className: p.className, css: p.css };
+                    return { kind: 'inline', path: p.path, changes: p.changes };
+                })
             })
         });
         const data = await res.json();
@@ -659,6 +1049,7 @@ $('#saveBtn').addEventListener('click', async () => {
         toast(`저장 완료 — ${data.applied.length}건`, 'ok');
         pending = [];
         updateDirty();
+        needsCenter = true;
         frame.src = frame.src;      // 저장된 실제 파일을 다시 읽어온다
     } catch (err) {
         toast('저장 실패: ' + err.message, 'err');
@@ -699,8 +1090,7 @@ function setAppMode(ds) {
     // 좌측 구역(브랜드·모드·파일)은 두 모드 공통으로 유지.
     document.querySelector('.bar-center').hidden = ds;
     document.querySelector('.bar-right').hidden = ds;
-    $('#compToggle').hidden = ds;
-    if (ds) closeLeftPanel();
+    leftPanel.hidden = ds;          // 디자인 시스템 모드에선 라이브러리 패널을 숨긴다
 
     document.querySelector('.layout').style.display = ds ? 'none' : '';
     document.getElementById('dsView').style.display = ds ? 'flex' : 'none';
@@ -713,18 +1103,279 @@ function setAppMode(ds) {
 
 // ---------------------------------------------------------------- 좌측 컴포넌트 패널
 const leftPanel = $('#leftPanel');
-function openLeftPanel() {
-    leftPanel.hidden = false;
-    $('#compToggle').classList.add('on');
-    $('#compToggle').setAttribute('aria-pressed', 'true');
+const TAB_TITLE = { components: '컴포넌트', media: '미디어', motion: '인터랙션' };
+let activeTab = 'components';
+
+function selectTab(name) {
+    // 같은 탭을 다시 누르면 접었다 폈다
+    if (name === activeTab && !leftPanel.classList.contains('is-closed')) {
+        leftPanel.classList.add('is-closed');
+        return;
+    }
+    activeTab = name;
+    leftPanel.classList.remove('is-closed');
+    document.querySelectorAll('.rail-btn').forEach(b => {
+        const on = b.dataset.tab === name;
+        b.classList.toggle('on', on);
+        b.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+    document.querySelectorAll('.lp-pane').forEach(p => { p.hidden = p.dataset.pane !== name; });
+    const t = $('#lpTitle'); if (t) t.textContent = TAB_TITLE[name] || name;
 }
-function closeLeftPanel() {
-    leftPanel.hidden = true;
-    $('#compToggle').classList.remove('on');
-    $('#compToggle').setAttribute('aria-pressed', 'false');
+document.querySelectorAll('.rail-btn').forEach(b =>
+    b.addEventListener('click', () => selectTab(b.dataset.tab)));
+
+// 컴포넌트 = vibra 에서 실제로 쓰는 구조. 텍스트 블록 + 레이아웃 패턴.
+const COMPONENT_GROUPS = [
+    {
+        label: 'TEXT', items: [
+            { key: 'sechead',   name: '섹션 헤더',     desc: '라벨 + 제목 2줄',      thumb: 'sechead' },
+            { key: 'lead',      name: '리드 문단',     desc: '번호 강조 본문',        thumb: 'lead' },
+            { key: 'titledesc', name: '제목 + 설명',   desc: '소제목 + 본문',        thumb: 'titledesc' },
+            { key: 'grouphead', name: '그룹 헤더',     desc: 'A · Key Features',     thumb: 'grouphead' },
+        ],
+    },
+    {
+        label: 'LAYOUT', items: [
+            { key: 'carousel',  name: '미디어 캐러셀', desc: '가로 스크롤 카드',      thumb: 'row' },
+            { key: 'cols3',     name: '3단 카드',      desc: '균등 3열 그리드',       thumb: 'cols3' },
+            { key: 'grid22',    name: '인터랙션 그리드', desc: '2×2 카드',           thumb: 'grid' },
+            { key: 'flow',      name: '가로 플로우',   desc: '단계 → 단계',          thumb: 'flow' },
+            { key: 'timeline',  name: '타임라인',      desc: '단계별 항목 나열',      thumb: 'timeline' },
+            { key: 'media',     name: '이미지 + 캡션', desc: '미디어와 설명',         thumb: 'media' },
+        ],
+    },
+];
+
+// 이름에 개수가 박힌 것(3단 카드·2×2 그리드)은 고정.
+// 개수가 유동적인 것만 드롭할 때 정한다.
+const COMPONENT_COUNT = { carousel: 3, flow: 3, timeline: 3 };
+const compCount = { ...COMPONENT_COUNT };
+
+// 각 컴포넌트가 실제로 넣는 HTML — vibra 의 기존 클래스를 그대로 쓴다.
+const COMPONENT_HTML = {
+    sechead:
+`<div class="vb-wrap">
+    <span class="vb-eyebrow reveal">00 — Label</span>
+    <h2 class="vb-title reveal">제목<br><span style="color:var(--vb-muted);font-weight:500;">부제목</span></h2>
+</div>`,
+    lead:
+`<p class="vb-body reveal">설명 문장을 여기에 씁니다. <span class="sky-lead__n">1.</span> <span class="sky-lead__k">첫 번째 강조</span>, <span class="sky-lead__n">2.</span> <span class="sky-lead__k">두 번째 강조</span> 할 수 있습니다.</p>`,
+    titledesc:
+`<div class="reveal">
+    <h3 class="vb-subtitle">소제목</h3>
+    <p class="vb-body">본문 설명을 여기에 씁니다.</p>
+</div>`,
+    grouphead:
+`<div class="vb-group__head vb-group__head--lead reveal">
+    <span class="vb-group__num">A</span>
+    <span class="vb-group__name">Group Name</span>
+</div>`,
+    // 캐러셀 — vibra 실제 구조: .vb-carousel-block(가운데 정렬) > .vb-carousel > __track
+    // 미디어는 '높이는 CSS · 폭은 이미지'라 빈 이미지면 찌그러진다 → 자리표시에 폭을 준다.
+    carousel: (n = 3) => {
+        // 화살표가 트랙을 id 로 찾으므로 겹치지 않는 이름을 만든다
+        const id = 'carousel-' + Math.random().toString(36).slice(2, 7);
+        return `<div class="vb-carousel-block reveal">
+    <div class="vb-group__head vb-group__head--lead" style="margin-top:0;">
+        <span class="vb-group__num">A</span>
+        <span class="vb-group__name">Key Features</span>
+    </div>
+    <div class="vb-carousel">
+        <div class="vb-carousel__track" id="${id}">
+${Array.from({ length: n }, (_, i) => `            <div class="vb-carousel__item">
+                <div class="vb-carousel__media ed-ph" style="width:min(560px,72vw)"><img src="" alt=""></div>
+                <p class="vb-carousel__caption"><span class="vb-carousel__num">${i + 1}.</span><strong>제목</strong><br>설명을 여기에 씁니다.</p>
+            </div>`).join('\n')}
+        </div>
+    </div>
+    <div class="vb-carousel-nav">
+        <button type="button" class="vb-carousel-nav__arrow" data-carousel-prev="${id}" aria-label="이전">‹</button>
+        <button type="button" class="vb-carousel-nav__arrow" data-carousel-next="${id}" aria-label="다음">›</button>
+    </div>
+</div>`;
+    },
+    // 3단 카드 — vibra 의 .sky-features (미디어 + 번호 캡션). 이름 그대로 3장 고정.
+    cols3:
+`<div class="sky-features">
+${Array.from({ length: 3 }, (_, i) => `    <div class="sky-feature reveal">
+        <div class="sky-feature__media ed-ph"><img src="" alt=""></div>
+        <p class="sky-feature__caption"><span class="sky-feature__num">${i + 1}.</span>항목 이름</p>
+    </div>`).join('\n')}
+</div>`,
+    // ig-card 의 이미지는 height:auto 라 비어 있으면 높이가 0 → 자리표시로 비율을 준다
+    grid22:
+`<div class="ig-grid">
+${Array.from({ length: 4 }, (_, i) => `    <div class="ig-card reveal">
+        <div class="ig-card__media ed-ph ed-ph--16x9"><img src="" alt=""></div>
+        <p class="ig-card__cap"><span class="ig-card__num">${i + 1}.</span>항목</p>
+    </div>`).join('\n')}
+</div>`,
+    // 가로 플로우 — 단계 사이에 화살표가 들어간다 (vibra .bg-flow)
+    flow: (n = 3) => {
+        const arrow = '<div class="bg-arrow"><svg viewBox="0 0 22 22" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 11h13M13 6l5 5-5 5"/></svg></div>';
+        const step = i => `    <div class="bg-step"><div class="bg-step__year">연도</div><div class="bg-step__label">단계 ${i + 1}</div></div>`;
+        const parts = [];
+        for (let i = 0; i < n; i++) { if (i) parts.push('    ' + arrow); parts.push(step(i)); }
+        return `<div class="bg-flow reveal">\n${parts.join('\n')}\n</div>`;
+    },
+    // 타임라인 — 한 단계(열) 안에 항목들이 쌓인다 (vibra .tl-col)
+    timeline: (n = 3) =>
+`<div class="tl-col reveal">
+    <div class="tl-col__head"><div class="tl-col__title">STEP</div></div>
+${Array.from({ length: n }, () => `    <div class="tl-item">
+        <div class="tl-item__name">항목 이름</div>
+        <div class="tl-item__desc">짧은 설명</div>
+    </div>`).join('\n')}
+</div>`,
+    media:
+`<div class="reveal">
+    <img src="" alt="" loading="lazy" style="width:100%;height:auto;display:block;border-radius:16px;border:1px solid var(--vb-line);">
+    <p class="vb-cap">이미지 설명</p>
+</div>`,
+};
+const PATTERN_THUMB = {
+    sechead:   '<rect x="46" y="12" width="26" height="4" rx="2" fill="#3B82F6" opacity=".8"/><rect x="30" y="24" width="80" height="8" rx="3" fill="currentColor" opacity=".55"/><rect x="44" y="37" width="52" height="6" rx="3" fill="currentColor" opacity=".3"/>',
+    lead:      '<rect x="20" y="16" width="8" height="5" rx="2" fill="#3B82F6"/><rect x="32" y="16" width="88" height="5" rx="2.5" fill="currentColor" opacity=".4"/><rect x="20" y="26" width="8" height="5" rx="2" fill="#3B82F6"/><rect x="32" y="26" width="76" height="5" rx="2.5" fill="currentColor" opacity=".4"/><rect x="20" y="36" width="8" height="5" rx="2" fill="#3B82F6"/><rect x="32" y="36" width="60" height="5" rx="2.5" fill="currentColor" opacity=".4"/>',
+    titledesc: '<rect x="24" y="15" width="54" height="7" rx="3" fill="currentColor" opacity=".55"/><rect x="24" y="28" width="92" height="4" rx="2" fill="currentColor" opacity=".28"/><rect x="24" y="36" width="72" height="4" rx="2" fill="currentColor" opacity=".28"/>',
+    grouphead: '<circle cx="28" cy="27" r="8" fill="#3B82F6" opacity=".75"/><rect x="44" y="23" width="60" height="7" rx="3" fill="currentColor" opacity=".5"/>',
+    row:       '<rect x="18" y="16" width="30" height="22" rx="4" fill="currentColor" opacity=".5"/><rect x="55" y="16" width="30" height="22" rx="4" fill="currentColor" opacity=".3"/><rect x="92" y="16" width="30" height="22" rx="4" fill="currentColor" opacity=".2"/>',
+    cols3:     '<rect x="16" y="14" width="32" height="26" rx="4" fill="currentColor" opacity=".45"/><rect x="54" y="14" width="32" height="26" rx="4" fill="currentColor" opacity=".45"/><rect x="92" y="14" width="32" height="26" rx="4" fill="currentColor" opacity=".45"/>',
+    grid:      '<rect x="40" y="10" width="26" height="15" rx="3" fill="currentColor" opacity=".45"/><rect x="74" y="10" width="26" height="15" rx="3" fill="currentColor" opacity=".3"/><rect x="40" y="29" width="26" height="15" rx="3" fill="currentColor" opacity=".3"/><rect x="74" y="29" width="26" height="15" rx="3" fill="currentColor" opacity=".2"/>',
+    flow:      '<rect x="24" y="18" width="20" height="18" rx="3" fill="currentColor" opacity=".45"/><path d="M48 27h9" stroke="currentColor" stroke-width="1.5" opacity=".5"/><rect x="60" y="18" width="20" height="18" rx="3" fill="currentColor" opacity=".3"/><path d="M84 27h9" stroke="currentColor" stroke-width="1.5" opacity=".5"/><rect x="96" y="18" width="20" height="18" rx="3" fill="#3B82F6" opacity=".6"/>',
+    timeline:  '<line x1="46" y1="8" x2="46" y2="46" stroke="currentColor" stroke-width="2" opacity=".4"/><circle cx="46" cy="14" r="4" fill="#3B82F6"/><rect x="60" y="18" width="40" height="18" rx="4" fill="currentColor" opacity=".3"/>',
+    media:     '<rect x="26" y="10" width="88" height="26" rx="4" fill="currentColor" opacity=".4"/><rect x="26" y="41" width="56" height="4" rx="2" fill="currentColor" opacity=".25"/>',
+
+    // 미디어 전용
+    mImage:    '<rect x="34" y="10" width="72" height="34" rx="4" fill="none" stroke="currentColor" stroke-width="1.6" opacity=".55"/><circle cx="49" cy="21" r="4" fill="currentColor" opacity=".5"/><path d="M38 40l16-14 12 10 8-6 12 10" fill="none" stroke="currentColor" stroke-width="1.6" opacity=".55"/>',
+    mVideo:    '<rect x="30" y="10" width="66" height="34" rx="4" fill="none" stroke="currentColor" stroke-width="1.6" opacity=".55"/><path d="M56 20l14 7-14 7z" fill="#3B82F6"/><rect x="100" y="16" width="10" height="22" rx="2" fill="currentColor" opacity=".25"/>',
+    mYoutube:  '<rect x="32" y="12" width="76" height="30" rx="7" fill="#3B82F6" opacity=".18"/><rect x="32" y="12" width="76" height="30" rx="7" fill="none" stroke="#3B82F6" stroke-width="1.5" opacity=".6"/><path d="M64 20l14 7-14 7z" fill="#3B82F6"/>',
+    mFigure:   '<rect x="34" y="8" width="72" height="26" rx="4" fill="none" stroke="currentColor" stroke-width="1.6" opacity=".55"/><path d="M38 30l14-11 10 8 7-5 11 8" fill="none" stroke="currentColor" stroke-width="1.5" opacity=".5"/><rect x="34" y="40" width="48" height="4" rx="2" fill="currentColor" opacity=".3"/>',
+
+    // 인터랙션 전용
+    xLift:     '<rect x="44" y="26" width="52" height="20" rx="4" fill="currentColor" opacity=".18"/><rect x="44" y="14" width="52" height="20" rx="4" fill="#3B82F6" opacity=".55"/><path d="M70 12V4M70 4l-4 4M70 4l4 4" stroke="#3B82F6" stroke-width="1.6" fill="none" stroke-linecap="round"/>',
+    xGrow:     '<rect x="52" y="18" width="36" height="18" rx="4" fill="currentColor" opacity=".2"/><rect x="44" y="12" width="52" height="30" rx="5" fill="none" stroke="#3B82F6" stroke-width="1.7" opacity=".8"/><path d="M100 8l6-4-1 6M40 46l-6 4 1-6" stroke="#3B82F6" stroke-width="1.4" fill="none" stroke-linecap="round"/>',
+    xPulse:    '<circle cx="70" cy="27" r="16" fill="none" stroke="#3B82F6" stroke-width="1.3" opacity=".35"/><circle cx="70" cy="27" r="10" fill="#3B82F6" opacity=".55"/><path d="M70 41v5M70 8v5M84 27h5M51 27h5" stroke="#3B82F6" stroke-width="1.4" stroke-linecap="round" opacity=".6"/>',
+    xFade:     '<rect x="46" y="30" width="48" height="14" rx="3" fill="#3B82F6" opacity=".55"/><rect x="46" y="18" width="48" height="9" rx="3" fill="currentColor" opacity=".28"/><rect x="46" y="9" width="48" height="6" rx="3" fill="currentColor" opacity=".12"/>',
+};
+// ── 미디어: 끌어다 놓으면 그 자리에 이미지·영상 자리를 만든다 (링크는 인스펙터에서) ──
+const MEDIA_ITEMS = [
+    { key: 'image',   name: '이미지',        desc: '단일 이미지',        thumb: 'mImage' },
+    { key: 'video',   name: '동영상',        desc: '자동재생 · 반복',     thumb: 'mVideo' },
+    { key: 'youtube', name: 'YouTube',       desc: '외부 영상 임베드',    thumb: 'mYoutube' },
+    { key: 'figure',  name: '이미지 + 캡션', desc: '설명이 붙는 미디어',  thumb: 'mFigure' },
+];
+// 링크가 비어 있어도 '자리'가 보이도록 감싼다 (빈 <img> 는 높이가 0 이라 화면에서 사라진다).
+// .ed-ph 는 링크를 채우면 저절로 티가 안 나는 얇은 점선 자리표시다.
+const MEDIA_HTML = {
+    image:
+`<div class="ed-ph ed-ph--16x9">
+    <img src="" alt="" loading="lazy" style="width:100%;height:100%;object-fit:cover;display:block;border-radius:16px;">
+</div>`,
+    video:
+`<div class="ed-ph ed-ph--16x9">
+    <video src="" autoplay muted loop playsinline style="width:100%;height:100%;object-fit:cover;display:block;border-radius:16px;"></video>
+</div>`,
+    youtube:
+`<div class="ed-ph ed-ph--16x9">
+    <iframe src="" title="video" allow="autoplay; fullscreen" allowfullscreen style="width:100%;height:100%;border:0;display:block;border-radius:16px;"></iframe>
+</div>`,
+    figure:
+`<div class="reveal">
+    <div class="ed-ph ed-ph--16x9">
+        <img src="" alt="" loading="lazy" style="width:100%;height:100%;object-fit:cover;display:block;border-radius:16px;">
+    </div>
+    <p class="vb-cap">이미지 설명</p>
+</div>`,
+};
+// 자리표시 스타일 — 삽입할 때 페이지에 한 번만 넣는다
+const MEDIA_PH_CSS =
+`.ed-ph{position:relative;width:100%;background:rgba(127,127,140,.08);border:1px dashed rgba(127,127,140,.45);border-radius:16px;overflow:hidden}
+.ed-ph--16x9{aspect-ratio:16/9}
+.ed-ph::after{content:'미디어 링크를 넣어주세요';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:13px;color:rgba(127,127,140,.9);pointer-events:none}
+.ed-ph:has(img[src]:not([src=""]))::after,.ed-ph:has(video[src]:not([src=""]))::after,.ed-ph:has(iframe[src]:not([src=""]))::after{display:none}
+.ed-ph:has(img[src]:not([src=""])),.ed-ph:has(video[src]:not([src=""])),.ed-ph:has(iframe[src]:not([src=""])){background:none;border:0}
+/* 링크가 비어 있는 동안은 이미지가 자리를 차지하지 않게 (0px 찌그러짐 방지) */
+.ed-ph > img[src=""],.ed-ph > video:not([src]),.ed-ph > img:not([src]){position:absolute;inset:0;width:100%;height:100%}
+`;
+
+// ── 인터랙션: 요소에 끌어다 놓으면 클래스 + CSS 규칙이 붙는다 ──
+const MOTION_ITEMS = [
+    { key: 'hover-lift',  name: '호버 시 떠오름', desc: '살짝 위로 + 그림자', thumb: 'xLift' },
+    { key: 'hover-grow',  name: '호버 시 커짐',   desc: '1.04배 확대',        thumb: 'xGrow' },
+    { key: 'click-pulse', name: '클릭 시 펄스',   desc: '눌렀다 튀어오름',    thumb: 'xPulse' },
+    { key: 'fade-up',     name: '스크롤 등장',    desc: '아래에서 떠오름',    thumb: 'xFade' },
+];
+// class 는 요소에 붙이고, css 는 페이지 <style> 에 한 번만 넣는다.
+const MOTION_DEFS = {
+    'hover-lift': {
+        className: 'ed-hover-lift',
+        css: `.ed-hover-lift{transition:transform .32s cubic-bezier(.2,.7,.3,1),box-shadow .32s ease}
+.ed-hover-lift:hover{transform:translateY(-8px);box-shadow:0 16px 34px rgba(0,0,0,.10)}
+@media (hover:none){.ed-hover-lift:hover{transform:none}}`,
+    },
+    'hover-grow': {
+        className: 'ed-hover-grow',
+        css: `.ed-hover-grow{transition:transform .3s cubic-bezier(.2,.7,.3,1)}
+.ed-hover-grow:hover{transform:scale(1.04)}
+@media (hover:none){.ed-hover-grow:hover{transform:none}}`,
+    },
+    'click-pulse': {
+        className: 'ed-click-pulse',
+        css: `.ed-click-pulse{transition:transform .18s ease}
+.ed-click-pulse:active{transform:scale(.96)}
+.ed-click-pulse:focus-visible{outline:2px solid var(--accent-color);outline-offset:3px}`,
+    },
+    'fade-up': {
+        className: 'reveal',
+        css: '',      // vibra 가 이미 .reveal 을 처리한다
+    },
+};
+
+function loadSimpleList(hostId, items, dragType) {
+    const host = $('#' + hostId);
+    if (!host) return;
+    host.innerHTML = '';
+    for (const it of items) {
+        const card = el('div', 'lp-card'); card.draggable = true;
+        card.innerHTML =
+            `<div class="lp-card__thumb"><svg viewBox="0 0 140 54" width="100%" height="54" aria-hidden="true">${PATTERN_THUMB[it.thumb] || ''}</svg></div>` +
+            `<div class="lp-card__name">${it.name}</div>` +
+            `<div class="lp-card__use">${it.desc}</div>`;
+        card.addEventListener('dragstart', ev => {
+            ev.dataTransfer.effectAllowed = 'copy';
+            ev.dataTransfer.setData(dragType, it.key);
+            ev.dataTransfer.setData('text/plain', it.key);
+        });
+        host.appendChild(card);
+    }
 }
-$('#compToggle').addEventListener('click', () => leftPanel.hidden ? openLeftPanel() : closeLeftPanel());
-$('#compClose').addEventListener('click', closeLeftPanel);
+
+function loadComponentPatterns() {
+    const host = $('#lpCards');
+    if (!host) return;
+    host.innerHTML = '';
+    for (const g of COMPONENT_GROUPS) {
+        host.appendChild(el('div', 'lp-group-sub', g.label));
+        for (const it of g.items) {
+            const card = el('div', 'lp-card'); card.draggable = true;
+            card.dataset.comp = it.key;
+            card.innerHTML =
+                `<div class="lp-card__thumb"><svg viewBox="0 0 140 54" width="100%" height="54" aria-hidden="true">${PATTERN_THUMB[it.thumb] || ''}</svg></div>` +
+                `<div class="lp-card__name">${it.name}</div>` +
+                `<div class="lp-card__use">${it.desc}</div>`;
+            card.addEventListener('dragstart', ev => {
+                ev.dataTransfer.effectAllowed = 'copy';
+                ev.dataTransfer.setData('text/x-hnkl-component', it.key);
+                ev.dataTransfer.setData('text/plain', it.key);
+            });
+            host.appendChild(card);
+        }
+    }
+}
+loadComponentPatterns();
+loadSimpleList('lpMedia', MEDIA_ITEMS, 'text/x-hnkl-media');
+loadSimpleList('lpMotion', MOTION_ITEMS, 'text/x-hnkl-motion');
 
 // ---------------------------------------------------------------- 디자인 시스템
 // ① 색 · 팔레트 — '색 자체'. 이름도 색 이름으로 부른다(용도 이름을 쓰면 역할과 겹쳐 헷갈림).
@@ -745,33 +1396,24 @@ function currentScale() {
 const round1 = n => Math.round(n * 10) / 10;
 const varName = name => Object.assign(el('span', 'ds-var'), { textContent: name });
 
-// 팔레트에서 쓸 '색 이름' (tokens.css 의 용도 이름 대신)
-const PALETTE_LABEL = {
-    '--surface': '흰색',
-    '--bg': '회색 50',        // 값(#F5F5F7)은 그대로 두고 램프 50 자리에 표시만 한다
-    '--blue': '블루',
-    '--purple': '퍼플',
-    '--teal': '틸',
-    '--dark-surface': '먹색',
-};
-// --panel 은 회색 100 과 같은 값을 가리키게 정리했으므로 팔레트에 따로 두지 않는다.
+// --panel 은 역할 토큰(gray-10 / dark gray-90)이라 팔레트에 따로 두지 않는다.
 const PALETTE_SKIP = new Set(['--panel']);
 
 let dsData = null;
 let dsEdits = {};
-let dsBaseHex = {}, dsDarkHex = {}, dsBasePx = {}, dsBaseLink = {};
+let dsBaseHex = {}, dsDarkHex = {}, dsBasePx = {}, dsBaseLink = {}, dsBaseDarkLink = {};
 let dsPalette = [];
 
-// 역할 목록: 2층 토큰만 (팔레트를 직접 쓰는 --panel 은 제외하고 아래 주석으로 알린다)
-const ROLE_SKIP = new Set(['--panel']);
+// 역할 목록: 2층 토큰 전부. --panel 도 이제 역할(라이트 gray-100 / 다크 dark-800)이라 포함한다.
+const ROLE_SKIP = new Set();
 
-// 팔레트를 3그룹으로 정리해 둔다 (표시용 — tokens.css 는 그대로)
-//   흰색 & 검정 / 회색 램프 50~900 / 포인트 · 서브
-let dsGroups = { whites: [], ramp: [], primitives: [] };
+// 팔레트 그룹 (표시용 — tokens.css 는 그대로)
+//   흰색 & 검정 / 회색 램프(단일) / Primary(10) / Secondary 퍼플·틸(각 5)
+let dsGroups = { whites: [], ramp: [], primary: [], purple: [], teal: [] };
 
 function buildDsBase(d) {
-    dsBaseHex = {}; dsDarkHex = {}; dsBasePx = {}; dsBaseLink = {}; dsPalette = [];
-    dsGroups = { whites: [], ramp: [], primitives: [] };
+    dsBaseHex = {}; dsDarkHex = {}; dsBasePx = {}; dsBaseLink = {}; dsBaseDarkLink = {}; dsPalette = [];
+    dsGroups = { whites: [], ramp: [], primary: [], purple: [], teal: [] };
     const add = (group, name, label, hex, darkHex) => {
         if (PALETTE_SKIP.has(name)) return;
         dsBaseHex[name] = hex;
@@ -781,33 +1423,50 @@ function buildDsBase(d) {
     };
 
     const byName = n => d.surfaces.find(s => s.name === n);
-    const surf = byName('--surface'), bg = byName('--bg');
 
-    // ① 흰색 & 검정 — 흰색만 토큰이 있다. 검정 자리는 회색 900 을 참고로 보여준다.
-    if (surf) add(dsGroups.whites, surf.name, PALETTE_LABEL[surf.name], surf.hex, surf.darkHex);
+    // ① 흰색 & 검정 — 1층 원시값(--white / --black)을 그대로 노출한다.
+    const whitePrim = d.primitives.find(p => p.name === '--white');
+    if (whitePrim) add(dsGroups.whites, whitePrim.name, whitePrim.label, whitePrim.hex, null);
+    const blackPrim = d.primitives.find(p => p.name === '--black');
+    if (blackPrim) add(dsGroups.whites, blackPrim.name, blackPrim.label, blackPrim.hex, null);
 
-    // ② 회색 램프 — #F5F5F7(--bg) 을 50 자리에 함께 (값·참조는 그대로)
-    if (bg) add(dsGroups.ramp, bg.name, PALETTE_LABEL[bg.name], bg.hex, bg.darkHex);
+    // ② 회색 램프 (단일 팔레트)
     for (const g of d.ramp) add(dsGroups.ramp, g.name, '회색 ' + g.step, g.hex, g.darkHex);
 
-    // ③ 포인트 · 서브
-    for (const p of d.primitives) add(dsGroups.primitives, p.name, PALETTE_LABEL[p.name] || p.label, p.hex, null);
+    // ③ 포인트(Primary) · 서브(Secondary 퍼플·틸)
+    for (const g of d.primary)    add(dsGroups.primary, g.name, 'Primary ' + g.step, g.hex, null);
+    for (const g of d.purpleRamp) add(dsGroups.purple,  g.name, '퍼플 ' + g.step, g.hex, null);
+    for (const g of d.tealRamp)   add(dsGroups.teal,    g.name, '틸 ' + g.step, g.hex, null);
 
-    // 팔레트에서 뺀 --panel 도 역할 해석에는 필요하므로 색만 등록해 둔다
     const panel = byName('--panel');
     if (panel) { dsBaseHex[panel.name] = panel.hex; if (panel.darkHex) dsDarkHex[panel.name] = panel.darkHex; }
 
-    for (const r of d.roles) if (!ROLE_SKIP.has(r.name) && r.linked) dsBaseLink[r.name] = r.linked;
+    for (const r of d.roles) {
+        if (r.darkHex) dsDarkHex[r.name] = r.darkHex;
+        if (ROLE_SKIP.has(r.name)) continue;
+        if (r.linked) dsBaseLink[r.name] = r.linked;
+        if (r.darkLinked) dsBaseDarkLink[r.name] = r.darkLinked;   // .dark-mode 에 있는 역할만
+    }
     for (const t of d.typo) dsBasePx[t.name] = t.basePx;
 }
 const effHex = n => (n in dsEdits && n in dsBaseHex) ? dsEdits[n] : dsBaseHex[n];
-const darkHexOf = n => dsDarkHex[n] || effHex(n);      // 다크값이 따로 없으면 같은 색
 const effLink = r => (r in dsEdits) ? dsEdits[r] : dsBaseLink[r];
 const effPx = n => (n in dsEdits && n in dsBasePx) ? +dsEdits[n] : dsBasePx[n];
 const roleHex = r => effHex(effLink(r));
-const roleDark = r => darkHexOf(effLink(r));
+
+// 역할의 다크 매핑은 라이트와 별개로 고른다. 편집 키는 '<역할>|dark'.
+const DK = '|dark';
+const darkKey = r => r + DK;
+const isDarkKey = k => k.endsWith(DK);
+const roleOfDark = k => k.slice(0, -DK.length);
+// 다크 오버라이드가 아직 없으면 라이트 링크를 따라간다(현재 CSS 동작과 동일).
+const darkBaseLink = r => (r in dsBaseDarkLink) ? dsBaseDarkLink[r] : dsBaseLink[r];
+const effDarkLink = r => (darkKey(r) in dsEdits) ? dsEdits[darkKey(r)] : darkBaseLink(r);
+const roleDark = r => effHex(effDarkLink(r));
+
 function isChanged(n) {
     if (!(n in dsEdits)) return false;
+    if (isDarkKey(n)) return dsEdits[n] !== darkBaseLink(roleOfDark(n));
     if (n in dsBaseHex) return dsEdits[n] !== dsBaseHex[n];
     if (n in dsBaseLink) return dsEdits[n] !== dsBaseLink[n];
     if (n in dsBasePx) return +dsEdits[n] !== dsBasePx[n];
@@ -857,7 +1516,7 @@ function dsSection(title, desc) {
     return s;
 }
 
-// ── 칩 카드 (크기 통일 · 색 면적 넓게) ──
+// ── 칩 카드 (원래 카드형: 색 면 + 이름 + 헥스) ──
 function chipCard(name, label) {
     const card = el('div', 'ds3-chip');
     card.dataset.cell = name;
@@ -878,73 +1537,65 @@ function chipRow(items) {
     return row;
 }
 
-// ① 색 · 팔레트
+// ① 팔레트
 function sectionPalette(d) {
-    const s = dsSection('색 · 팔레트', '색 자체입니다. 여기서는 색 이름으로만 부르고, 어디에 쓸지는 아래 "역할"에서 정합니다.');
+    const s = dsSection('팔레트');
 
     s.appendChild(el('h3', 'ds3-sub', '흰색 & 검정'));
-    const wRow = chipRow(dsGroups.whites);
-    // 검정은 아직 토큰이 없다 → 자리만 두고 가장 어두운 회색을 참고로 보여준다
-    const darkest = dsGroups.ramp.at(-1);
-    if (darkest) {
-        const ref = el('div', 'ds3-chip is-ref');
-        const face = el('div', 'ds3-chip-refface');
-        face.style.background = effHex(darkest.name);
-        const meta = el('div', 'ds3-chip-meta');
-        meta.append(el('div', 'ds3-chip-name', '검정 (없음)'),
-            el('div', 'ds3-chip-hex', darkest.label + ' 참고'));
-        ref.append(face, meta);
-        ref.title = '검정 토큰은 아직 만들지 않았습니다. 가장 어두운 ' + darkest.label + ' 을 참고로 보여줍니다.';
-        wRow.appendChild(ref);
-    }
-    s.appendChild(wRow);
+    s.appendChild(chipRow(dsGroups.whites));
 
-    s.appendChild(el('h3', 'ds3-sub', '회색 램프 — 밝은 것부터'));
+    s.appendChild(el('h3', 'ds3-sub', '회색'));
     s.appendChild(chipRow(dsGroups.ramp));
 
-    s.appendChild(el('h3', 'ds3-sub', '포인트 · 서브'));
-    s.appendChild(chipRow(dsGroups.primitives));
+    s.appendChild(el('h3', 'ds3-sub', 'Primary'));
+    s.appendChild(chipRow(dsGroups.primary));
+
+    s.appendChild(el('h3', 'ds3-sub', 'Secondary · 퍼플'));
+    s.appendChild(chipRow(dsGroups.purple));
+
+    s.appendChild(el('h3', 'ds3-sub', 'Secondary · 틸'));
+    s.appendChild(chipRow(dsGroups.teal));
     return s;
 }
 
-// ② 색 · 역할
+// ② 역할 — 역할마다 카드. 이름 아래 라이트·다크 버튼을 나란히. 버튼 = 스와치 + 색상 이름.
 function sectionRoles(d) {
-    const s = dsSection('색 · 역할',
-        '어디에 쓰는 색인지 정합니다. 팔레트에서 골라 연결하며, 직접 색을 넣을 수는 없습니다. 다크모드 값도 함께 보여줍니다.');
+    const s = dsSection('역할');
     const grid = el('div', 'ds3-roles');
     for (const r of d.roles) {
         if (ROLE_SKIP.has(r.name) || !dsBaseLink[r.name]) continue;
         const card = el('div', 'ds3-role'); card.dataset.role = r.name;
 
-        const head = el('div', 'ds3-role-head');
-        head.append(el('span', 'ds3-role-name', r.label), varName(r.name));
-        const chg = el('span', 'ds3-chg'); chg.dataset.chg = r.name; head.appendChild(chg);
+        const nameEl = el('div', 'ds3-role-name', r.label);
+        nameEl.appendChild(varName(r.name));
+        card.appendChild(nameEl);
 
-        const sel = el('select', 'ds3-select');
-        for (const o of dsPalette) {
-            const opt = el('option'); opt.value = o.name; opt.textContent = o.label;
-            sel.appendChild(opt);
-        }
-        sel.value = effLink(r.name);
-        sel.addEventListener('change', () => applyEdit(r.name, sel.value));
-
-        // 라이트 / 다크 두 칸
-        const modes = el('div', 'ds3-modes');
+        const modes = el('div', 'ds3-role-modes');
         for (const m of ['light', 'dark']) {
-            const box = el('div', 'ds3-mode ' + m);
-            box.append(
-                el('div', 'ds3-mode-label', m === 'light' ? '라이트' : '다크'),
-                dEl('div', 'ds3-mode-chip', m === 'light' ? 'rolechip' : 'rolechipdark', r.name),
-                dEl('div', 'ds3-mode-hex', m === 'light' ? 'rolehex' : 'rolehexdark', r.name),
-            );
-            if (r.contrast) box.appendChild(dEl('div', 'ds3-mode-contrast', m === 'light' ? 'contrast' : 'contrastdark', r.name));
-            modes.appendChild(box);
+            const isLight = m === 'light';
+            const key = isLight ? r.name : darkKey(r.name);
+            const col = el('div', 'ds3-mode-col');
+            col.appendChild(el('span', 'ds3-mode-cap', isLight ? '라이트' : '다크'));
+
+            const btn = el('div', 'ds3-mode-btn');
+            btn.appendChild(dEl('span', 'ds3-mode-swatch', isLight ? 'rolechip' : 'rolechipdark', r.name));
+            const sel = el('select', 'ds3-select');
+            for (const o of dsPalette) {
+                const opt = el('option'); opt.value = o.name; opt.textContent = o.label;
+                sel.appendChild(opt);
+            }
+            sel.value = isLight ? effLink(r.name) : effDarkLink(r.name);
+            sel.addEventListener('change', () => applyEdit(key, sel.value));
+            btn.appendChild(sel);
+            col.appendChild(btn);
+
+            const chg = el('span', 'ds3-chg'); chg.dataset.chg = key; col.appendChild(chg);
+            modes.appendChild(col);
         }
-        card.append(head, sel, modes);
+        card.appendChild(modes);
         grid.appendChild(card);
     }
     s.appendChild(grid);
-    s.appendChild(el('p', 'ds3-foot', '면 배경(--panel)은 역할을 거치지 않고 팔레트를 그대로 쓰고 있어 여기 없습니다.'));
     return s;
 }
 
@@ -953,7 +1604,7 @@ function sectionRoles(d) {
 const TYPO_GROUP_BREAK = new Set(['--fs-body']);
 
 function sectionTypo(d) {
-    const s = dsSection('타이포', '크기 숫자를 더블클릭하면 바꿀 수 있습니다.');
+    const s = dsSection('타이포');
 
     const table = el('div', 'ds3-typo');
     const head = el('div', 'ds3-typo-row is-head');
@@ -1032,23 +1683,11 @@ function refresh() {
     const SAMPLE = '다람쥐 헌 쳇바퀴';
     const q = s => document.querySelectorAll(s);
 
-    const lightBg = effHex(effLink('--bg-color'));
-    const darkBg = darkHexOf(effLink('--bg-color'));
-
     q('[data-chip]').forEach(i => { const h = effHex(i.dataset.chip); if (h) i.value = h.toLowerCase(); });
     q('[data-hex]').forEach(e => e.textContent = effHex(e.dataset.hex) || '');
 
     q('[data-rolechip]').forEach(e => e.style.background = roleHex(e.dataset.rolechip) || 'transparent');
     q('[data-rolechipdark]').forEach(e => e.style.background = roleDark(e.dataset.rolechipdark) || 'transparent');
-    q('[data-rolehex]').forEach(e => e.textContent = roleHex(e.dataset.rolehex) || '—');
-    q('[data-rolehexdark]').forEach(e => e.textContent = roleDark(e.dataset.rolehexdark) || '—');
-    const setC = (node, hex, bg) => {
-        const v = contrast(hex, bg);
-        node.textContent = '대비 ' + v + (v < 4.5 ? ' ⚠' : '');
-        node.classList.toggle('bad', v < 4.5);
-    };
-    q('[data-contrast]').forEach(n => setC(n, roleHex(n.dataset.contrast), lightBg));
-    q('[data-contrastdark]').forEach(n => setC(n, roleDark(n.dataset.contrastdark), darkBg));
 
     // 카테고리 이름을 '정의된 크기 그대로' 보여준다 (화면 배율 계산은 표시하지 않음)
     q('[data-sample]').forEach(e => {
@@ -1062,18 +1701,20 @@ function refresh() {
         box.innerHTML = `<b>${effPx(box.dataset.numbox)}</b>`;
     });
 
+    const labelOf = link => dsPalette.find(p => p.name === link)?.label || link;
     q('[data-chg]').forEach(b => {
         const n = b.dataset.chg;
         if (isChanged(n)) {
-            const orig = n in dsBaseHex ? dsBaseHex[n]
-                : n in dsBaseLink ? (dsPalette.find(p => p.name === dsBaseLink[n])?.label || dsBaseLink[n])
-                    : dsBasePx[n] + 'px';
+            const orig = isDarkKey(n) ? labelOf(darkBaseLink(roleOfDark(n)))
+                : n in dsBaseHex ? dsBaseHex[n]
+                    : n in dsBaseLink ? labelOf(dsBaseLink[n])
+                        : dsBasePx[n] + 'px';
             b.textContent = '바뀜 · 원래 ' + orig;
             b.hidden = false;
         } else { b.hidden = true; b.textContent = ''; }
     });
     q('[data-cell]').forEach(c => c.classList.toggle('is-changed', isChanged(c.dataset.cell)));
-    q('[data-role]').forEach(c => c.classList.toggle('is-changed', isChanged(c.dataset.role)));
+    q('[data-role]').forEach(c => c.classList.toggle('is-changed', isChanged(c.dataset.role) || isChanged(darkKey(c.dataset.role))));
     q('[data-typo]').forEach(c => c.classList.toggle('is-changed', isChanged(c.dataset.typo)));
 
     updateDsToolbar();
@@ -1081,14 +1722,20 @@ function refresh() {
 }
 
 function editAsDecl(name) {
+    if (isDarkKey(name)) return 'var(' + effDarkLink(roleOfDark(name)) + ')';
     if (name in dsBaseHex) return effHex(name);
     if (name in dsBaseLink) return 'var(' + effLink(name) + ')';
     if (name in dsBasePx) return `calc(${effPx(name)}px * var(--s))`;
     return null;
 }
 function pushTokenPreview() {
-    const decls = changedNames().map(n => `  ${n}: ${editAsDecl(n)};`).join('\n');
-    toFrame('tokenPreview', { css: decls ? `:root{\n${decls}\n}` : '' });
+    const names = changedNames();
+    const root = names.filter(n => !isDarkKey(n)).map(n => `  ${n}: ${editAsDecl(n)};`).join('\n');
+    const dark = names.filter(isDarkKey).map(n => `  ${roleOfDark(n)}: ${editAsDecl(n)};`).join('\n');
+    let css = '';
+    if (root) css += `:root{\n${root}\n}`;
+    if (dark) css += (css ? '\n' : '') + `.dark-mode{\n${dark}\n}`;
+    toFrame('tokenPreview', { css });
 }
 function updateDsToolbar() {
     const n = changedNames().length;
@@ -1103,12 +1750,15 @@ function dsSaveConfirm() {
     if (!names.length) return;
     const list = $('#dsConfirmList'); list.innerHTML = '';
     for (const n of names) {
-        const before = n in dsBaseHex ? dsBaseHex[n]
-            : n in dsBaseLink ? `var(${dsBaseLink[n]})`
-                : `calc(${dsBasePx[n]}px * var(--s))`;
+        const isDk = isDarkKey(n);
+        const label = isDk ? roleOfDark(n) + ' · 다크' : n;
+        const before = isDk ? `var(${darkBaseLink(roleOfDark(n))})`
+            : n in dsBaseHex ? dsBaseHex[n]
+                : n in dsBaseLink ? `var(${dsBaseLink[n]})`
+                    : `calc(${dsBasePx[n]}px * var(--s))`;
         const row = el('div', 'ds-confirm-row');
         row.append(
-            Object.assign(el('span', 'ds-confirm-name'), { textContent: n }),
+            Object.assign(el('span', 'ds-confirm-name'), { textContent: label }),
             Object.assign(el('span', 'ds-confirm-before'), { textContent: before }),
             Object.assign(el('span', 'ds-confirm-arrow'), { textContent: '→' }),
             Object.assign(el('span', 'ds-confirm-after'), { textContent: editAsDecl(n) }),
@@ -1118,13 +1768,16 @@ function dsSaveConfirm() {
     $('#dsConfirm').hidden = false;
 }
 async function dsSaveCommit() {
-    const edits = {};
-    for (const n of changedNames()) edits[n] = editAsDecl(n);
+    const edits = {}, darkEdits = {};
+    for (const n of changedNames()) {
+        if (isDarkKey(n)) darkEdits[roleOfDark(n)] = editAsDecl(n);
+        else edits[n] = editAsDecl(n);
+    }
     $('#dsConfirmOk').disabled = true;
     try {
         const res = await fetch('/__api/savetokens', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ edits }),
+            body: JSON.stringify({ edits, darkEdits }),
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || '저장 실패');
@@ -1148,13 +1801,13 @@ $('#dsShowVars')?.addEventListener('change', e => {
 // 칩 크기·색 면적·아래 텍스트 여백을 직접 만져볼 수 있는 작은 창.
 // CSS 변수만 바꾸므로 파일에는 아무 영향이 없다.
 const CHIP_VARS = [
-    { v: '--chip-w', label: '칩 너비', min: 60, max: 200, def: 104 },
-    { v: '--chip-h', label: '색 높이', min: 40, max: 180, def: 104 },
-    { v: '--chip-px', label: '글자 좌우 여백', min: 0, max: 24, def: 9 },
+    { v: '--chip-w', label: '칩 너비', min: 60, max: 200, def: 96 },
+    { v: '--chip-h', label: '색 높이', min: 40, max: 180, def: 96 },
+    { v: '--chip-px', label: '글자 좌우 여백', min: 0, max: 24, def: 10 },
     { v: '--chip-pt', label: '글자 위 여백', min: 0, max: 24, def: 8 },
-    { v: '--chip-pb', label: '글자 아래 여백', min: 0, max: 24, def: 9 },
-    { v: '--chip-gap', label: '이름 ↔ 코드 간격', min: 0, max: 16, def: 2 },
-    { v: '--chip-radius', label: '모서리', min: 0, max: 24, def: 12 },
+    { v: '--chip-pb', label: '글자 아래 여백', min: 0, max: 24, def: 8 },
+    { v: '--chip-gap', label: '이름 ↔ 코드 간격', min: 0, max: 16, def: 0 },
+    { v: '--chip-radius', label: '모서리', min: 0, max: 24, def: 10 },
 ];
 function buildChipTuner() {
     const host = $('#chipTunerRows');

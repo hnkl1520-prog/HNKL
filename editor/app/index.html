@@ -10,14 +10,19 @@
 <header class="bar">
     <!-- 좌: 브랜드 · 모드 스위처 · 파일 · 컴포넌트 토글 -->
     <div class="bar-zone bar-left">
-        <span class="brand">HNKL</span>
+        <img class="brand" src="/preview/assets/logo.svg" alt="HNKL" width="52" height="21">
         <div class="mode-switch" role="tablist" aria-label="작업 모드">
             <button id="editTab" class="mode-btn on" role="tab">편집</button>
             <button id="dsTab"   class="mode-btn"    role="tab">디자인 시스템</button>
         </div>
-        <select id="pageSelect" class="select" title="편집할 페이지"></select>
-        <button id="compToggle" class="btn ghost tiny" aria-pressed="false"
-                title="컴포넌트 패널 열기/닫기">＋ 컴포넌트</button>
+        <!-- 현재 위치를 경로로 보여준다. 파일명을 누르면 목록에서 고를 수 있다. -->
+        <nav class="crumb" id="crumb" aria-label="현재 파일 경로">
+            <button class="crumb__file" id="crumbFile" type="button" title="다른 파일 열기">
+                <span id="crumbPath"></span>
+                <span class="crumb__dot" id="crumbDot" hidden title="저장하지 않은 변경">●</span>
+            </button>
+            <select id="pageSelect" class="crumb__select" title="편집할 페이지" aria-label="편집할 페이지"></select>
+        </nav>
     </div>
 
     <!-- 중앙: 뷰포트(브레이크포인트) 제어 + 활성 해상도 -->
@@ -33,34 +38,56 @@
 
     <!-- 우: 보기 배율 · 편집 도구 · 상태 · 액션 -->
     <div class="bar-zone bar-right">
-        <label class="zoomWrap" title="미리보기 축소 배율 (실제 값에는 영향 없음)">
-            <input type="range" id="zoom" min="20" max="100" value="60"> <span id="zoomVal">60%</span>
-        </label>
-        <span class="sep"></span>
-        <button id="pickBtn" class="btn">요소 고르기</button>
-        <button id="reloadBtn" class="btn ghost">새로고침</button>
         <span class="sep"></span>
         <span id="dirty" class="dirty" hidden>변경 <b id="dirtyCount">0</b></span>
-        <button id="revertBtn" class="btn ghost" disabled>되돌리기</button>
+        <button id="revertBtn" class="btn ghost" disabled title="한 단계 되돌리기 (Ctrl+Z)">되돌리기</button>
         <button id="saveBtn" class="btn primary" disabled>저장</button>
     </div>
 </header>
 
 <main class="layout">
-    <!-- 좌측 컴포넌트 라이브러리 (기본 닫힘, 상단 '＋ 컴포넌트'로 토글) -->
-    <aside class="left-panel" id="leftPanel" hidden aria-label="컴포넌트 라이브러리">
-        <div class="lp-head">
-            <span>컴포넌트</span>
-            <button class="lp-close" id="compClose" title="닫기" aria-label="닫기">✕</button>
-        </div>
-        <p class="lp-note">캔버스에 끌어다 넣는 블록 라이브러리입니다.<br>(삽입 동작 연결은 준비 중)</p>
-        <div class="lp-list">
-            <div class="lp-item" draggable="true">제목 (H2)</div>
-            <div class="lp-item" draggable="true">본문 문단</div>
-            <div class="lp-item" draggable="true">이미지</div>
-            <div class="lp-item" draggable="true">버튼</div>
-            <div class="lp-item" draggable="true">카드</div>
-            <div class="lp-item" draggable="true">구분선</div>
+    <!-- 좌측 패널 (액티비티 바 + 내용이 하나로 붙은 플로팅 창) -->
+    <aside class="left-panel" id="leftPanel" aria-label="라이브러리">
+        <!-- 최좌측 얇은 탭 바 -->
+        <nav class="lp-rail" role="tablist" aria-label="라이브러리 탭">
+            <!-- 아이콘: Google Material Symbols (Apache 2.0) · weight 200 -->
+            <button class="rail-btn on" data-tab="components" role="tab" aria-selected="true" title="컴포넌트">
+                <!-- material: widgets (wght 200) -->
+                <svg class="ico" viewBox="0 -960 960 960" aria-hidden="true">
+                    <path d="M652.15-481.54 483.08-650.62l169.07-169.07 169.08 169.07-169.08 169.08Zm-467.54-53.84v-240.01h240.01v240.01H184.61Zm350.77 350.77v-240.01h240.01v240.01H535.38Zm-350.77 0v-240.01h240.01v240.01H184.61Zm40.01-390.77h160v-160h-160v160Zm428.53 38.76 113-113-113-113-113 113 113 113Zm-77.77 312h160v-160h-160v160Zm-350.76 0h160v-160h-160v160Zm160-350.76Zm155.53-74.24Zm-155.53 265Zm190.76 0Z"/>
+                </svg>
+            </button>
+            <button class="rail-btn" data-tab="media" role="tab" aria-selected="false" title="미디어">
+                <!-- material: add_photo_alternate (wght 200) -->
+                <svg class="ico" viewBox="0 -960 960 960" aria-hidden="true">
+                    <path d="M480-480ZM160-160v-640h344.62v40H200v560h560v-304.62h40V-160H160Zm110.77-144.62h418.46L560-476.92 440-325.38l-80-96.16-89.23 116.92ZM680-600v-80h-80v-40h80v-80h40v80h80v40h-80v80h-40Z"/>
+                </svg>
+            </button>
+            <button class="rail-btn" data-tab="motion" role="tab" aria-selected="false" title="인터랙션">
+                <!-- material: gesture (wght 200) -->
+                <svg class="ico" viewBox="0 -960 960 960" aria-hidden="true">
+                    <path d="M550.15-160q-46.3 0-75.23-29.31Q446-218.62 446-265.23q0-68.31 59.19-121.35 59.19-53.04 145.81-62.65-4.54-51.39-22.23-75.27-17.69-23.88-50.62-23.88-34.61 0-71.15 26.15-36.54 26.15-89.15 90.08-58 71.46-93.73 97.92-35.74 26.46-72.35 26.46-41 0-66.39-29.15-25.38-29.16-25.38-77 0-44.77 20.04-94.35 20.04-49.58 63.73-110.88 25.92-36 36.85-58.62 10.92-22.61 10.92-38.23 0-12.38-6.35-18.19-6.34-5.81-18.27-5.81-13.84 0-29.61 10.19t-35 31.58L160-740q27.38-29.77 53.85-44.88Q240.31-800 266.92-800q36.77 0 60.7 23.54 23.92 23.54 23.92 60 0 26.69-13.85 57.84-13.84 31.16-48.84 80.93-35.7 51.69-52.27 90.77Q220-447.85 220-415.31q0 21.62 8.96 34.58 8.96 12.96 22.81 12.96 12.31 0 24.42-6.65 12.12-6.66 29.81-23.04 13-11.69 28.31-29.5 15.31-17.81 36.69-42.42 63.77-76.54 110.15-107.77 46.39-31.23 96.23-31.23 58.54 0 93.85 41.92 35.31 41.92 39.77 116.08h89.77v60H711q-6.46 105.07-50.42 167.73Q616.62-160 550.15-160Zm.47-60q40.46 0 67.84-46.12 27.39-46.11 32.31-122.65-59.08 6.39-101.92 42.73Q506-309.69 506-266.92 506-246 517.85-233q11.84 13 32.77 13Z"/>
+                </svg>
+            </button>
+        </nav>
+
+        <!-- 탭 내용 (닫히면 폭 0으로 접힘) -->
+        <div class="lp-body">
+            <div class="lp-head">
+                <span class="lp-title" id="lpTitle">컴포넌트</span>
+                <span class="lp-hint">끌어다 놓기</span>
+            </div>
+            <div class="lp-panes">
+                <div class="lp-pane" data-pane="components">
+                    <div class="lp-cards" id="lpCards"></div>
+                </div>
+                <div class="lp-pane" data-pane="media" hidden>
+                    <div class="lp-cards" id="lpMedia"></div>
+                </div>
+                <div class="lp-pane" data-pane="motion" hidden>
+                    <div class="lp-cards" id="lpMotion"></div>
+                </div>
+            </div>
         </div>
     </aside>
 
@@ -69,12 +96,61 @@
             <iframe id="frame" title="미리보기"></iframe>
         </div>
         <div id="stageOverlay" class="stageOverlay"></div>
+
+        <!-- 캔버스 도구 (커서 상태) — 손이 캔버스를 떠나지 않게 여기에 둔다 -->
+        <div class="canvas-tools" role="group" aria-label="캔버스 도구">
+            <button id="panBtn" class="ct-tool" title="화면 이동 (H)" aria-pressed="false">
+                <!-- material: drag_pan (wght 200) -->
+                <svg class="ico" viewBox="0 -960 960 960" aria-hidden="true">
+                    <path d="M480-107.69 337.69-250l28.54-28.54L460-184.77V-460H185l93.77 93.54L250-337.69 107.69-480l142.08-142.08 28.54 28.54L184.77-500H460v-275.23l-93.77 93.77L337.69-710 480-852.31 622.31-710l-28.54 28.54L500-775.23V-500h275l-93.77-93.54L710-622.31 852.31-480 710-337.69l-28.54-28.54L775.23-460H500v275l93.54-93.77L622.31-250 480-107.69Z"/>
+                </svg>
+            </button>
+            <button id="pickBtn" class="ct-tool on" title="선택 도구 (V)" aria-pressed="true">
+                <!-- material: left_click (wght 200) -->
+                <svg class="ico" viewBox="0 -960 960 960" aria-hidden="true">
+                    <path d="M456.46-281.54q-75.23-9.61-125.84-65.54Q280-403 280-480q0-83.08 58.46-141.54Q396.92-680 480-680q77 0 132.92 50.23 55.93 50.23 65.54 125.46L635.23-517q-13-54-55.61-88.5Q537-640 480-640q-66 0-113 47t-47 113q0 57 34.88 100 34.89 43 88.12 56l13.46 42.46Zm333.77 153.08L598.46-321l-36.92 111.77L480-480l270.77 81.54L639-361.54l192.54 191.77-41.31 41.31Z"/>
+                </svg>
+            </button>
+        </div>
+
         <div class="stageInfo" id="stageInfo"></div>
     </section>
 
     <aside class="panel" id="panel">
+        <div class="panel-head">인스펙터</div>
+
+        <!-- 요소를 고르지 않아도 쓰는 페이지 전체 설정 -->
+        <details class="sp-block" id="spBlock">
+            <summary>섹션 여백</summary>
+            <div class="sp-pane">
+                <label class="sp-row sp-slider">
+                    <span>전체 섹션 여백 <em id="gapApplyCount"></em></span>
+                    <input type="range" id="gapRange" min="0" max="320" step="4" value="144">
+                    <output id="gapRangeVal">144px</output>
+                </label>
+
+                <!-- 토큰을 따르지 않는 섹션 -->
+                <div class="sp-exc" id="gapExc" hidden>
+                    <div class="sp-exc__head">따로 지정된 섹션 <b id="gapExcCount">0</b></div>
+                    <div class="sp-exc__list" id="gapExcList"></div>
+                </div>
+                <label class="sp-row">
+                    <span class="sp-check">
+                        <input type="checkbox" id="gapShow"> 미리보기에서 여백 표시하고 끌어서 조절
+                    </span>
+                </label>
+                <div class="sp-row" id="gapScopeRow" hidden>
+                    <span>끌 때 적용 범위</span>
+                    <div class="seg" id="gapScope">
+                        <button data-scope="all" class="on">전체</button>
+                        <button data-scope="one">이 경계</button>
+                    </div>
+                </div>
+            </div>
+        </details>
+
         <div class="empty" id="emptyState">
-            <p><b>요소 고르기</b>를 누른 뒤<br>미리보기에서 고칠 부분을 클릭하세요.</p>
+            <p><b>요소 선택</b>을 누른 뒤<br>미리보기에서 고칠 부분을 클릭하세요.</p>
             <p class="hint">값을 바꾸면 미리보기에 바로 보이고,<br><b>파일에 저장</b>을 눌러야 실제 코드가 바뀝니다.</p>
         </div>
 
@@ -95,6 +171,8 @@
             <p class="modeHelp" id="modeHelp"></p>
 
             <div id="fields"></div>
+
+            <button class="insp-more" id="inspMore" type="button" aria-expanded="false">고급 속성 보기</button>
         </div>
     </aside>
 </main>
