@@ -27,6 +27,7 @@ window.addEventListener('message', e => {
     if (msg.type === 'ready') {
         pageClassSet = new Set(msg.payload?.classes || []);
         pageVarSet = new Set(msg.payload?.vars || []);
+        mainPath = msg.payload?.mainPath || null;
         toFrame('setPicking', pickOn);
         toFrame('setMoving', tool === 'move');
         applyPendingPreview();
@@ -42,6 +43,18 @@ window.addEventListener('message', e => {
     }
     else if (msg.type === 'grabbed') {
         onGrabbed(msg.payload);
+    }
+    else if (msg.type === 'movedMany') {
+        // 끌어서 여러 칸 옮긴 경우 — 파일에는 '한 칸 이동'을 그만큼 쌓는다.
+        // 서버가 순서대로 적용하므로 매번 경로가 한 칸씩 따라 움직인다.
+        const { from, steps, dir } = msg.payload;
+        const mainPath = framePathOfMain();
+        for (let i = 0; i < steps; i++) {
+            const idx = dir === 'down' ? from + i : from - i;
+            pending.push({ kind: 'move', path: [...mainPath, idx], dir });
+        }
+        updateDirty();
+        toast(`${steps}칸 옮겼습니다 — 저장해야 파일에 반영됩니다`, 'ok');
     }
     else if (msg.type === 'moved') {
         // 미리보기에서는 이미 옮겨졌다. 파일에 반영할 내용만 쌓아 둔다.
@@ -118,9 +131,15 @@ function onComponentDropped({ key, kind, path, position }) {
         if (!it) return;
         const missing = missingClasses(it);
 
-        // 이 페이지에 없는 클래스가 있으면, 등록할 때 같이 떠 둔 스타일을 함께 넣는다.
-        // (이미 있는 페이지에는 넣지 않는다 — 같은 규칙을 두 벌 만들면 나중 것이 이기며 헷갈린다)
-        if (missing.length && it.css) {
+        if (it.block) {
+            // 마스터 블록 — 스타일은 이미 파일로 있으니, 페이지가 그 파일을 부르게만 한다
+            if (it.block.css) pending.push({ kind: 'link', assetKind: 'css', url: it.block.css });
+            if (it.block.js) pending.push({ kind: 'link', assetKind: 'js', url: it.block.js });
+            // 미리보기에도 같은 파일을 걸어 바로 모양이 보이게 한다
+            toFrame('linkAsset', { css: it.block.css, js: it.block.js });
+        } else if (missing.length && it.css) {
+            // 일반 컴포넌트 — 이 페이지에 없는 규칙만 그 페이지에 복사한다.
+            // (이미 있는 페이지에는 넣지 않는다 — 같은 규칙을 두 벌 만들면 나중 것이 이기며 헷갈린다)
             pending.push({ kind: 'motion', path, className: '', css: it.css });
             toFrame('motionPreview', { path, className: '', css: it.css });
         }
@@ -129,7 +148,9 @@ function onComponentDropped({ key, kind, path, position }) {
         updateDirty();
 
         const missingVars = (it.vars || []).filter(v => !pageVarSet.has(v));
-        if (missing.length && it.css) {
+        if (it.block) {
+            toast(`${it.name} — blocks/${it.block.slug} 를 이 페이지에 연결했습니다`, 'ok');
+        } else if (missing.length && it.css) {
             toast(missingVars.length
                 ? `${it.name} — 스타일도 함께 넣었습니다. 다만 토큰 ${missingVars.length}개가 이 페이지에 없습니다 (${missingVars.slice(0, 3).join(', ')}…)`
                 : `${it.name} — 이 페이지에 없던 스타일도 함께 넣었습니다`,
@@ -386,6 +407,12 @@ document.addEventListener('keydown', e => {
     if (e.key === 'h' || e.key === 'H') setTool('pan');
     if (e.key === 'm' || e.key === 'M') setTool('move');
     if (e.key === 'Delete' || e.key === 'Backspace') { if (selection) { e.preventDefault(); blockAction('remove'); } }
+});
+$('#openRawBtn')?.addEventListener('click', () => {
+    if (!currentPage) return;
+    // 저장 전 변경은 파일에 없으니, 실제 모습과 다를 수 있다는 것만 알려 준다
+    if (pending.length) toast('저장하지 않은 변경은 빠진 채로 열립니다', 'warn');
+    window.open('/raw/' + currentPage, '_blank', 'noopener');
 });
 $('#parentBtn')?.addEventListener('click', () => toFrame('selectParent'));
 $('#dupBtn')?.addEventListener('click', () => blockAction('duplicate'));
@@ -1042,6 +1069,17 @@ function applyPendingPreview() {
     for (const p of pending.filter(p => p.kind === 'inline')) {
         toFrame('preview', { path: p.path, changes: p.changes });
     }
+    // 구조를 바꾼 편집(넣기·옮기기·지우기·복제·파일 연결)은 순서대로 다시 튼다
+    const steps = pending.filter(p => ['insert', 'move', 'remove', 'duplicate', 'link'].includes(p.kind));
+    if (steps.length) toFrame('replay', { steps });
+}
+
+/** 미리보기를 처음부터 다시 그린 뒤, 저장 대기 중인 편집을 재생한다 */
+function reloadPreview() {
+    const f = $('#frame');
+    if (!f) return;
+    needsCenter = false;          // 보던 위치를 유지한다
+    f.src = f.src;                // ready 가 다시 오고 applyPendingPreview 가 불린다
 }
 
 function setMode(m) {
@@ -1054,6 +1092,10 @@ $('#modeSeg').addEventListener('click', e => {
 });
 
 function updateDirty() {
+    // 편집이 늘었다면 되돌린 갈래는 더 이상 이어붙일 수 없다
+    if (pending.length > lastPendingLen) redoStack = [];
+    lastPendingLen = pending.length;
+    const rb = $('#redoBtn'); if (rb) rb.disabled = !redoStack.length;
     const n = pending.reduce((s, p) => s + (p.kind === 'inline' ? Object.keys(p.changes).length : 1), 0);
     $('#dirty').hidden = n === 0;
     $('#dirtyCount').textContent = n;
@@ -1067,6 +1109,24 @@ function updateDirty() {
  * 되돌리기 — Ctrl+Z 처럼 '마지막 한 걸음'만 취소한다.
  * 예전엔 전부 비우고 새로고침해서, 한 글자 고친 걸 취소하려다 작업을 통째로 잃었다.
  */
+// 되돌린 편집을 쌓아 두는 곳 — 다시실행이 여기서 꺼내 쓴다.
+// 새로 편집하면 갈래가 갈리므로 비운다 (흔한 되돌리기 규칙).
+let redoStack = [];
+let lastPendingLen = 0;
+
+function updateHistoryButtons() {
+    const r = $('#redoBtn'); if (r) r.disabled = !redoStack.length;
+}
+
+function redoLast() {
+    if (!redoStack.length) return;
+    pending.push(redoStack.pop());
+    updateDirty();
+    updateHistoryButtons();
+    reloadPreview();              // 화면을 새로 그리고 전부 재생
+    toast('다시 실행했습니다', 'ok');
+}
+
 function undoLast() {
     if (!pending.length) return;
     const last = pending[pending.length - 1];
@@ -1078,21 +1138,27 @@ function undoLast() {
         delete last.changes[k];
         toFrame('clearPreview', { path: last.path, props: [k] });
         if (!Object.keys(last.changes).length) pending.pop();
+        redoStack.push({ ...last, changes: { ...last.changes } });
     } else {
-        pending.pop();
-        // 삽입·인터랙션은 화면에서 되돌리기 어려우니 그 요소만 지우고 다시 그린다
-        if (last.kind === 'insert' || last.kind === 'motion') toFrame('undoInserts', {});
-        // 섹션 이동은 화면에서도 제자리로 돌려놓는다
-        if (last.kind === 'move') toFrame('undoMove', {});
-        // 지우기·복제도 화면에서 제자리로 돌려놓는다
-        if (last.kind === 'remove' || last.kind === 'duplicate') toFrame('undoBlock', {});
+        redoStack.push(pending.pop());
+        // 구조를 바꾼 편집은 거꾸로 되짚기보다 화면을 새로 그리고 남은 것만 재생하는 편이 정확하다
+        if (['insert', 'motion', 'move', 'remove', 'duplicate', 'link'].includes(last.kind)) {
+            updateDirty();
+            updateHistoryButtons();
+            reloadPreview();
+            toast(pending.length ? '한 단계 되돌림' : '모두 되돌림', 'ok');
+            return;
+        }
     }
 
     updateDirty();
+    updateHistoryButtons();
     applyPendingPreview();       // 남은 변경은 그대로 유지
     toast(pending.length ? '한 단계 되돌림' : '모두 되돌림', 'ok');
 }
 $('#revertBtn').addEventListener('click', undoLast);
+$('#redoBtn')?.addEventListener('click', redoLast);
+$('#reloadBtn')?.addEventListener('click', () => { reloadPreview(); toast('미리보기를 새로 그렸습니다', 'ok'); });
 
 // Ctrl/Cmd + Z 로도 되돌리기
 document.addEventListener('keydown', e => {
@@ -1100,12 +1166,12 @@ document.addEventListener('keydown', e => {
     const t = e.target;
     if (t && /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) return;   // 입력 중엔 기본 동작
     e.preventDefault();
-    undoLast();
+    if (e.shiftKey) redoLast(); else undoLast();   // Shift 를 같이 누르면 다시 실행
 });
 
 // Ctrl/Cmd + D 로 복제
 document.addEventListener('keydown', e => {
-    if (!(e.metaKey || e.ctrlKey) || e.key !== 'd') return;
+    if (!(e.metaKey || e.ctrlKey) || e.key !== 'd') return;   // Ctrl+D 복제
     const t = e.target;
     if (t && /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) return;
     e.preventDefault();
@@ -1126,6 +1192,7 @@ $('#saveBtn').addEventListener('click', async () => {
                     if (p.kind === 'css') return { kind: 'css', selector: p.selector, prop: p.prop, value: p.value };
                     if (p.kind === 'insert') return { kind: 'insert', path: p.path, html: p.html, position: p.position };
                     if (p.kind === 'move') return { kind: 'move', path: p.path, dir: p.dir };
+                    if (p.kind === 'link') return { kind: 'link', assetKind: p.assetKind, url: p.url };
                     if (p.kind === 'remove') return { kind: 'remove', path: p.path };
                     if (p.kind === 'duplicate') return { kind: 'duplicate', path: p.path };
                     if (p.kind === 'attr') return { kind: 'attr', path: p.path, name: p.name, value: p.value };
@@ -1158,12 +1225,30 @@ async function onGrabbed(p) {
     const name = prompt('컴포넌트 이름 (같은 이름이면 덮어씁니다)', guess);
     if (name === null) return;
     if (!name.trim()) { toast('이름이 필요합니다', 'warn'); return; }
+
+    // 마스터로 두면 스타일이 blocks/ 에 파일로 나가고, 페이지에는 링크만 걸린다.
+    // 여러 페이지에서 같은 블록을 쓸 때 고칠 곳이 한 군데로 모인다.
+    const master = confirm(
+        `"${name.trim()}" 을(를) 마스터 블록으로 둘까요?\n\n` +
+        `[확인] blocks/ 에 파일로 저장 — 어느 페이지에 넣어도 같은 파일을 씁니다.\n` +
+        `          나중에 고치면 넣어 둔 곳 전부에 반영됩니다.\n\n` +
+        `[취소] 그냥 컴포넌트 — 넣을 때마다 그 페이지에 스타일이 복사됩니다.`
+    );
+    let slug = '', js = '';
+    if (master) {
+        slug = (prompt('블록 파일 이름 (영문 소문자·숫자·하이픈)',
+            name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'block') || '').trim();
+        if (!slug) return;
+        js = (prompt(
+            '이 블록에 필요한 JS 가 있으면 붙여 넣으세요.\n' +
+            '(스크롤 인터랙션·자동 넘김 같은 동작. 없으면 비워 두세요)', '') || '').trim();
+    }
     try {
         const res = await fetch('/__api/components', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 name: name.trim(), html: p.html, sketch: p.sketch, needs: p.needs,
-                css: p.css, vars: p.vars,
+                css: p.css, vars: p.vars, master, slug, js,
                 note: p.text ? `"${p.text}"` : '', from: currentPage,
             }),
         });
@@ -1172,8 +1257,11 @@ async function onGrabbed(p) {
         savedComps = out.items || [];
         loadComponentPatterns();
         selectTab('components');
-        const css = p.cssCount ? ` · 스타일 ${p.cssCount}줄 포함` : '';
-        toast((out.replaced ? `"${out.saved}" 을(를) 덮어썼습니다` : `"${out.saved}" 등록 완료`) + css, 'ok');
+        const saved = out.items.find(c => c.name === name.trim());
+        const where = saved?.block
+            ? ` · blocks/${saved.block.slug}.css${saved.block.js ? ' + .js' : ''} 로 저장`
+            : (p.cssCount ? ` · 스타일 ${p.cssCount}줄 포함` : '');
+        toast((out.replaced ? `"${out.saved}" 을(를) 덮어썼습니다` : `"${out.saved}" 등록 완료`) + where, 'ok');
     } catch (e) { toast('등록 실패: ' + e.message, 'warn'); }
 }
 
@@ -1502,6 +1590,10 @@ function loadSimpleList(hostId, items, dragType) {
 let savedComps = [];
 let pageClassSet = new Set();   // 지금 열린 페이지의 CSS 가 아는 클래스
 let pageVarSet = new Set();     // 지금 열린 페이지가 정의한 CSS 변수(디자인 토큰)
+let mainPath = null;            // 미리보기에서 최상위 블록을 담는 그릇(<main>)의 경로
+
+/** 최상위 블록의 부모 경로 — 끌어서 옮길 때 자리 번호에 이 경로를 붙여 쓴다 */
+function framePathOfMain() { return mainPath || []; }
 
 /** 이 컴포넌트가 기대는데 지금 페이지엔 없는 클래스 (모양이 깨질 신호) */
 function missingClasses(item) {
@@ -1700,11 +1792,18 @@ function contrast(a, b) {
 
 async function fetchDesignSystem() {
     const canvas = document.getElementById('dsCanvas');
-    canvas.innerHTML = '<div class="ds-loading">tokens.css 읽는 중…</div>';
+    canvas.innerHTML = '<div class="ds-loading">디자인 토큰 읽는 중…</div>';
     try {
         const res = await fetch('/__api/designsystem');
         if (!res.ok) throw new Error('HTTP ' + res.status);
         dsData = await res.json();
+    // 무엇을 기준으로 무엇을 훑었는지 실제 값으로 보여준다 (설정에 따라 달라진다)
+    const srcEl = document.getElementById('dsSrc');
+    if (srcEl && dsData?.meta) {
+        const list = (dsData.meta.scanned || []);
+        const shown = list.slice(0, 3).join(', ') + (list.length > 3 ? ` 외 ${list.length - 3}개` : '');
+        srcEl.innerHTML = `기준: <b>${dsData.meta.source}</b> · 스캔: ${shown}`;
+    }
         dsEdits = {};
         buildDsBase(dsData);
         renderDesignSystem(dsData);

@@ -70,3 +70,6 @@ node_modules/
 
 # 에디터 디자인 시스템 저장 시 남기는 tokens.css 백업
 public/tokens.css.bak-*
+
+# macOS 가 폴더마다 남기는 파일 — 저장소에 들어갈 이유가 없다
+.DS_Store

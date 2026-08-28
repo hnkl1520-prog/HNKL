@@ -8,12 +8,31 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const HERE = path.dirname(fileURLToPath(import.meta.url));
-const PUBLIC = path.resolve(HERE, '../../public');
+import { PUBLIC, TOKENS_FILE, SHARED_CSS, CONFIG } from './config.js';
 
-const TOKENS = path.join(PUBLIC, 'tokens.css');
-const COMMON = path.join(PUBLIC, 'common.css');
-const VIBRA = path.join(PUBLIC, 'works/projects/vibra/vibra.html');
+const HERE = path.dirname(fileURLToPath(import.meta.url));
+
+const TOKENS = TOKENS_FILE;
+const COMMON = SHARED_CSS;
+
+/**
+ * 토큰이 어디에 몇 번 쓰이는지 셀 대상 페이지들.
+ * 설정의 scan 에 적은 폴더 아래 .html 을 모은다 (특정 파일을 코드에 박지 않는다).
+ */
+function scanTargets() {
+    const out = [];
+    const walk = dir => {
+        let entries;
+        try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { return; }
+        for (const e of entries) {
+            const full = path.join(dir, e.name);
+            if (e.isDirectory()) walk(full);
+            else if (e.name.endsWith('.html')) out.push(full);
+        }
+    };
+    for (const rel of (CONFIG.scan || [])) walk(path.join(PUBLIC, rel));
+    return out;
+}
 
 // ---------- 유틸 ----------
 const stripComments = s => s.replace(/\/\*[\s\S]*?\*\//g, '');
@@ -264,18 +283,20 @@ function scanFsWeightPairs(sources) {
 export function buildDesignSystem() {
     const tokensCss = fs.readFileSync(TOKENS, 'utf8');
     const commonCss = fs.readFileSync(COMMON, 'utf8');
-    const vibraHtml = fs.readFileSync(VIBRA, 'utf8');
 
-    // 스캔 소스: common.css 전체 + vibra 의 <style> + vibra 의 inline style
-    const vibraStyle = (() => {
-        const o = vibraHtml.indexOf('<style>'); const c = vibraHtml.indexOf('</style>', o);
-        return o >= 0 && c >= 0 ? vibraHtml.slice(o + 7, c) : '';
-    })();
-    const vibraInline = [...vibraHtml.matchAll(/style="([^"]*)"/g)].map(m => m[1]);
-    const scanText = commonCss + '\n' + vibraStyle + '\n' + vibraInline.join(';');
+    // 스캔 소스: 공용 CSS 전체 + 설정에 적힌 페이지들의 <style>·inline style.
+    // (특정 파일을 코드에 박지 않으므로, 게시물이 늘면 자동으로 함께 세어진다)
+    const pages = scanTargets().map(file => {
+        const html = fs.readFileSync(file, 'utf8');
+        const styles = [...html.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)].map(m => m[1]).join('\n');
+        const inline = [...html.matchAll(/style="([^"]*)"/g)].map(m => m[1]);
+        return { name: path.basename(file), styles, inline };
+    });
+
+    const scanText = [commonCss, ...pages.map(p => p.styles), ...pages.flatMap(p => p.inline)].join('\n');
     const sources = [
         { rules: leafRules(commonCss), inline: [] },
-        { rules: leafRules(vibraStyle), inline: vibraInline },
+        ...pages.map(p => ({ rules: leafRules(p.styles), inline: p.inline })),
     ];
 
     // --- 토큰 파싱 (파일에서) ---
@@ -497,6 +518,6 @@ export function buildDesignSystem() {
         typo, fontWeights, weightTokens,
         spacing, scale,
         aliases,
-        meta: { source: 'tokens.css', scanned: ['vibra.html', 'common.css'] },
+        meta: { source: CONFIG.tokensFile, scanned: [CONFIG.sharedCss, ...pages.map(p => p.name)] },
     };
 }

@@ -1,0 +1,14 @@
+{
+  "_": "이 에디터가 어느 사이트를 다루는지 적어 두는 곳. 코드를 고치지 않고 여기만 바꾸면 된다.",
+
+  "siteRoot": "public",
+  "tokensFile": "tokens.css",
+  "sharedCss": "common.css",
+  "sharedJs": "common.js",
+
+  "_blocksDir": "재사용 블록(마스터 컴포넌트)이 저장되는 폴더. siteRoot 기준 상대경로.",
+  "blocksDir": "blocks",
+
+  "_scan": "디자인 시스템이 '토큰이 어디에 몇 번 쓰이는지' 셀 때 훑는 페이지들.",
+  "scan": ["works/projects"]
+}

@@ -226,7 +226,21 @@
         .__ed-picking, .__ed-picking * { cursor: crosshair !important; }
         /* 섹션 이동 모드 — 덩어리째 고르는 중이라 커서도 '집는' 모양으로 */
         .__ed-moving, .__ed-moving * { cursor: grab !important; }
-        .__ed-move-pick { outline: 2px dashed #3B82F6 !important; outline-offset: -3px !important; }
+        /* 이동 모드 — 어디까지가 한 덩어리인지 면으로 보여준다 (선만으로는 경계가 안 읽힘) */
+        .__ed-move-hot {
+            outline: 2px solid rgba(59,130,246,.5) !important; outline-offset: -2px !important;
+            background-image: linear-gradient(rgba(59,130,246,.10), rgba(59,130,246,.10)) !important;
+        }
+        .__ed-move-pick {
+            outline: 2px solid #3B82F6 !important; outline-offset: -2px !important;
+            background-image: linear-gradient(rgba(59,130,246,.16), rgba(59,130,246,.16)) !important;
+        }
+        .__ed-dragging { opacity: .45 !important; }
+        /* 놓을 자리 — 섹션 사이에 굵은 선으로 */
+        .__ed-move-line {
+            position: absolute; z-index: 2147483646; height: 4px; border-radius: 2px;
+            background: #3B82F6; box-shadow: 0 0 0 4px rgba(59,130,246,.18); pointer-events: none;
+        }
         .__ed-movebar {
             position: absolute; z-index: 2147483647; display: flex; gap: 6px;
             padding: 6px; border-radius: 999px; background: rgba(20,20,24,.92);
@@ -243,14 +257,14 @@
     document.documentElement.appendChild(style);
 
     let hovered = null;
-    const clearHover = () => { hovered?.classList.remove('__ed-hover'); hovered = null; };
+    const clearHover = () => { hovered?.classList.remove('__ed-hover', '__ed-move-hot'); hovered = null; };
 
     document.addEventListener('mouseover', e => {
         if (moving) {
             if (e.target.closest && e.target.closest('.__ed-movebar')) return;
             clearHover();
             const b = topBlockOf(e.target);
-            if (b && b !== moveTarget) { hovered = b; b.classList.add('__ed-hover'); }
+            if (b && b !== moveTarget) { hovered = b; b.classList.add('__ed-move-hot'); }
             return;
         }
         if (!picking) return;
@@ -498,6 +512,83 @@
         moveTarget.classList.add('__ed-move-pick');
         placeMoveBar();
     }
+    // ── 끌어서 순서 바꾸기 ──
+    // 이동 모드에서는 최상위 블록을 통째로 끌 수 있다. 놓을 자리는 굵은 선으로 미리 보여준다.
+    let dragEl = null, moveLine = null, moveDropAt = null;
+
+    function showMoveLine(before, after) {
+        if (!moveLine) {
+            moveLine = document.createElement('div');
+            moveLine.className = '__ed-move-line';
+            document.body.appendChild(moveLine);
+        }
+        // 두 블록 사이(또는 끝)의 y 좌표를 잡는다
+        const ref = before || after;
+        const r = ref.getBoundingClientRect();
+        const y = before ? r.bottom : r.top;
+        moveLine.style.top = (window.scrollY + y - 2) + 'px';
+        moveLine.style.left = (window.scrollX + r.left) + 'px';
+        moveLine.style.width = r.width + 'px';
+    }
+    function hideMoveLine() { moveLine?.remove(); moveLine = null; moveDropAt = null; }
+
+    document.addEventListener('mousedown', e => {
+        if (!moving) return;
+        if (e.target.closest && e.target.closest('.__ed-movebar')) return;
+        const b = topBlockOf(e.target);
+        if (!b) return;
+        dragEl = b;
+        dragEl.__startY = e.clientY;
+    }, true);
+
+    document.addEventListener('mousemove', e => {
+        if (!moving || !dragEl) return;
+        // 살짝 눌린 것만으로 끌기로 오해하지 않게, 어느 정도 움직여야 시작한다
+        if (!dragEl.classList.contains('__ed-dragging')) {
+            if (Math.abs(e.clientY - dragEl.__startY) < 6) return;
+            dragEl.classList.add('__ed-dragging');
+        }
+        e.preventDefault();
+        const blocks = topBlocks().filter(b => b !== dragEl);
+        let before = null, after = null;
+        for (const b of blocks) {
+            const r = b.getBoundingClientRect();
+            if (e.clientY >= r.top + r.height / 2) before = b;
+            else { after = b; break; }
+        }
+        moveDropAt = { before, after };
+        if (before || after) showMoveLine(before, after);
+    }, true);
+
+    document.addEventListener('mouseup', e => {
+        if (!moving || !dragEl) return;
+        const wasDragging = dragEl.classList.contains('__ed-dragging');
+        const el = dragEl;
+        el.classList.remove('__ed-dragging');
+        dragEl = null;
+        if (!wasDragging) { hideMoveLine(); return; }   // 그냥 클릭이면 선택만 (click 핸들러가 처리)
+        e.preventDefault(); e.stopPropagation();
+
+        const at = moveDropAt;
+        hideMoveLine();
+        if (!at || (!at.before && !at.after)) return;
+
+        const before = topBlocks().indexOf(el);
+        // 놓을 자리로 옮기고, 파일에는 '한 칸씩 이동'을 그만큼 쌓아 보낸다
+        if (at.before) at.before.parentNode.insertBefore(el, at.before.nextSibling);
+        else at.after.parentNode.insertBefore(el, at.after);
+        const after = topBlocks().indexOf(el);
+        if (before === after) return;
+
+        const dir = after > before ? 'down' : 'up';
+        const steps = Math.abs(after - before);
+        // 되돌리기는 한 칸씩 무르므로, 옮긴 칸 수만큼 이력을 쌓아 에디터의 pending 과 짝을 맞춘다
+        for (let i = 0; i < steps; i++) moveHistory.push({ el, dir });
+        post('movedMany', { from: before, steps, dir });
+        setMoveTarget(el);
+        setTimeout(reportHeight, 80);
+    }, true);
+
     function onMoveClick(e) {
         const btn = e.target.closest('button[data-dir]');
         if (!btn || btn.disabled || !moveTarget) return;
@@ -920,6 +1011,63 @@
             else last.node.remove();
             setTimeout(reportHeight, 80);
         }
+        else if (type === 'replay') {
+            // 저장 대기 중인 편집을 처음부터 순서대로 다시 적용한다.
+            // (되돌리기/다시실행은 화면을 새로 그린 뒤 여기로 되돌아온다 —
+            //  구조를 바꾸는 편집은 거꾸로 되짚는 것보다 처음부터 다시 트는 편이 정확하다)
+            for (const st of (payload.steps || [])) {
+                try {
+                    if (st.kind === 'insert') {
+                        const el = elementAtPath(st.path); if (!el) continue;
+                        const tpl = document.createElement('template');
+                        tpl.innerHTML = String(st.html || '').trim();
+                        const node = tpl.content.firstElementChild; if (!node) continue;
+                        node.setAttribute('data-ed-inserted', '1');
+                        if (st.position === 'before') el.parentNode.insertBefore(node, el);
+                        else if (st.position === 'firstChild') el.insertBefore(node, el.firstChild);
+                        else if (st.position === 'lastChild') el.appendChild(node);
+                        else el.parentNode.insertBefore(node, el.nextSibling);
+                        revealNow(node); bindCarouselNav(node);
+                    } else if (st.kind === 'move') {
+                        const el = elementAtPath(st.path); if (!el) continue;
+                        const blocks = topBlocks();
+                        const i = blocks.indexOf(el);
+                        const partner = st.dir === 'up' ? blocks[i - 1] : blocks[i + 1];
+                        if (!partner) continue;
+                        if (st.dir === 'up') partner.parentNode.insertBefore(el, partner);
+                        else partner.parentNode.insertBefore(partner, el);
+                    } else if (st.kind === 'remove') {
+                        const el = elementAtPath(st.path); if (el) el.remove();
+                    } else if (st.kind === 'duplicate') {
+                        const el = elementAtPath(st.path); if (!el) continue;
+                        const copy = el.cloneNode(true);
+                        copy.classList?.remove('__ed-selected', '__ed-hover', '__ed-move-pick');
+                        el.parentNode.insertBefore(copy, el.nextSibling);
+                        revealNow(copy); bindCarouselNav(copy);
+                    } else if (st.kind === 'link') {
+                        if (!st.url || document.querySelector(`[data-ed-asset="${st.url}"]`)) continue;
+                        const el = st.assetKind === 'js'
+                            ? Object.assign(document.createElement('script'), { src: st.url, defer: true })
+                            : Object.assign(document.createElement('link'), { rel: 'stylesheet', href: st.url });
+                        el.setAttribute('data-ed-asset', st.url);
+                        document.head.appendChild(el);
+                    }
+                } catch (e) { /* 한 단계가 실패해도 나머지는 이어서 적용한다 */ }
+            }
+            setTimeout(reportHeight, 120);
+        }
+        else if (type === 'linkAsset') {
+            // 마스터 블록의 파일을 미리보기에도 걸어 준다 (저장 전에 모양을 보려고)
+            for (const [kind, url] of [['css', payload.css], ['js', payload.js]]) {
+                if (!url || document.querySelector(`[data-ed-asset="${url}"]`)) continue;
+                const el = kind === 'css'
+                    ? Object.assign(document.createElement('link'), { rel: 'stylesheet', href: url })
+                    : Object.assign(document.createElement('script'), { src: url, defer: true });
+                el.setAttribute('data-ed-asset', url);
+                document.head.appendChild(el);
+            }
+            setTimeout(reportHeight, 200);
+        }
         else if (type === 'grabComponent') {
             if (!selected) { post('grabbed', { error: '고른 요소가 없습니다.' }); return; }
             const css = collectCss(selected);
@@ -954,7 +1102,7 @@
         else if (type === 'setMoving') {
             moving = !!payload;
             document.documentElement.classList.toggle('__ed-moving', moving);
-            if (!moving) hideMoveBar(); else clearHover();
+            if (!moving) { hideMoveBar(); hideMoveLine(); dragEl = null; } else clearHover();
         }
         else if (type === 'setPicking') {
             picking = !!payload;
@@ -1140,7 +1288,7 @@
         else if (type === 'highlight') showHighlight(payload.area);
         else if (type === 'clearHighlight') clearHighlight();
         else if (type === 'getDesignSystem') post('designSystem', collectDesignSystem());
-        else if (type === 'ping') post('ready', { page: PAGE, title: document.title, classes: pageClasses(), vars: pageVars() });
+        else if (type === 'ping') post('ready', { page: PAGE, title: document.title, classes: pageClasses(), vars: pageVars(), mainPath: pathOf(document.querySelector('main') || document.body) });
     });
 
     // ---------- 박스 모델 하이라이트 ----------
@@ -1431,5 +1579,5 @@
         post('panEnd', {});
     }, true);
 
-    post('ready', { page: PAGE, title: document.title, classes: pageClasses(), vars: pageVars() });
+    post('ready', { page: PAGE, title: document.title, classes: pageClasses(), vars: pageVars(), mainPath: pathOf(document.querySelector('main') || document.body) });
 })();

@@ -13,12 +13,13 @@ import fs from 'node:fs';
 import fsp from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { patchInlineStyle, patchCssRule, insertHtml, patchAttr, applyMotion, moveElement, removeElement, duplicateElement } from './lib/patch.js';
+import { patchInlineStyle, patchCssRule, insertHtml, patchAttr, applyMotion, moveElement, removeElement, duplicateElement, linkAsset } from './lib/patch.js';
 import { buildDesignSystem, saveTokens } from './lib/designsystem.js';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
-const PUBLIC = path.join(ROOT, 'public');
+// 어느 사이트를 다루는지는 editor.config.json 이 정한다 (경로를 코드에 박지 않는다)
+const { PUBLIC, BLOCKS_DIR, CONFIG, blockUrl } = await import('./lib/config.js');
 const PORT = Number(process.env.PORT) || 5180;
 // 유저가 등록한 컴포넌트 — public/ 밖이라 배포되지 않고, 페이지끼리 함께 쓴다
 const COMPONENTS_FILE = path.join(HERE, 'components.json');
@@ -145,6 +146,25 @@ const server = http.createServer(async (req, res) => {
             }
 
             const name = String(body.name || '').trim();
+            // 마스터로 등록하면 CSS·JS 를 blocks/ 아래 '컴포넌트 하나 = 파일 하나'로 저장한다.
+            // (common.css 에 몰아넣으면 쓰지도 않는 페이지까지 계속 받아 가고, 나중에 고치기 어렵다)
+            let block = null;
+            if (body.master) {
+                const slug = String(body.slug || '').trim();
+                if (!/^[a-z0-9][a-z0-9-]*$/.test(slug)) {
+                    return sendJson(res, 400, { error: '블록 이름은 영문 소문자·숫자·하이픈만 됩니다.' });
+                }
+                await fsp.mkdir(BLOCKS_DIR, { recursive: true });
+                block = { slug, css: null, js: null };
+                if (body.css) {
+                    await fsp.writeFile(path.join(BLOCKS_DIR, slug + '.css'), String(body.css).trim() + '\n', 'utf8');
+                    block.css = blockUrl(slug + '.css');
+                }
+                if (body.js) {
+                    await fsp.writeFile(path.join(BLOCKS_DIR, slug + '.js'), String(body.js).trim() + '\n', 'utf8');
+                    block.js = blockUrl(slug + '.js');
+                }
+            }
             const html = String(body.html || '').trim();
             if (!name) return sendJson(res, 400, { error: '이름이 필요합니다.' });
             if (!html) return sendJson(res, 400, { error: '내용이 비어 있습니다.' });
@@ -155,7 +175,9 @@ const server = http.createServer(async (req, res) => {
             const id = body.id || 'c' + Date.now().toString(36);
             const item = {
                 id, name, html,
-                css: String(body.css || ''),
+                // 마스터면 CSS 는 파일로 나가 있으므로 사본을 들고 다니지 않는다
+                block,
+                css: body.master ? '' : String(body.css || ''),
                 vars: Array.isArray(body.vars) ? body.vars.slice(0, 80) : [],
                 note: String(body.note || '').slice(0, 80),
                 sketch: Array.isArray(body.sketch) ? body.sketch.slice(0, 8) : [],
@@ -214,6 +236,10 @@ const server = http.createServer(async (req, res) => {
                     const r = moveElement(text, edit.path, edit.dir);
                     text = r.text;
                     applied.push({ kind: 'move', dir: edit.dir, before: r.before, after: r.after });
+                } else if (edit.kind === 'link') {
+                    const r = linkAsset(text, edit.assetKind, edit.url);
+                    text = r.text;
+                    applied.push({ kind: 'link', url: edit.url, before: r.added ? '(없음)' : '이미 연결됨', after: r.added ? '연결' : '그대로' });
                 } else if (edit.kind === 'remove') {
                     const r = removeElement(text, edit.path);
                     text = r.text;
@@ -232,6 +258,21 @@ const server = http.createServer(async (req, res) => {
             }
             await fsp.writeFile(file, text, 'utf8');
             return sendJson(res, 200, { ok: true, applied });
+        }
+
+        // ---------- 실제 모습 (주입 없이 그대로) ----------
+        // '브라우저에서 열기' 버튼이 쓰는 길. / 와 /index.html 은 에디터 화면이
+        // 가로채기 때문에, 어떤 페이지든 확실히 원본으로 여는 경로를 따로 둔다.
+        if (pathname.startsWith('/raw/')) {
+            const file = safeJoin(PUBLIC, pathname.slice('/raw'.length));
+            if (!file || !fs.existsSync(file) || fs.statSync(file).isDirectory()) {
+                return send(res, 404, '없는 페이지입니다: ' + pathname.slice('/raw'.length));
+            }
+            res.writeHead(200, {
+                'Content-Type': MIME[path.extname(file)] || 'application/octet-stream',
+                'Cache-Control': 'no-store',
+            });
+            return fs.createReadStream(file).pipe(res);
         }
 
         // ---------- 미리보기 (public/ 서빙 + 주입) ----------
@@ -272,10 +313,33 @@ const URL_ = `http://localhost:${PORT}`;
 /** 기본 브라우저로 열기 (NO_OPEN=1 이면 건너뜀) */
 function openBrowser(url) {
     if (process.env.NO_OPEN) return;
-    const cmd = process.platform === 'win32' ? `start "" "${url}"`
-        : process.platform === 'darwin' ? `open "${url}"`
-            : `xdg-open "${url}"`;
-    import('node:child_process').then(({ exec }) => exec(cmd));
+    import('node:child_process').then(({ exec }) => {
+        // 앱 창으로 띄운다 — 주소창·탭·북마크가 없는 창 하나만 뜬다.
+        // 크로미움 계열(Chrome·Edge·Brave)의 --app 기능이라, 없으면 기본 브라우저로 넘어간다.
+        const APP_FLAG = `--app=${url} --window-size=1600,1000`;
+        const candidates = process.platform === 'darwin' ? [
+            `open -na "Google Chrome" --args ${APP_FLAG}`,
+            `open -na "Microsoft Edge" --args ${APP_FLAG}`,
+            `open -na "Brave Browser" --args ${APP_FLAG}`,
+        ] : process.platform === 'win32' ? [
+            `start "" chrome ${APP_FLAG}`,
+            `start "" msedge ${APP_FLAG}`,
+        ] : [
+            `google-chrome ${APP_FLAG}`,
+            `chromium ${APP_FLAG}`,
+            `microsoft-edge ${APP_FLAG}`,
+        ];
+        const fallback = process.platform === 'win32' ? `start "" "${url}"`
+            : process.platform === 'darwin' ? `open "${url}"`
+                : `xdg-open "${url}"`;
+
+        // 앞에서부터 하나씩 시도하고, 다 실패하면 그냥 기본 브라우저로 연다
+        const tryNext = i => {
+            if (i >= candidates.length) return exec(fallback);
+            exec(candidates[i], err => { if (err) tryNext(i + 1); });
+        };
+        if (process.env.NO_APP_WINDOW) exec(fallback); else tryNext(0);
+    });
 }
 
 server.on('error', err => {

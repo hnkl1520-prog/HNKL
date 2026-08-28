@@ -534,6 +534,44 @@ export function duplicateElement(source, path) {
 }
 
 /**
+ * <head> 에 <link> 나 <script> 를 한 줄 넣는다. 이미 있으면 그대로 둔다.
+ * 블록(마스터 컴포넌트)을 페이지에 떨어뜨릴 때, 그 블록이 필요로 하는
+ * 파일을 페이지가 스스로 불러오게 만드는 용도.
+ *
+ * @param {'css'|'js'} kind
+ * @param {string} url   예: /blocks/hero.css
+ * @returns {{text: string, added: boolean}}
+ */
+export function linkAsset(source, kind, url) {
+    if (!url) return { text: source, added: false };
+    if (source.includes(url)) return { text: source, added: false };   // 이미 걸려 있다
+
+    const tag = kind === 'js'
+        ? `<script src="${url}" defer></script>`
+        : `<link rel="stylesheet" href="${url}">`;
+
+    const doc = parse(source, { sourceCodeLocationInfo: true });
+    let head = null, body = null;
+    walk(doc, n => {
+        if (n.nodeName === 'head' && n.sourceCodeLocation) head = n.sourceCodeLocation;
+        if (n.nodeName === 'body' && n.sourceCodeLocation) body = n.sourceCodeLocation;
+    });
+
+    // 넣을 자리: </head> 바로 앞. head 가 없으면 <body> 앞.
+    let at, indent = '    ';
+    if (head && head.endTag) at = head.endTag.startOffset;
+    else if (body && body.startTag) at = body.startTag.startOffset;
+    else return { text: source, added: false };
+
+    // 그 줄의 들여쓰기를 따라간다
+    const lineStart = source.lastIndexOf('\n', at - 1) + 1;
+    const cur = (source.slice(lineStart, at).match(/^[ \t]*/) || [''])[0];
+    if (cur) indent = cur + (head && head.endTag ? '    ' : '');
+
+    return { text: source.slice(0, at) + `${indent}${tag}\n` + source.slice(at), added: true };
+}
+
+/**
  * 요소의 속성 하나를 바꾸거나(있으면) 새로 넣는다(없으면).
  * 이미지 src·영상 링크처럼 style 이 아닌 값을 고칠 때 쓴다.
  * value 가 null 이면 속성을 지운다.
