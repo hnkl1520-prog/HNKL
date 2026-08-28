@@ -13,7 +13,7 @@ import fs from 'node:fs';
 import fsp from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { patchInlineStyle, patchCssRule } from './lib/patch.js';
+import { patchInlineStyle, patchCssRule, insertHtml, patchAttr, applyMotion } from './lib/patch.js';
 import { buildDesignSystem, saveTokens } from './lib/designsystem.js';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -118,12 +118,12 @@ const server = http.createServer(async (req, res) => {
             return sendJson(res, 200, buildDesignSystem());
         }
 
-        // 디자인 시스템 저장 — tokens.css 의 :root 값만 갱신 (백업 남김)
+        // 디자인 시스템 저장 — :root(라이트) + .dark-mode(다크) 갱신 (백업 남김)
         if (pathname === '/__api/savetokens' && req.method === 'POST') {
             const body = JSON.parse(await readBody(req));
             if (!body || typeof body.edits !== 'object') return sendJson(res, 400, { error: 'edits 없음' });
             try {
-                return sendJson(res, 200, { ok: true, ...saveTokens(body.edits) });
+                return sendJson(res, 200, { ok: true, ...saveTokens(body.edits, body.darkEdits) });
             } catch (e) {
                 return sendJson(res, 500, { error: e.message });
             }
@@ -146,6 +146,18 @@ const server = http.createServer(async (req, res) => {
                     const r = patchCssRule(text, edit.selector, edit.prop, edit.value);
                     text = r.text;
                     applied.push({ kind: 'css', selector: edit.selector, prop: edit.prop, before: r.before, after: r.after });
+                } else if (edit.kind === 'insert') {
+                    const r = insertHtml(text, edit.path, edit.html, edit.position || 'after');
+                    text = r.text;
+                    applied.push({ kind: 'insert', position: edit.position, before: r.before, after: r.after });
+                } else if (edit.kind === 'attr') {
+                    const r = patchAttr(text, edit.path, edit.name, edit.value);
+                    text = r.text;
+                    applied.push({ kind: 'attr', name: edit.name, before: r.before, after: r.after });
+                } else if (edit.kind === 'motion') {
+                    const r = applyMotion(text, edit.path, edit.className, edit.css);
+                    text = r.text;
+                    applied.push({ kind: 'motion', name: edit.className, before: r.before, after: r.after });
                 } else {
                     return sendJson(res, 400, { error: `알 수 없는 수정 방식: ${edit.kind}` });
                 }

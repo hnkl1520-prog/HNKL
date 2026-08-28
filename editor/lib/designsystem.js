@@ -30,9 +30,11 @@ function parseDecls(body) {
 
 /** 최상위 selector { ... } 블록 하나의 본문을 꺼낸다 (중괄호 깊이 추적) */
 function extractBlock(css, selector) {
-    const start = css.indexOf(selector);
-    if (start < 0) return '';
-    const open = css.indexOf('{', start);
+    const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const re = new RegExp(escaped + '\\s*\\{');
+    const m = re.exec(css);
+    if (!m) return '';
+    const open = css.indexOf('{', m.index);
     if (open < 0) return '';
     let depth = 0;
     for (let i = open; i < css.length; i++) {
@@ -165,47 +167,72 @@ function scanFontWeights(sources) {
         .sort((a, b) => b.weight - a.weight);
 }
 
-// ---------- 저장 (:root 블록만 갱신, 백업 남김) ----------
-// edits: { '--gray-500': '#86868B', '--text-sub': 'var(--gray-700)',
-//          '--fs-body': 'calc(20px * var(--s))', '--s': '0.9', ... }
-// 규칙: tokens.css 의 첫 :root { ... } 안에서만 값(: 와 ; 사이)을 바꾼다.
-//       주석·정렬·.dark-mode·@media 는 손대지 않는다. 토큰 추가/삭제 없음(기존 이름만).
-export function saveTokens(edits) {
-    const css = fs.readFileSync(TOKENS, 'utf8');
+// ---------- 저장 (:root=라이트, .dark-mode=다크, 백업 남김) ----------
+// edits     : { '--gray-50': '#848487', '--text-sub': 'var(--gray-70)', '--fs-body': 'calc(20px * var(--s))', ... }
+// darkEdits : { '--text-sub': 'var(--gray-40)', ... }  // 역할의 다크 매핑
+// 규칙: :root 는 기존 선언 값만 치환(추가 금지). .dark-mode 는 역할 다크 매핑을 치환하고,
+//       아직 없는 역할이면 새 줄로 추가한다. 주석·정렬·@media 는 손대지 않는다.
+export function saveTokens(edits, darkEdits) {
+    const original = fs.readFileSync(TOKENS, 'utf8');
 
-    // 첫 :root { ... } 범위
-    const rootStart = css.indexOf(':root');
-    const open = css.indexOf('{', rootStart);
-    let depth = 0, close = -1;
-    for (let i = open; i < css.length; i++) {
-        if (css[i] === '{') depth++;
-        else if (css[i] === '}') { depth--; if (depth === 0) { close = i; break; } }
-    }
-    if (rootStart < 0 || close < 0) throw new Error(':root 블록을 찾지 못했습니다.');
-
-    let block = css.slice(open + 1, close);
-    const applied = [];
-
-    for (const [name, rawVal] of Object.entries(edits)) {
-        const newVal = String(rawVal).trim();
-        // 이 이름이 :root 에 실제로 정의돼 있어야 함 (추가 금지)
-        const re = new RegExp('(' + escapeRe(name) + '\\s*:\\s*)([^;]+)(;)');
-        const m = block.match(re);
-        if (!m) { applied.push({ name, skipped: '정의 없음(추가 안 함)' }); continue; }
-        const before = m[2].trim();
-        if (before === newVal) { applied.push({ name, before, after: newVal, unchanged: true }); continue; }
-        block = block.replace(re, `$1${newVal}$3`);
-        applied.push({ name, before, after: newVal });
-    }
-
-    // 백업 (타임스탬프)
+    // 백업 먼저 — 원본 그대로 남긴다
     const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
     const backup = TOKENS + '.bak-' + stamp;
-    fs.writeFileSync(backup, css, 'utf8');
+    fs.writeFileSync(backup, original, 'utf8');
 
-    const out = css.slice(0, open + 1) + block + css.slice(close);
-    fs.writeFileSync(TOKENS, out, 'utf8');
+    let css = original;
+    const applied = [];
 
+    // 한 selector 의 { ... } 범위. 헤더는 정규식으로 찾아 주석 안 이름(.dark-mode = 다크.)에 걸리지 않게 한다.
+    const blockRange = (text, headerRe) => {
+        const m = headerRe.exec(text);
+        if (!m) return null;
+        const open = text.indexOf('{', m.index);
+        if (open < 0) return null;
+        let depth = 0;
+        for (let i = open; i < text.length; i++) {
+            if (text[i] === '{') depth++;
+            else if (text[i] === '}') { depth--; if (depth === 0) return { open, close: i }; }
+        }
+        return null;
+    };
+
+    // 블록 본문에서 기존 선언 값만 치환. insert=true 면 없는 이름은 닫는 괄호 앞에 새 줄로 추가.
+    const patchBlock = (body, obj, { insert = false, tag = '' } = {}) => {
+        for (const [name, rawVal] of Object.entries(obj || {})) {
+            const newVal = String(rawVal).trim();
+            const re = new RegExp('(' + escapeRe(name) + '\\s*:\\s*)([^;]+)(;)');
+            const m = body.match(re);
+            if (m) {
+                const before = m[2].trim();
+                if (before === newVal) { applied.push({ name: name + tag, before, after: newVal, unchanged: true }); continue; }
+                body = body.replace(re, `$1${newVal}$3`);
+                applied.push({ name: name + tag, before, after: newVal });
+            } else if (insert) {
+                body = body.replace(/\s*$/, '\n') + `    ${name}: ${newVal};\n`;
+                applied.push({ name: name + tag, before: '(없음)', after: newVal });
+            } else {
+                applied.push({ name: name + tag, skipped: '정의 없음(추가 안 함)' });
+            }
+        }
+        return body;
+    };
+
+    // 1) :root (라이트) — 기존 선언만 치환, 추가 금지
+    const root = blockRange(css, /:root\s*\{/);
+    if (!root) throw new Error(':root 블록을 찾지 못했습니다.');
+    const newRoot = patchBlock(css.slice(root.open + 1, root.close), edits);
+    css = css.slice(0, root.open + 1) + newRoot + css.slice(root.close);
+
+    // 2) .dark-mode (다크) — 없는 역할은 새 줄로 추가
+    if (darkEdits && Object.keys(darkEdits).length) {
+        const dark = blockRange(css, /\.dark-mode\s*\{/);
+        if (!dark) throw new Error('.dark-mode 블록을 찾지 못했습니다.');
+        const newDark = patchBlock(css.slice(dark.open + 1, dark.close), darkEdits, { insert: true, tag: ' (다크)' });
+        css = css.slice(0, dark.open + 1) + newDark + css.slice(dark.close);
+    }
+
+    fs.writeFileSync(TOKENS, css, 'utf8');
     return { applied: applied.filter(a => !a.unchanged && !a.skipped), backup: path.basename(backup) };
 }
 
@@ -264,32 +291,47 @@ export function buildDesignSystem() {
     const hintOf = name => usageHint(usageOf(name, sources));
     const isUnused = name => count(name) === 0;
 
-    // 1) 회색 램프
+    // 1) 회색 램프 — 단일 팔레트 (라이트·다크가 같은 램프에서 단계만 다르게 집는다)
     const ramp = [];
-    for (let n = 100; n <= 900; n += 100) {
+    for (const n of [1, 5, 10, 15, 20, 30, 40, 50, 60, 70, 80, 90, 95, 100]) {
         const key = `--gray-${n}`;
         if (!light[key]) continue;
         ramp.push({
             name: key, step: n,
-            hex: normHex(light[key]), darkHex: dark[key] ? normHex(dark[key]) : null,
+            hex: normHex(light[key]), darkHex: null,
             count: count(key), usage: hintOf(key), unused: isUnused(key),
         });
     }
-    // 램프 특수 단계 사이도 있으면(예: 없음) 무시. 밝은→어두운(=번호 오름) 순 유지.
 
-    // 1) 원시 색 (블루/퍼플/틸/다크배경)
+    // 1-b) 포인트 램프 — Primary(10단계) / Secondary 퍼플·틸(각 5단계)
+    const buildRamp = (prefix, steps) => {
+        const out = [];
+        for (const n of steps) {
+            const key = `--${prefix}-${n}`;
+            if (!light[key]) continue;
+            out.push({
+                name: key, step: n,
+                hex: normHex(light[key]),
+                count: count(key), usage: hintOf(key), unused: isUnused(key),
+            });
+        }
+        return out;
+    };
+    const primary = buildRamp('primary', [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]);
+    const purpleRamp = buildRamp('purple', [10, 30, 50, 70, 90]);
+    const tealRamp = buildRamp('teal', [10, 30, 50, 70, 90]);
+
+    // 1-c) 원시 색 (흑·백)
     const primitives = [
-        { name: '--blue', label: '포인트 블루' },
-        { name: '--purple', label: '서브 퍼플' },
-        { name: '--teal', label: '서브 틸' },
-        { name: '--dark-surface', label: '다크 배경' },
+        { name: '--black', label: '검정' },
+        { name: '--white', label: '흰색' },
     ].filter(p => light[p.name]).map(p => ({
         ...p, hex: resolveColor(light[p.name], light),
         count: count(p.name), usage: hintOf(p.name), unused: isUnused(p.name),
     }));
 
     // 다크값 해석용: 다크 블록이 덮은 값 위에서 var() 체인을 따라간다.
-    // (--panel 처럼 var(--gray-100) 을 가리키는 토큰도 올바른 다크 hex 로 풀린다)
+    // (--panel 처럼 var(--gray-10) 을 가리키는 토큰도 올바른 다크 hex 로 풀린다)
     const darkMap = { ...light, ...dark };
     const resolveDark = name => resolveColor(darkMap[name], darkMap);
 
@@ -317,13 +359,17 @@ export function buildDesignSystem() {
     ];
     const bgHex = resolveColor('var(--bg-color)', light) || normHex(light['--bg'] || '#FFFFFF');
     const cardHex = resolveColor('var(--card-bg)', light) || normHex(light['--surface'] || '#FFFFFF');
+    const darkBgHex = resolveDark('--bg-color') || resolveDark('--bg') || '#050505';
+    const darkCardHex = resolveDark('--card-bg') || resolveDark('--surface') || '#1C1C1E';
     const roles = roleDefs.filter(r => light[r.name]).map(r => {
         const hex = resolveColor(light[r.name], light);
-        // 연결된 팔레트 이름 (var(--x) 면 --x)
+        const darkHex = resolveDark(r.name);
         const linkM = String(light[r.name]).match(/^var\(\s*(--[\w-]+)\s*\)$/);
+        const darkLinkM = dark[r.name] ? String(dark[r.name]).match(/^var\(\s*(--[\w-]+)\s*\)$/) : null;
         const row = {
-            name: r.name, label: r.label, hex,
+            name: r.name, label: r.label, hex, darkHex,
             linked: linkM ? linkM[1] : null,
+            darkLinked: darkLinkM ? darkLinkM[1] : null,
             count: count(r.name), usage: hintOf(r.name), unused: isUnused(r.name),
         };
         if (r.text && hex) {
@@ -331,6 +377,12 @@ export function buildDesignSystem() {
                 onBg: contrast(hex, bgHex),
                 onCard: contrast(hex, cardHex),
             };
+            if (darkHex) {
+                row.darkContrast = {
+                    onBg: contrast(darkHex, darkBgHex),
+                    onCard: contrast(darkHex, darkCardHex),
+                };
+            }
         }
         return row;
     });
@@ -408,7 +460,7 @@ export function buildDesignSystem() {
     const scale = { name: '--s', base: light['--s'] || '1', override: sOverride };
 
     // 하위호환 별칭 (접힘 영역)
-    const aliasNames = ['--gray-ink', '--gray-50', '--space-xs', '--space-sm', '--space-md', '--space-lg', '--space-xl'];
+    const aliasNames = ['--gray-ink', '--space-xs', '--space-sm', '--space-md', '--space-lg', '--space-xl'];
     const aliases = aliasNames.filter(n => light[n]).map(n => {
         const linkM = String(light[n]).match(/^var\(\s*(--[\w-]+)\s*\)$/);
         return {
@@ -433,12 +485,15 @@ export function buildDesignSystem() {
         t.unused = (t.count + t.indirect) === 0;
     });
     annotate(ramp);
+    annotate(primary);
+    annotate(purpleRamp);
+    annotate(tealRamp);
     annotate(primitives);
     annotate(surfaces);
     annotate(spacing);
 
     return {
-        ramp, primitives, surfaces, roles,
+        ramp, primary, purpleRamp, tealRamp, primitives, surfaces, roles,
         typo, fontWeights, weightTokens,
         spacing, scale,
         aliases,

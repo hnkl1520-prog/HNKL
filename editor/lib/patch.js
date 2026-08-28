@@ -376,3 +376,141 @@ function findPropInBody(body, prop) {
     }
     return null;
 }
+
+/**
+ * 요소의 앞·뒤·안쪽에 HTML 조각을 끼워 넣는다.
+ * 원본은 그대로 두고 '그 지점에만' 문자열을 삽입하므로, 다른 줄은 diff에 안 뜬다.
+ *
+ * @param {string} source
+ * @param {number[]} path   기준 요소 경로 (findByPath 규칙)
+ * @param {string} html     넣을 HTML 조각
+ * @param {'before'|'after'|'firstChild'|'lastChild'} position
+ */
+export function insertHtml(source, path, html, position = 'after') {
+    const document = parse(source, { sourceCodeLocationInfo: true });
+    const el = findByPath(document, path);
+    if (!el) throw new Error('요소를 찾지 못했습니다. 파일이 그 사이 바뀌었을 수 있어요.');
+
+    const loc = el.sourceCodeLocation;
+    if (!loc) throw new Error('요소의 원본 위치를 알 수 없습니다.');
+
+    let at;
+    if (position === 'before') at = loc.startOffset;
+    else if (position === 'after') at = loc.endOffset;
+    else if (position === 'firstChild') {
+        if (!loc.startTag) throw new Error('여는 태그 위치를 알 수 없습니다.');
+        at = loc.startTag.endOffset;
+    } else if (position === 'lastChild') {
+        // 닫는 태그가 없으면(자기닫기 등) 뒤에 붙인다
+        at = loc.endTag ? loc.endTag.startOffset : loc.endOffset;
+    } else {
+        throw new Error(`알 수 없는 삽입 위치: ${position}`);
+    }
+
+    // 그 줄의 들여쓰기를 따라가서 새 줄로 넣는다 (한 줄짜리 조각도 보기 좋게)
+    const lineStart = source.lastIndexOf('\n', loc.startOffset - 1) + 1;
+    const indent = (source.slice(lineStart, loc.startOffset).match(/^[ \t]*/) || [''])[0];
+    const inner = (position === 'firstChild' || position === 'lastChild') ? indent + '    ' : indent;
+    const body = String(html).trim().split('\n').map((l, i) => (i === 0 ? l : inner + l)).join('\n');
+    let snippet = `\n${inner}${body}`;
+    // 삽입 지점 뒤에 곧바로 다른 태그가 붙어 있으면 줄을 바꿔 준다 (…</div><h3> 방지)
+    const rest = source.slice(at);
+    if (position === 'lastChild') snippet += `\n${indent}`;
+    else if (rest && !/^[ \t]*\n/.test(rest)) snippet += `\n${indent}`;
+
+    return {
+        text: source.slice(0, at) + snippet + source.slice(at),
+        before: '(없음)',
+        after: body.split('\n')[0].slice(0, 80),
+        mode: 'insert'
+    };
+}
+
+/**
+ * 요소의 속성 하나를 바꾸거나(있으면) 새로 넣는다(없으면).
+ * 이미지 src·영상 링크처럼 style 이 아닌 값을 고칠 때 쓴다.
+ * value 가 null 이면 속성을 지운다.
+ */
+export function patchAttr(source, path, name, value) {
+    const document = parse(source, { sourceCodeLocationInfo: true });
+    const el = findByPath(document, path);
+    if (!el) throw new Error('요소를 찾지 못했습니다. 파일이 그 사이 바뀌었을 수 있어요.');
+
+    const loc = el.sourceCodeLocation;
+    if (!loc || !loc.startTag) throw new Error('요소의 원본 위치를 알 수 없습니다.');
+
+    const attrLoc = loc.attrs && loc.attrs[name.toLowerCase()];
+    if (attrLoc) {
+        const before = source.slice(attrLoc.startOffset, attrLoc.endOffset);
+        let start = attrLoc.startOffset;
+        let after;
+        if (value == null) {
+            after = '';
+            while (start > 0 && /\s/.test(source[start - 1])) start--;
+        } else {
+            after = `${name}="${String(value).replace(/"/g, '&quot;')}"`;
+        }
+        return { text: source.slice(0, start) + after + source.slice(attrLoc.endOffset), before, after, mode: 'replace' };
+    }
+
+    if (value == null) return { text: source, before: '', after: '', mode: 'noop' };
+
+    const tagText = source.slice(loc.startTag.startOffset, loc.startTag.endOffset);
+    const closeLen = tagText.endsWith('/>') ? 2 : 1;
+    const insertAt = loc.startTag.endOffset - closeLen;
+    const needsSpace = !/\s$/.test(source.slice(0, insertAt));
+    const inserted = `${needsSpace ? ' ' : ''}${name}="${String(value).replace(/"/g, '&quot;')}"`;
+
+    return {
+        text: source.slice(0, insertAt) + inserted + source.slice(insertAt),
+        before: '(없음)',
+        after: inserted.trim(),
+        mode: 'insert'
+    };
+}
+
+/**
+ * 인터랙션 적용: 요소에 클래스를 붙이고, 필요한 CSS 를 <style> 끝에 한 번만 넣는다.
+ * 같은 클래스를 또 적용해도 CSS 는 중복되지 않는다.
+ */
+export function applyMotion(source, path, className, css) {
+    let text = source;
+    const notes = [];
+
+    // 1) 요소에 클래스 추가 (className 이 비면 CSS 만 넣는 경우)
+    if (className) {
+        const document = parse(text, { sourceCodeLocationInfo: true });
+        const el = findByPath(document, path);
+        if (!el) throw new Error('요소를 찾지 못했습니다. 파일이 그 사이 바뀌었을 수 있어요.');
+        const cls = getAttr(el, 'class');
+        const has = cls && cls.value.split(/\s+/).includes(className);
+        if (!has) {
+            const next = cls ? (cls.value + ' ' + className).trim() : className;
+            text = patchAttr(text, path, 'class', next).text;
+            notes.push('+.' + className);
+        }
+    }
+
+    // 2) CSS 를 마지막 <style> 블록 끝에 넣는다 (이미 있으면 건너뜀)
+    const marker = (css || '').trim().split('\n')[0].trim();
+    if (css && !text.includes(marker)) {
+        const doc2 = parse(text, { sourceCodeLocationInfo: true });
+        let last = null;
+        walk(doc2, node => {
+            if (node.nodeName === 'style' && node.sourceCodeLocation) {
+                const t = node.childNodes && node.childNodes[0];
+                if (t && t.sourceCodeLocation) last = t.sourceCodeLocation;
+            }
+        });
+        if (last) {
+            let at = last.endOffset;
+            while (at > last.startOffset && /\s/.test(text[at - 1])) at--;
+            const block = `\n\n        /* 인터랙션: ${className} */\n` +
+                css.split('\n').map(l => '        ' + l).join('\n') + '\n';
+            text = text.slice(0, at) + block + text.slice(at);
+            notes.push('+CSS');
+        }
+    }
+
+    return { text, before: '(없음)', after: notes.join(' ') || '이미 적용됨', mode: 'motion' };
+}
