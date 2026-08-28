@@ -3,8 +3,8 @@
   "configurations": [
     {
       "name": "static",
-      "runtimeExecutable": "python",
-      "runtimeArgs": ["-m", "http.server", "8000", "--directory", "public"],
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["editor/static.js"],
       "port": 8000
     },
     {
