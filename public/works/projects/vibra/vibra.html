@@ -3064,8 +3064,10 @@
                 scroller.addEventListener('mouseenter', () => { isHovering = true; clearAutoplay(); });
                 scroller.addEventListener('mouseleave', () => { isHovering = false; scheduleAutoplay(); });
             }
-            initCarouselControls('stadium-carousel');
-            initCarouselControls('interaction-carousel');
+            // 페이지에 있는 캐러셀을 모두 찾아 초기화한다.
+            // id 를 손으로 적어 두면 나중에 추가한 캐러셀은 자동 넘김이 죽는다.
+            document.querySelectorAll('.vb-carousel__track[id]')
+                .forEach(track => initCarouselControls(track.id));
 
             // 카드별 재생 버튼: 클릭한 영상만 재생, 나머지는 정지 + 아이콘 리셋
             // 버튼은 항상 미디어 박스(.vb-carousel__media / .sky-inter__media 등)의 직계 자식이라 parentElement로 찾음
