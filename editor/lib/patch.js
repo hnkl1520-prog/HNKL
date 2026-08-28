@@ -427,6 +427,113 @@ export function insertHtml(source, path, html, position = 'after') {
 }
 
 /**
+ * 형제 사이에서 요소를 한 칸 위/아래로 옮긴다. (섹션 순서 바꾸기)
+ *
+ * 요소만 딱 바꾸면 바로 앞의 주석이 제자리에 남아 엉뚱한 섹션을 가리키게 된다.
+ *   <!-- 2. INFO -->   <section A>   <!-- 3. VIDEO -->   <section B>
+ * 그래서 '앞 여백(개행·들여쓰기·주석)까지 한 덩어리'로 보고 통째로 맞바꾼다.
+ * 덩어리 시작 = 바로 앞 형제 요소의 끝(첫 요소면 부모 여는 태그의 끝).
+ *
+ * @param {string} source
+ * @param {number[]} path  옮길 요소 경로 (findByPath 규칙)
+ * @param {'up'|'down'} dir
+ */
+export function moveElement(source, path, dir = 'up') {
+    const document = parse(source, { sourceCodeLocationInfo: true });
+    const el = findByPath(document, path);
+    if (!el) throw new Error('요소를 찾지 못했습니다. 파일이 그 사이 바뀌었을 수 있어요.');
+
+    const parent = el.parentNode;
+    if (!parent) throw new Error('바깥 요소가 없어 옮길 수 없습니다.');
+
+    // 미리보기(bridge)와 '같은 규칙'으로 세야 화면과 파일이 어긋나지 않는다.
+    // 눈에 안 보이는 태그는 순서에서 뺀다.
+    const SKIP = /^(script|style|link|template|noscript)$/i;
+    const sibs = (parent.childNodes || []).filter(n => isElement(n) && !SKIP.test(n.nodeName));
+    const at = sibs.indexOf(el);
+    const partner = dir === 'up' ? sibs[at - 1] : sibs[at + 1];
+    if (!partner) throw new Error(dir === 'up' ? '이미 맨 위입니다.' : '이미 맨 아래입니다.');
+
+    // 항상 (앞선 것, 뒤선 것) 순으로 정렬해서 두 덩어리를 맞바꾼다
+    const [first, second] = dir === 'up' ? [partner, el] : [el, partner];
+    const firstLoc = first.sourceCodeLocation, secondLoc = second.sourceCodeLocation;
+    if (!firstLoc || !secondLoc) throw new Error('요소의 원본 위치를 알 수 없습니다.');
+
+    // 앞 덩어리의 시작점 — 그 앞 형제의 끝, 없으면 부모 여는 태그의 끝
+    const prev = sibs[sibs.indexOf(first) - 1];
+    const head = prev
+        ? prev.sourceCodeLocation.endOffset
+        : (parent.sourceCodeLocation?.startTag?.endOffset ?? firstLoc.startOffset);
+
+    const blockA = source.slice(head, firstLoc.endOffset);          // 앞 여백 + 앞 요소
+    const blockB = source.slice(firstLoc.endOffset, secondLoc.endOffset); // 앞 여백 + 뒤 요소
+
+    const label = n => {
+        const cls = (n.attrs || []).find(a => a.name === 'class');
+        return n.nodeName + (cls ? '.' + cls.value.trim().split(/\s+/)[0] : '');
+    };
+    return {
+        text: source.slice(0, head) + blockB + blockA + source.slice(secondLoc.endOffset),
+        before: `${label(first)} → ${label(second)}`,
+        after: `${label(second)} → ${label(first)}`,
+        mode: 'move'
+    };
+}
+
+/**
+ * 요소를 지운다. 앞 여백(개행·들여쓰기·주석)까지 같이 걷어내야
+ * 빈 줄과 주인 없는 주석이 남지 않는다. (moveElement 와 같은 '덩어리' 규칙)
+ */
+export function removeElement(source, path) {
+    const document = parse(source, { sourceCodeLocationInfo: true });
+    const el = findByPath(document, path);
+    if (!el) throw new Error('요소를 찾지 못했습니다. 파일이 그 사이 바뀌었을 수 있어요.');
+    const loc = el.sourceCodeLocation;
+    if (!loc) throw new Error('요소의 원본 위치를 알 수 없습니다.');
+
+    const parent = el.parentNode;
+    const SKIP = /^(script|style|link|template|noscript)$/i;
+    const sibs = (parent?.childNodes || []).filter(n => isElement(n) && !SKIP.test(n.nodeName));
+    const prev = sibs[sibs.indexOf(el) - 1];
+    const head = prev
+        ? prev.sourceCodeLocation.endOffset
+        : (parent?.sourceCodeLocation?.startTag?.endOffset ?? loc.startOffset);
+
+    const cls = (el.attrs || []).find(a => a.name === 'class');
+    return {
+        text: source.slice(0, head) + source.slice(loc.endOffset),
+        before: el.nodeName + (cls ? '.' + cls.value.trim().split(/\s+/)[0] : ''),
+        after: '(지움)',
+        mode: 'remove'
+    };
+}
+
+/**
+ * 요소를 그대로 하나 더 만들어 바로 뒤에 붙인다.
+ * 원본 문자열을 그대로 복사하므로 들여쓰기·주석·따옴표 스타일이 유지된다.
+ */
+export function duplicateElement(source, path) {
+    const document = parse(source, { sourceCodeLocationInfo: true });
+    const el = findByPath(document, path);
+    if (!el) throw new Error('요소를 찾지 못했습니다. 파일이 그 사이 바뀌었을 수 있어요.');
+    const loc = el.sourceCodeLocation;
+    if (!loc) throw new Error('요소의 원본 위치를 알 수 없습니다.');
+
+    const block = source.slice(loc.startOffset, loc.endOffset);
+    // 원본이 있던 줄의 들여쓰기를 그대로 따라간다
+    const lineStart = source.lastIndexOf('\n', loc.startOffset - 1) + 1;
+    const indent = (source.slice(lineStart, loc.startOffset).match(/^[ \t]*/) || [''])[0];
+
+    const cls = (el.attrs || []).find(a => a.name === 'class');
+    return {
+        text: source.slice(0, loc.endOffset) + '\n' + indent + block + source.slice(loc.endOffset),
+        before: el.nodeName + (cls ? '.' + cls.value.trim().split(/\s+/)[0] : ''),
+        after: '(하나 더)',
+        mode: 'duplicate'
+    };
+}
+
+/**
  * 요소의 속성 하나를 바꾸거나(있으면) 새로 넣는다(없으면).
  * 이미지 src·영상 링크처럼 style 이 아닌 값을 고칠 때 쓴다.
  * value 가 null 이면 속성을 지운다.
@@ -473,6 +580,36 @@ export function patchAttr(source, path, name, value) {
  * 인터랙션 적용: 요소에 클래스를 붙이고, 필요한 CSS 를 <style> 끝에 한 번만 넣는다.
  * 같은 클래스를 또 적용해도 CSS 는 중복되지 않는다.
  */
+/**
+ * CSS 를 페이지의 마지막 <style> 블록 끝에 덧붙인다.
+ * 첫 줄을 표시로 삼아 이미 들어 있으면 건너뛰므로, 같은 걸 두 번 넣어도 늘어나지 않는다.
+ * (컴포넌트가 기대는 규칙을 함께 옮길 때도, 인터랙션 CSS 를 넣을 때도 이 경로를 쓴다)
+ *
+ * @returns {{text: string, added: boolean}}
+ */
+export function appendCss(source, css, label = '') {
+    const body = String(css || '').trim();
+    if (!body) return { text: source, added: false };
+    const marker = body.split('\n')[0].trim();
+    if (marker && source.includes(marker)) return { text: source, added: false };
+
+    const doc = parse(source, { sourceCodeLocationInfo: true });
+    let last = null;
+    walk(doc, node => {
+        if (node.nodeName === 'style' && node.sourceCodeLocation) {
+            const t = node.childNodes && node.childNodes[0];
+            if (t && t.sourceCodeLocation) last = t.sourceCodeLocation;
+        }
+    });
+    if (!last) return { text: source, added: false };   // <style> 이 없으면 손대지 않는다
+
+    let at = last.endOffset;
+    while (at > last.startOffset && /\s/.test(source[at - 1])) at--;
+    const head = label ? `\n\n        /* ${label} */\n` : '\n\n';
+    const block = head + body.split('\n').map(l => '        ' + l).join('\n') + '\n';
+    return { text: source.slice(0, at) + block + source.slice(at), added: true };
+}
+
 export function applyMotion(source, path, className, css) {
     let text = source;
     const notes = [];
@@ -491,26 +628,10 @@ export function applyMotion(source, path, className, css) {
         }
     }
 
-    // 2) CSS 를 마지막 <style> 블록 끝에 넣는다 (이미 있으면 건너뜀)
-    const marker = (css || '').trim().split('\n')[0].trim();
-    if (css && !text.includes(marker)) {
-        const doc2 = parse(text, { sourceCodeLocationInfo: true });
-        let last = null;
-        walk(doc2, node => {
-            if (node.nodeName === 'style' && node.sourceCodeLocation) {
-                const t = node.childNodes && node.childNodes[0];
-                if (t && t.sourceCodeLocation) last = t.sourceCodeLocation;
-            }
-        });
-        if (last) {
-            let at = last.endOffset;
-            while (at > last.startOffset && /\s/.test(text[at - 1])) at--;
-            const block = `\n\n        /* 인터랙션: ${className} */\n` +
-                css.split('\n').map(l => '        ' + l).join('\n') + '\n';
-            text = text.slice(0, at) + block + text.slice(at);
-            notes.push('+CSS');
-        }
-    }
+    // 2) CSS 를 페이지에 넣는다
+    const r = appendCss(text, css, className ? `인터랙션: ${className}` : '');
+    text = r.text;
+    if (r.added) notes.push('+CSS');
 
     return { text, before: '(없음)', after: notes.join(' ') || '이미 적용됨', mode: 'motion' };
 }

@@ -28,6 +28,7 @@
     }
 
     function elementAtPath(path) {
+        if (!Array.isArray(path)) return null;
         let cur = document.documentElement;
         for (const i of path) {
             cur = cur.children[i];
@@ -218,10 +219,26 @@
 
     // ---------- 겉모습 (선택/호버 표시) ----------
     const style = document.createElement('style');
+    style.id = '__ed-chrome';   // 컴포넌트를 뜰 때 이 스타일이 딸려가지 않도록 표시해 둔다
     style.textContent = `
         .__ed-hover { outline: 2px solid rgba(59,130,246,.55) !important; outline-offset: -2px !important; }
         .__ed-selected { outline: 2px solid #3B82F6 !important; outline-offset: -2px !important; }
         .__ed-picking, .__ed-picking * { cursor: crosshair !important; }
+        /* 섹션 이동 모드 — 덩어리째 고르는 중이라 커서도 '집는' 모양으로 */
+        .__ed-moving, .__ed-moving * { cursor: grab !important; }
+        .__ed-move-pick { outline: 2px dashed #3B82F6 !important; outline-offset: -3px !important; }
+        .__ed-movebar {
+            position: absolute; z-index: 2147483647; display: flex; gap: 6px;
+            padding: 6px; border-radius: 999px; background: rgba(20,20,24,.92);
+            box-shadow: 0 8px 24px rgba(0,0,0,.28); font: 500 13px/1 system-ui, sans-serif;
+        }
+        .__ed-movebar button {
+            all: unset; cursor: pointer; width: 30px; height: 30px; border-radius: 999px;
+            display: flex; align-items: center; justify-content: center; color: #fff;
+        }
+        .__ed-movebar button:hover { background: rgba(255,255,255,.16); }
+        .__ed-movebar button[disabled] { opacity: .3; cursor: default; }
+        .__ed-movebar span { color: rgba(255,255,255,.72); padding: 0 8px; align-self: center; white-space: nowrap; }
     `;
     document.documentElement.appendChild(style);
 
@@ -229,6 +246,13 @@
     const clearHover = () => { hovered?.classList.remove('__ed-hover'); hovered = null; };
 
     document.addEventListener('mouseover', e => {
+        if (moving) {
+            if (e.target.closest && e.target.closest('.__ed-movebar')) return;
+            clearHover();
+            const b = topBlockOf(e.target);
+            if (b && b !== moveTarget) { hovered = b; b.classList.add('__ed-hover'); }
+            return;
+        }
         if (!picking) return;
         clearHover();
         hovered = e.target;
@@ -236,6 +260,13 @@
     }, true);
 
     document.addEventListener('click', e => {
+        if (moving) {
+            if (e.target.closest && e.target.closest('.__ed-movebar')) return;  // 화살표는 그대로 통과
+            e.preventDefault(); e.stopPropagation();
+            const b = topBlockOf(e.target);
+            if (b) setMoveTarget(b);
+            return;
+        }
         if (!picking) return;
         // 캐러셀 화살표는 눌러서 넘겨봐야 하므로 선택보다 우선한다
         if (e.target.closest && e.target.closest('[data-carousel-prev],[data-carousel-next]')) return;
@@ -249,6 +280,242 @@
         selected = el;
         selected.classList.add('__ed-selected');
         post('selected', describe(el));
+    }
+
+    /**
+     * 이 페이지의 CSS 가 알고 있는 클래스 이름 전부.
+     * 다른 페이지에서 만든 컴포넌트를 넣을 때, 기대는 클래스가 여기 없으면 모양이 깨진다.
+     */
+    /** 이 페이지가 정의한 CSS 변수(디자인 토큰) 이름 — 컴포넌트가 기대는 토큰이 있는지 확인용 */
+    function pageVars() {
+        const out = new Set();
+        for (const sheet of document.styleSheets) {
+            let rules;
+            try { rules = sheet.cssRules; } catch { continue; }
+            if (!rules) continue;
+            const scan = list => {
+                for (const r of list) {
+                    if (r.style) {
+                        for (let i = 0; i < r.style.length; i++) {
+                            const p = r.style[i];
+                            if (p && p.startsWith('--')) out.add(p);
+                        }
+                    }
+                    if (r.cssRules) scan(r.cssRules);
+                }
+            };
+            scan(rules);
+        }
+        return [...out];
+    }
+
+    function pageClasses() {
+        const out = new Set();
+        for (const sheet of document.styleSheets) {
+            let rules;
+            try { rules = sheet.cssRules; } catch { continue; }   // 남의 도메인 스타일시트는 못 읽는다
+            if (!rules) continue;
+            const scan = list => {
+                for (const r of list) {
+                    if (r.selectorText) {
+                        for (const m of r.selectorText.matchAll(/\.([A-Za-z_][-\w]*)/g)) out.add(m[1]);
+                    }
+                    if (r.cssRules) scan(r.cssRules);   // @media 안쪽도 본다
+                }
+            };
+            scan(rules);
+        }
+        return [...out];
+    }
+
+    /**
+     * 이 덩어리에 실제로 적용되는 CSS 규칙을 순서대로 모은다.
+     *
+     * 까다로운 점 두 가지:
+     *  1) :hover · :focus-visible 같은 상태 규칙은 matches() 로 안 잡힌다
+     *     → 선택자에서 상태 부분을 떼고 맞춰 본 뒤, 규칙은 원래대로 담는다.
+     *  2) @media 안의 규칙은 조건까지 살려야 반응형이 따라온다.
+     * 파일에 적힌 순서를 지켜야 덮어쓰기 관계가 깨지지 않으므로, 시트 순회 순서를 그대로 쓴다.
+     */
+    function collectCss(root) {
+        const nodes = [root, ...root.querySelectorAll('*')];
+        const hit = sel => {
+            // 상태·의사요소를 걷어낸 형태로 검사 (":hover", "::after", ":not(...)" 등)
+            const plain = sel
+                .replace(/::[a-z-]+(\([^)]*\))?/gi, '')
+                .replace(/:(hover|focus|focus-visible|active|visited|target|checked|disabled|first-of-type|last-child|first-child|nth-child\([^)]*\))/gi, '')
+                .trim();
+            if (!plain) return false;
+            for (const n of nodes) {
+                try { if (n.matches(plain)) return true; } catch { /* 못 읽는 선택자는 건너뛴다 */ }
+            }
+            return false;
+        };
+
+        const out = [];        // { css, media } — 나온 순서 그대로
+        const seen = new Set();
+        const scan = (rules, media) => {
+            for (const r of rules) {
+                if (r.type === 4 /* @media */) {
+                    scan(r.cssRules || [], media ? `${media} and ${r.conditionText}` : r.conditionText);
+                    continue;
+                }
+                if (r.cssRules && !r.selectorText) { scan(r.cssRules, media); continue; }   // @supports 등
+                if (!r.selectorText) continue;
+                // 쉼표로 묶인 선택자는 우리 덩어리에 걸리는 것만 남긴다 (남의 규칙까지 끌고 오지 않게)
+                const parts = r.selectorText.split(',').map(x => x.trim()).filter(Boolean);
+                // *, html, body, :root 같은 페이지 전체 규칙은 덩어리의 스타일이 아니다.
+                // 함께 옮기면 대상 페이지의 기본값까지 덮어써 버린다.
+                const GLOBAL = /^(\*|html|body|:root|:where\(html\))$/i;
+                const keep = parts.filter(sel => !GLOBAL.test(sel) && hit(sel));
+                if (!keep.length) continue;
+                const text = `${keep.join(', ')} { ${r.style.cssText} }`;
+                const key = media + '|' + text;
+                if (seen.has(key)) continue;
+                seen.add(key);
+                out.push({ css: text, media: media || '' });
+            }
+        };
+
+        for (const sheet of document.styleSheets) {
+            // 에디터가 미리보기용으로 끼워 넣은 시트는 컴포넌트의 것이 아니다
+            const id = sheet.ownerNode && sheet.ownerNode.id;
+            if (id && id.startsWith('__ed-')) continue;
+            let rules;
+            try { rules = sheet.cssRules; } catch { continue; }
+            if (rules) scan(rules, '');
+        }
+
+        // @media 는 조건별로 다시 묶는다
+        const plain = out.filter(r => !r.media).map(r => r.css);
+        const byMedia = new Map();
+        for (const r of out.filter(r => r.media)) {
+            if (!byMedia.has(r.media)) byMedia.set(r.media, []);
+            byMedia.get(r.media).push(r.css);
+        }
+        const chunks = [...plain];
+        for (const [cond, list] of byMedia) {
+            chunks.push(`@media ${cond} {\n${list.map(c => '    ' + c).join('\n')}\n}`);
+        }
+        return { text: chunks.join('\n'), count: out.length };
+    }
+
+    /** 이 덩어리가 쓰는 CSS 변수 이름들 (디자인 시스템 토큰이 필요한지 알려준다) */
+    function usedVars(cssText) {
+        return [...new Set([...String(cssText).matchAll(/var\(\s*(--[\w-]+)/g)].map(m => m[1]))];
+    }
+
+    // ---------- 고른 것을 컴포넌트로 뜨기 ----------
+    /**
+     * 선택한 요소의 HTML 을 '저장해도 되는 상태'로 만들어 돌려준다.
+     * 미리보기에만 존재하는 흔적(선택 테두리 클래스, reveal 을 풀어둔 인라인 스타일,
+     * 삽입 표시)을 지워야 다음에 다시 넣었을 때 원래 모습이 나온다.
+     */
+    function cleanHtml(el) {
+        const c = el.cloneNode(true);
+        const strip = n => {
+            if (!n.classList) return;
+            n.classList.remove('__ed-selected', '__ed-hover', '__ed-move-pick');
+            if (!n.classList.length) n.removeAttribute('class');
+            n.removeAttribute('data-ed-inserted');
+            // revealNow 가 눈에 보이게 하려고 넣은 값만 되돌린다 (원래는 CSS 가 맡는다)
+            if (n.classList && n.classList.contains('reveal')) {
+                if (n.style.opacity === '1') n.style.removeProperty('opacity');
+                if (n.style.transform === 'none') n.style.removeProperty('transform');
+            }
+            if (n.getAttribute && n.getAttribute('style') === '') n.removeAttribute('style');
+        };
+        strip(c);
+        c.querySelectorAll('*').forEach(strip);
+        return c.outerHTML;
+    }
+
+    /** 컴포넌트 카드에 그릴 뼈대 — 자식들의 크기 비율만 네모로 옮긴다 */
+    function sketch(el) {
+        const box = el.getBoundingClientRect();
+        if (!box.width || !box.height) return [];
+        const kids = [...el.children].slice(0, 8);
+        const src = kids.length ? kids : [el];
+        return src.map(k => {
+            const r = k.getBoundingClientRect();
+            return {
+                x: +(((r.left - box.left) / box.width) * 140).toFixed(1),
+                y: +(((r.top - box.top) / box.height) * 54).toFixed(1),
+                w: +((r.width / box.width) * 140).toFixed(1),
+                h: +((r.height / box.height) * 54).toFixed(1),
+            };
+        }).filter(r => r.w > 1 && r.h > 0.5);
+    }
+
+    // ---------- 섹션 이동 (최상위 덩어리 순서 바꾸기) ----------
+    // 페이지의 큰 흐름을 바꾸는 일이라, 안쪽 요소가 아니라 '가장 바깥 블록'만 고른다.
+    let moving = false, moveTarget = null, moveBar = null;
+    const moveHistory = [];   // 되돌리기용 — 에디터의 pending 과 같은 순서로 쌓인다
+    const blockHistory = [];  // 지우기·복제 되돌리기용 (지운 노드를 들고 있다가 제자리에 꽂는다)
+
+    /** 최상위 블록들 = <main> 직속(없으면 body 직속). 스크립트·스타일은 뺀다 */
+    function topBlocks() {
+        const host = document.querySelector('main') || document.body;
+        return [...host.children].filter(n => !/^(SCRIPT|STYLE|LINK|TEMPLATE|NOSCRIPT)$/.test(n.tagName));
+    }
+    /** 어디를 눌렀든 그게 속한 최상위 블록으로 올라간다 */
+    function topBlockOf(el) {
+        const blocks = topBlocks();
+        let cur = el;
+        while (cur && !blocks.includes(cur)) cur = cur.parentElement;
+        return cur || null;
+    }
+    function hideMoveBar() {
+        moveTarget?.classList.remove('__ed-move-pick');
+        moveTarget = null;
+        moveBar?.remove(); moveBar = null;
+    }
+    function placeMoveBar() {
+        if (!moveTarget) return;
+        if (!moveBar) {
+            moveBar = document.createElement('div');
+            moveBar.className = '__ed-movebar';
+            moveBar.innerHTML =
+                '<button data-dir="up" title="위로">\u2191</button>' +
+                '<span></span>' +
+                '<button data-dir="down" title="아래로">\u2193</button>';
+            moveBar.addEventListener('click', onMoveClick, true);
+            document.body.appendChild(moveBar);
+        }
+        const blocks = topBlocks();
+        const i = blocks.indexOf(moveTarget);
+        moveBar.querySelector('[data-dir=up]').disabled = i <= 0;
+        moveBar.querySelector('[data-dir=down]').disabled = i < 0 || i >= blocks.length - 1;
+        moveBar.querySelector('span').textContent = `${i + 1} / ${blocks.length}`;
+        const r = moveTarget.getBoundingClientRect();
+        moveBar.style.top = (window.scrollY + Math.max(r.top, 8) + 8) + 'px';
+        moveBar.style.left = (window.scrollX + r.right - 150) + 'px';
+    }
+    function setMoveTarget(el) {
+        moveTarget?.classList.remove('__ed-move-pick');
+        clearHover();
+        moveTarget = el;
+        moveTarget.classList.add('__ed-move-pick');
+        placeMoveBar();
+    }
+    function onMoveClick(e) {
+        const btn = e.target.closest('button[data-dir]');
+        if (!btn || btn.disabled || !moveTarget) return;
+        e.preventDefault(); e.stopPropagation();
+        const dir = btn.dataset.dir;
+        const blocks = topBlocks();
+        const i = blocks.indexOf(moveTarget);
+        const partner = dir === 'up' ? blocks[i - 1] : blocks[i + 1];
+        if (!partner) return;
+        // 파일 수정은 '옮기기 전' 경로 기준이라, DOM 을 건드리기 전에 먼저 읽는다
+        const path = pathOf(moveTarget);
+        if (dir === 'up') partner.parentNode.insertBefore(moveTarget, partner);
+        else partner.parentNode.insertBefore(partner, moveTarget);
+        moveHistory.push({ el: moveTarget, dir });
+        post('moved', { path, dir });
+        placeMoveBar();
+        moveTarget.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        setTimeout(reportHeight, 80);
     }
 
     /**
@@ -605,7 +872,8 @@
         let key = '', kind = 'component';
         try {
             const dt = e.dataTransfer;
-            if (dt.getData('text/x-hnkl-media')) { key = dt.getData('text/x-hnkl-media'); kind = 'media'; }
+            if (dt.getData('text/x-hnkl-saved')) { key = dt.getData('text/x-hnkl-saved'); kind = 'saved'; }
+            else if (dt.getData('text/x-hnkl-media')) { key = dt.getData('text/x-hnkl-media'); kind = 'media'; }
             else if (dt.getData('text/x-hnkl-motion')) { key = dt.getData('text/x-hnkl-motion'); kind = 'motion'; }
             else key = dt.getData('text/x-hnkl-component') || dt.getData('text/plain') || '';
         } catch (_) {}
@@ -623,7 +891,72 @@
         if (!msg || msg.source !== '__hnkl_editor_host') return;
         const { type, payload } = msg;
 
-        if (type === 'setPicking') {
+        if (type === 'removeElement' || type === 'duplicateElement') {
+            const el = selected;
+            if (!el || !el.parentNode) { post('blockDone', { error: '고른 요소가 없습니다.' }); return; }
+            const path = pathOf(el);                       // 파일 수정은 '건드리기 전' 경로 기준
+            if (type === 'removeElement') {
+                // 되돌릴 수 있게 어디에 있었는지 함께 적어 둔다
+                blockHistory.push({ act: 'remove', node: el, parent: el.parentNode, next: el.nextSibling });
+                el.classList.remove('__ed-selected');
+                el.remove();
+                selected = null;
+                post('blockDone', { act: 'remove', path });
+            } else {
+                const copy = el.cloneNode(true);
+                copy.classList.remove('__ed-selected', '__ed-hover', '__ed-move-pick');
+                el.parentNode.insertBefore(copy, el.nextSibling);
+                revealNow(copy);
+                bindCarouselNav(copy);
+                blockHistory.push({ act: 'duplicate', node: copy });
+                post('blockDone', { act: 'duplicate', path });
+            }
+            setTimeout(reportHeight, 80);
+        }
+        else if (type === 'undoBlock') {
+            const last = blockHistory.pop();
+            if (!last) return;
+            if (last.act === 'remove') last.parent.insertBefore(last.node, last.next);
+            else last.node.remove();
+            setTimeout(reportHeight, 80);
+        }
+        else if (type === 'grabComponent') {
+            if (!selected) { post('grabbed', { error: '고른 요소가 없습니다.' }); return; }
+            const css = collectCss(selected);
+            post('grabbed', {
+                html: cleanHtml(selected),
+                css: css.text,
+                cssCount: css.count,
+                vars: usedVars(css.text),
+                tag: selected.tagName.toLowerCase(),
+                className: (selected.getAttribute('class') || '').trim(),
+                text: (selected.textContent || '').trim().slice(0, 40),
+                sketch: sketch(selected),
+                // 이 덩어리가 기대는 클래스들 — 다른 페이지에 넣을 때 있는지 확인하는 데 쓴다
+                needs: [...new Set([selected, ...selected.querySelectorAll('*')]
+                    .flatMap(n => [...(n.classList || [])])
+                    .filter(c => !c.startsWith('__ed') && !c.startsWith('ed-')))].slice(0, 60),
+            });
+        }
+        else if (type === 'undoMove') {
+            // 마지막에 옮긴 것을 반대로 한 칸 되돌린다 (에디터가 pending 을 뺄 때 같이 부른다)
+            const last = moveHistory.pop();
+            if (!last) return;
+            const blocks = topBlocks();
+            const i = blocks.indexOf(last.el);
+            const back = last.dir === 'up' ? blocks[i + 1] : blocks[i - 1];
+            if (!back) return;
+            if (last.dir === 'up') back.parentNode.insertBefore(back, last.el);
+            else back.parentNode.insertBefore(last.el, back);
+            if (moveTarget) placeMoveBar();
+            setTimeout(reportHeight, 80);
+        }
+        else if (type === 'setMoving') {
+            moving = !!payload;
+            document.documentElement.classList.toggle('__ed-moving', moving);
+            if (!moving) hideMoveBar(); else clearHover();
+        }
+        else if (type === 'setPicking') {
             picking = !!payload;
             document.documentElement.classList.toggle('__ed-picking', picking);
             if (!picking) clearHover();
@@ -673,6 +1006,9 @@
             // 영원히 투명하게 남는다 → 삽입한 것은 바로 보이게 해 준다.
             revealNow(node);
             node.scrollIntoView({ block: 'center', behavior: 'smooth' });
+            // 넣자마자 덩어리 전체를 골라 둔다 — 인스펙터에서 바로 여백을 만질 수 있게.
+            // (직접 클릭하면 마우스가 닿은 말단 요소가 잡혀서 덩어리 여백을 못 준다)
+            select(node);
             post('inserted', { path: pathOf(node) });
             setTimeout(reportHeight, 80);
             bindCarouselNav(node);
@@ -804,7 +1140,7 @@
         else if (type === 'highlight') showHighlight(payload.area);
         else if (type === 'clearHighlight') clearHighlight();
         else if (type === 'getDesignSystem') post('designSystem', collectDesignSystem());
-        else if (type === 'ping') post('ready', { page: PAGE, title: document.title });
+        else if (type === 'ping') post('ready', { page: PAGE, title: document.title, classes: pageClasses(), vars: pageVars() });
     });
 
     // ---------- 박스 모델 하이라이트 ----------
@@ -1095,5 +1431,5 @@
         post('panEnd', {});
     }, true);
 
-    post('ready', { page: PAGE, title: document.title });
+    post('ready', { page: PAGE, title: document.title, classes: pageClasses(), vars: pageVars() });
 })();

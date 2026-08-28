@@ -13,13 +13,15 @@ import fs from 'node:fs';
 import fsp from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { patchInlineStyle, patchCssRule, insertHtml, patchAttr, applyMotion } from './lib/patch.js';
+import { patchInlineStyle, patchCssRule, insertHtml, patchAttr, applyMotion, moveElement, removeElement, duplicateElement } from './lib/patch.js';
 import { buildDesignSystem, saveTokens } from './lib/designsystem.js';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
 const PUBLIC = path.join(ROOT, 'public');
 const PORT = Number(process.env.PORT) || 5180;
+// 유저가 등록한 컴포넌트 — public/ 밖이라 배포되지 않고, 페이지끼리 함께 쓴다
+const COMPONENTS_FILE = path.join(HERE, 'components.json');
 
 const MIME = {
     '.html': 'text/html; charset=utf-8',
@@ -44,6 +46,20 @@ function safeJoin(base, rel) {
     const target = path.resolve(base, '.' + path.posix.normalize('/' + rel));
     if (target !== base && !target.startsWith(base + path.sep)) return null;
     return target;
+}
+
+/** 등록된 컴포넌트 읽기 (파일이 없거나 깨졌으면 빈 목록) */
+async function readComponents() {
+    try {
+        const raw = await fsp.readFile(COMPONENTS_FILE, 'utf8');
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed.items) ? parsed.items : [];
+    } catch { return []; }
+}
+
+/** 컴포넌트 저장 — 통째로 다시 쓴다 (사람이 읽을 일이 있어 들여쓰기 유지) */
+async function writeComponents(items) {
+    await fsp.writeFile(COMPONENTS_FILE, JSON.stringify({ items }, null, 2) + '\n', 'utf8');
 }
 
 /** public/ 안의 편집 대상 HTML 목록 */
@@ -113,6 +129,46 @@ const server = http.createServer(async (req, res) => {
             return sendJson(res, 200, { pages: await listPages() });
         }
 
+        // ---------- 내 컴포넌트 (등록·조회·삭제) ----------
+        if (pathname === '/__api/components' && req.method === 'GET') {
+            return sendJson(res, 200, { items: await readComponents() });
+        }
+        if (pathname === '/__api/components' && req.method === 'POST') {
+            const body = JSON.parse(await readBody(req));
+            const items = await readComponents();
+
+            if (body.remove) {
+                const next = items.filter(it => it.id !== body.remove);
+                if (next.length === items.length) return sendJson(res, 404, { error: '없는 컴포넌트입니다.' });
+                await writeComponents(next);
+                return sendJson(res, 200, { ok: true, items: next });
+            }
+
+            const name = String(body.name || '').trim();
+            const html = String(body.html || '').trim();
+            if (!name) return sendJson(res, 400, { error: '이름이 필요합니다.' });
+            if (!html) return sendJson(res, 400, { error: '내용이 비어 있습니다.' });
+            if (html.length > 200_000) return sendJson(res, 400, { error: '너무 큽니다 (200KB 초과).' });
+            if (String(body.css || '').length > 400_000) return sendJson(res, 400, { error: 'CSS 가 너무 큽니다 (400KB 초과).' });
+
+            // 같은 이름이면 덮어쓴다 (계속 다듬어 가며 쓰는 흐름)
+            const id = body.id || 'c' + Date.now().toString(36);
+            const item = {
+                id, name, html,
+                css: String(body.css || ''),
+                vars: Array.isArray(body.vars) ? body.vars.slice(0, 80) : [],
+                note: String(body.note || '').slice(0, 80),
+                sketch: Array.isArray(body.sketch) ? body.sketch.slice(0, 8) : [],
+                needs: Array.isArray(body.needs) ? body.needs.slice(0, 60) : [],
+                from: String(body.from || ''),
+            };
+            const at = items.findIndex(it => it.name === name);
+            if (at >= 0) items[at] = { ...item, id: items[at].id };
+            else items.push(item);
+            await writeComponents(items);
+            return sendJson(res, 200, { ok: true, items, saved: name, replaced: at >= 0 });
+        }
+
         // 디자인 시스템 (tokens.css 파싱 + vibra/common 사용처 스캔). 표시 전용.
         if (pathname === '/__api/designsystem') {
             return sendJson(res, 200, buildDesignSystem());
@@ -154,6 +210,18 @@ const server = http.createServer(async (req, res) => {
                     const r = patchAttr(text, edit.path, edit.name, edit.value);
                     text = r.text;
                     applied.push({ kind: 'attr', name: edit.name, before: r.before, after: r.after });
+                } else if (edit.kind === 'move') {
+                    const r = moveElement(text, edit.path, edit.dir);
+                    text = r.text;
+                    applied.push({ kind: 'move', dir: edit.dir, before: r.before, after: r.after });
+                } else if (edit.kind === 'remove') {
+                    const r = removeElement(text, edit.path);
+                    text = r.text;
+                    applied.push({ kind: 'remove', before: r.before, after: r.after });
+                } else if (edit.kind === 'duplicate') {
+                    const r = duplicateElement(text, edit.path);
+                    text = r.text;
+                    applied.push({ kind: 'duplicate', before: r.before, after: r.after });
                 } else if (edit.kind === 'motion') {
                     const r = applyMotion(text, edit.path, edit.className, edit.css);
                     text = r.text;

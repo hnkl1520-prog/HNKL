@@ -130,18 +130,22 @@ body { font-weight: 400; }
     background: var(--bar); border-bottom: 1px solid var(--line);
 }
 .bar-zone { display: flex; align-items: center; gap: 8px; min-width: 0; }
-.bar-left   { justify-self: start; overflow: hidden; }
-.bar-right  { justify-self: end; }
-.bar-center { justify-self: center; }
+/* grid-column 을 못박는다 — 중앙 구역이 display:none 이 되어도 우측 구역이
+   빈 auto 칸으로 흘러들어가 가운데에 서지 않게 한다 (DS 모드) */
+.bar-left   { grid-column: 1; justify-self: start; overflow: hidden; }
+.bar-center { grid-column: 2; justify-self: center; }
+.bar-right  { grid-column: 3; justify-self: end; }
 /* 파일 드롭다운은 공간이 부족하면 줄어들며 말줄임 (컴포넌트 토글이 밀려나지 않게) */
 .bar-left .select { min-width: 0; flex: 0 1 auto; max-width: 200px; text-overflow: ellipsis; }
 .bar-zone[hidden] { display: none; }
 /* 브랜드 로고 — 사이트 assets/logo.svg 를 그대로 쓴다 */
 .brand {
     height: 18px; width: auto; display: block; flex: 0 0 auto;
-    margin-right: 4px;
 }
 .sep { width: 1px; height: 22px; background: var(--line); }
+/* 우측 존의 편집 전용 액션 묶음 — DS 모드에서 이 덩어리만 숨는다 (모드 스위처는 남는다) */
+.bar-actions { display: flex; align-items: center; gap: 8px; }
+.bar-actions[hidden] { display: none; }
 .grow { flex: 1; }
 
 .select {
@@ -263,6 +267,9 @@ body { font-weight: 400; }
 
 /* 탭 내용 — 닫히면 폭 0으로 접힌다 (옆으로 뿅) */
 .lp-body {
+    /* 카드(--surface-1)와 바닥이 거의 같은 밝기라 카드가 떠 보이지 않았다.
+       패널 유리 위에 옅은 그늘만 얹어 바닥을 살짝 누른다 (blur 느낌은 유지). */
+    background: rgba(0, 0, 0, 0.05);
     flex: 0 0 244px; width: 244px; min-width: 0;
     display: flex; flex-direction: column; overflow: hidden;
     transition: flex-basis .24s cubic-bezier(.2,.7,.3,1), width .24s cubic-bezier(.2,.7,.3,1);
@@ -293,6 +300,15 @@ body { font-weight: 400; }
     transition: border-color .15s, background .15s;
 }
 .lp-card:hover { border-color: #c9c9d0; background: var(--surface-2); }
+/* 내가 등록한 카드에만 있는 삭제 버튼 — 평소엔 숨고 hover 때만 보인다 */
+.lp-card { position: relative; }
+.lp-card__del {
+    position: absolute; top: 6px; right: 6px; width: 20px; height: 20px;
+    border: 0; border-radius: 999px; background: rgba(0,0,0,.06); color: var(--dim);
+    font-size: 13px; line-height: 1; cursor: pointer; opacity: 0; transition: opacity .15s;
+}
+.lp-card:hover .lp-card__del { opacity: 1; }
+.lp-card__del:hover { background: rgba(0,0,0,.14); color: var(--text); }
 .lp-card:active { cursor: grabbing; }
 .lp-card__thumb {
     display: flex; align-items: center; justify-content: center;
@@ -403,7 +419,9 @@ body { font-weight: 400; }
 .empty .hint { font-size: 12px; opacity: .8; margin-top: 18px; }
 
 .selHead { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.selTag { font-weight: 700; font-size: 14px; color: var(--accent); word-break: break-all; }
+.selTag { font-weight: 700; font-size: 14px; color: var(--accent); word-break: break-all; min-width: 0; }
+/* 덩어리 조작 줄 — 폭이 모자라면 다음 줄로 넘긴다 (글자가 세로로 쪼개지지 않게) */
+.selActions { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 4px; }
 .selMeta { color: var(--dim); font-size: 12px; margin: 4px 0 14px; line-height: 1.6; word-break: break-all; }
 
 .modeRow { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
@@ -557,6 +575,11 @@ body { font-weight: 400; }
 }
 .toast.err { border-color: #c0483f; color: #b03a30; }
 .toast.ok { border-color: #2f7d4f; }
+/* 경고 — 넣긴 했는데 이 페이지에 없는 클래스가 있을 때 */
+.toast.warn { border-color: #b8860b; color: #8a6508; }
+/* 되돌릴 수 있는 삭제라 빨갛게 겁주지 않고, 글자만 붉은 기를 준다 */
+.btn.danger { color: #b03a30; }
+.btn.danger:hover:not(:disabled) { background: rgba(176,58,48,.08); }
 
 /* ================================================================
    디자인 시스템 뷰 (표시 전용) — tokens.css 기반 4섹션

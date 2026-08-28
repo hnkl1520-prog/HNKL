@@ -1,0 +1,51 @@
+{
+  "items": [
+    {
+      "id": "cmtcmn5wt",
+      "name": "Research 카드 3단",
+      "html": "<div class=\"ql-method-grid\">\n                        <div class=\"ql-method-card reveal\">\n                            <img class=\"ql-method-card__img\" src=\"media/qualitative/interview.jpg\" alt=\"심층 인터뷰\">\n                            <div class=\"ql-method-card__body\">\n                                <span class=\"ql-method-card__tag\">In-depth Interview</span>\n                                <h3 class=\"ql-method-card__title\">심층 인터뷰</h3>\n                                <p class=\"ql-method-card__desc\">축구 전문가 2명, 일반 유저 8명</p>\n                            </div>\n                        </div>\n                        <div class=\"ql-method-card reveal\">\n                            <img class=\"ql-method-card__img\" src=\"media/qualitative/observation.jpg\" alt=\"참여 관찰\">\n                            <div class=\"ql-method-card__body\">\n                                <span class=\"ql-method-card__tag\">In-Situ Observation</span>\n                                <h3 class=\"ql-method-card__title\">참여 관찰 (섀도잉)</h3>\n                                <p class=\"ql-method-card__desc\">경기장 현장 관람 유저 1명, 중계 방송 시청 유저 1명</p>\n                            </div>\n                        </div>\n                        <div class=\"ql-method-card reveal\">\n                            <img class=\"ql-method-card__img\" src=\"media/qualitative/ethnography.jpg\" alt=\"온라인 행태 관찰\">\n                            <div class=\"ql-method-card__body\">\n                                <span class=\"ql-method-card__tag\">Online Ethnography</span>\n                                <h3 class=\"ql-method-card__title\">온라인 행태 관찰</h3>\n                                <p class=\"ql-method-card__desc\">경기 중 구단 팬 커뮤니티에 올라온 실시간 댓글 약 4,000건</p>\n                            </div>\n                        </div>\n                    </div>",
+      "css": ".ql-method-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: clamp(calc(28px * var(--vb-s)), 3.5vw, calc(44px * var(--vb-s))); }\n.ql-method-card { text-align: center; }\n.ql-method-card__img { width: 100%; height: auto; display: block; border-radius: 16px; border: 1px solid var(--vb-line); }\n.ql-method-card__body { padding: 16px 6px 0px; }\n.ql-method-card__tag { display: block; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent-color); margin-bottom: 8px; }\n.ql-method-card__title { margin: 0px 0px 6px; font-size: var(--fs-body); font-weight: 700; color: var(--vb-text); word-break: keep-all; }\n.ql-method-card__desc { margin: 0px; font-size: var(--fs-caption); line-height: 1.65; color: var(--vb-muted); word-break: keep-all; }\n.reveal { opacity: 0; transform: translateY(40px); will-change: opacity, transform; }\n@media (max-width: 768px) {\n    img { max-width: 100%; }\n}",
+      "vars": [
+        "--vb-s",
+        "--vb-line",
+        "--accent-color",
+        "--fs-body",
+        "--vb-text",
+        "--fs-caption",
+        "--vb-muted"
+      ],
+      "note": "\"In-depth Interview\n                     \"",
+      "sketch": [
+        {
+          "x": 0,
+          "y": 0,
+          "w": 43.5,
+          "h": 54
+        },
+        {
+          "x": 48.3,
+          "y": 0,
+          "w": 43.5,
+          "h": 54
+        },
+        {
+          "x": 96.5,
+          "y": 0,
+          "w": 43.5,
+          "h": 54
+        }
+      ],
+      "needs": [
+        "ql-method-grid",
+        "ql-method-card",
+        "reveal",
+        "ql-method-card__img",
+        "ql-method-card__body",
+        "ql-method-card__tag",
+        "ql-method-card__title",
+        "ql-method-card__desc"
+      ],
+      "from": "works/projects/vibra/vibra.html"
+    }
+  ]
+}

@@ -25,8 +25,30 @@ window.addEventListener('message', e => {
     const msg = e.data;
     if (!msg || msg.source !== '__hnkl_editor') return;
     if (msg.type === 'ready') {
+        pageClassSet = new Set(msg.payload?.classes || []);
+        pageVarSet = new Set(msg.payload?.vars || []);
         toFrame('setPicking', pickOn);
+        toFrame('setMoving', tool === 'move');
         applyPendingPreview();
+    }
+    else if (msg.type === 'blockDone') {
+        const p = msg.payload || {};
+        if (p.error) { toast(p.error, 'warn'); return; }
+        pending.push({ kind: p.act === 'remove' ? 'remove' : 'duplicate', path: p.path });
+        updateDirty();
+        if (p.act === 'remove') { selection = null; renderInspector(); }
+        toast(p.act === 'remove' ? '지웠습니다 — 저장해야 파일에 반영됩니다'
+                                 : '하나 더 만들었습니다 — 저장해야 파일에 반영됩니다', 'ok');
+    }
+    else if (msg.type === 'grabbed') {
+        onGrabbed(msg.payload);
+    }
+    else if (msg.type === 'moved') {
+        // 미리보기에서는 이미 옮겨졌다. 파일에 반영할 내용만 쌓아 둔다.
+        // 경로는 '옮기기 전' 기준이고 서버가 순서대로 적용하므로, 여러 번 눌러도 어긋나지 않는다.
+        pending.push({ kind: 'move', path: msg.payload.path, dir: msg.payload.dir });
+        updateDirty();
+        toast('섹션을 옮겼습니다 — 저장해야 파일에 반영됩니다', 'ok');
     }
     else if (msg.type === 'selected' || msg.type === 'previewApplied') {
         selection = msg.payload;
@@ -90,7 +112,36 @@ function onComponentDropped({ key, kind, path, position }) {
         toast(`인터랙션 적용 — ${def.className}`, 'ok');
         return;
     }
-    // ② 미디어 / 컴포넌트 — HTML 조각을 삽입
+    // ② 내가 등록한 컴포넌트 — 저장해 둔 HTML 을 그대로 넣는다
+    if (kind === 'saved') {
+        const it = savedComps.find(c => c.id === key);
+        if (!it) return;
+        const missing = missingClasses(it);
+
+        // 이 페이지에 없는 클래스가 있으면, 등록할 때 같이 떠 둔 스타일을 함께 넣는다.
+        // (이미 있는 페이지에는 넣지 않는다 — 같은 규칙을 두 벌 만들면 나중 것이 이기며 헷갈린다)
+        if (missing.length && it.css) {
+            pending.push({ kind: 'motion', path, className: '', css: it.css });
+            toFrame('motionPreview', { path, className: '', css: it.css });
+        }
+        pending.push({ kind: 'insert', path, html: it.html, position });
+        toFrame('insertPreview', { path, html: it.html, position });
+        updateDirty();
+
+        const missingVars = (it.vars || []).filter(v => !pageVarSet.has(v));
+        if (missing.length && it.css) {
+            toast(missingVars.length
+                ? `${it.name} — 스타일도 함께 넣었습니다. 다만 토큰 ${missingVars.length}개가 이 페이지에 없습니다 (${missingVars.slice(0, 3).join(', ')}…)`
+                : `${it.name} — 이 페이지에 없던 스타일도 함께 넣었습니다`,
+                missingVars.length ? 'warn' : 'ok');
+        } else if (missing.length) {
+            toast(`${it.name} — 없는 클래스 ${missing.length}개인데 저장된 스타일이 없습니다 (다시 등록하면 함께 저장됩니다)`, 'warn');
+        } else {
+            toast(`${it.name} 을(를) 넣었습니다 — 저장해야 파일에 반영됩니다`, 'ok');
+        }
+        return;
+    }
+    // ③ 미디어 / 기본 컴포넌트 — HTML 조각을 삽입
     let src = kind === 'media' ? MEDIA_HTML[key] : COMPONENT_HTML[key];
     if (!src) return;
     // 개수를 고를 수 있는 컴포넌트는 카드에서 고른 값을 쓴다 (카드 안 −/+ 로 조절)
@@ -309,24 +360,47 @@ let pickOn = true, tool = 'select';
 function setTool(next) {
     tool = next;
     pickOn = (next === 'select');
-    $('#pickBtn')?.classList.toggle('on', pickOn);
-    $('#pickBtn')?.setAttribute('aria-pressed', pickOn ? 'true' : 'false');
-    $('#panBtn')?.classList.toggle('on', !pickOn);
-    $('#panBtn')?.setAttribute('aria-pressed', !pickOn ? 'true' : 'false');
+    const moveOn = (next === 'move');
+    const mark = (id, on) => {
+        const b = $(id); if (!b) return;
+        b.classList.toggle('on', on);
+        b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    };
+    mark('#pickBtn', pickOn);
+    mark('#panBtn', next === 'pan');
+    mark('#moveBtn', moveOn);
     const st = document.getElementById('stage');
-    if (st) st.style.cursor = pickOn ? '' : 'grab';
+    if (st) st.style.cursor = (next === 'pan') ? 'grab' : '';
+    // 두 모드는 배타적 — 이동 중에는 요소 선택을 끈다
     toFrame('setPicking', pickOn);
+    toFrame('setMoving', moveOn);
 }
 $('#pickBtn')?.addEventListener('click', () => setTool('select'));
 $('#panBtn')?.addEventListener('click', () => setTool('pan'));
+$('#moveBtn')?.addEventListener('click', () => setTool('move'));
 document.addEventListener('keydown', e => {
     if (e.metaKey || e.ctrlKey || e.altKey) return;
     const t = e.target;
     if (t && /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) return;   // 입력 중엔 무시
     if (e.key === 'v' || e.key === 'V') setTool('select');
     if (e.key === 'h' || e.key === 'H') setTool('pan');
+    if (e.key === 'm' || e.key === 'M') setTool('move');
+    if (e.key === 'Delete' || e.key === 'Backspace') { if (selection) { e.preventDefault(); blockAction('remove'); } }
 });
 $('#parentBtn')?.addEventListener('click', () => toFrame('selectParent'));
+$('#dupBtn')?.addEventListener('click', () => blockAction('duplicate'));
+$('#delBtn')?.addEventListener('click', () => blockAction('remove'));
+
+/** 고른 덩어리를 지우거나 복제한다 — 미리보기가 먼저 반영하고, 결과를 받아 대기열에 쌓는다 */
+function blockAction(act) {
+    if (!selection) { toast('먼저 미리보기에서 덩어리를 고르세요', 'warn'); return; }
+    toFrame(act === 'remove' ? 'removeElement' : 'duplicateElement', {});
+}
+
+$('#saveCompBtn')?.addEventListener('click', () => {
+    if (!selection) { toast('먼저 미리보기에서 덩어리를 고르세요', 'warn'); return; }
+    toFrame('grabComponent', {});
+});
 
 // ---------------------------------------------------------------- 섹션 간격 조절
 // 큰 덩어리(.vb-section) 사이를 끌어서 위아래 여백을 조절한다.
@@ -1008,6 +1082,10 @@ function undoLast() {
         pending.pop();
         // 삽입·인터랙션은 화면에서 되돌리기 어려우니 그 요소만 지우고 다시 그린다
         if (last.kind === 'insert' || last.kind === 'motion') toFrame('undoInserts', {});
+        // 섹션 이동은 화면에서도 제자리로 돌려놓는다
+        if (last.kind === 'move') toFrame('undoMove', {});
+        // 지우기·복제도 화면에서 제자리로 돌려놓는다
+        if (last.kind === 'remove' || last.kind === 'duplicate') toFrame('undoBlock', {});
     }
 
     updateDirty();
@@ -1025,6 +1103,15 @@ document.addEventListener('keydown', e => {
     undoLast();
 });
 
+// Ctrl/Cmd + D 로 복제
+document.addEventListener('keydown', e => {
+    if (!(e.metaKey || e.ctrlKey) || e.key !== 'd') return;
+    const t = e.target;
+    if (t && /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) return;
+    e.preventDefault();
+    blockAction('duplicate');
+});
+
 $('#saveBtn').addEventListener('click', async () => {
     if (!pending.length) return;
     $('#saveBtn').disabled = true;
@@ -1038,6 +1125,9 @@ $('#saveBtn').addEventListener('click', async () => {
                 edits: pending.map(p => {
                     if (p.kind === 'css') return { kind: 'css', selector: p.selector, prop: p.prop, value: p.value };
                     if (p.kind === 'insert') return { kind: 'insert', path: p.path, html: p.html, position: p.position };
+                    if (p.kind === 'move') return { kind: 'move', path: p.path, dir: p.dir };
+                    if (p.kind === 'remove') return { kind: 'remove', path: p.path };
+                    if (p.kind === 'duplicate') return { kind: 'duplicate', path: p.path };
                     if (p.kind === 'attr') return { kind: 'attr', path: p.path, name: p.name, value: p.value };
                     if (p.kind === 'motion') return { kind: 'motion', path: p.path, className: p.className, css: p.css };
                     return { kind: 'inline', path: p.path, changes: p.changes };
@@ -1061,6 +1151,32 @@ $('#saveBtn').addEventListener('click', async () => {
 
 // ---------------------------------------------------------------- 알림
 let toastTimer;
+/** 미리보기가 떠 준 덩어리를 이름 붙여 등록한다 */
+async function onGrabbed(p) {
+    if (!p || p.error) { toast(p?.error || '가져오지 못했습니다', 'warn'); return; }
+    const guess = (p.className || '').split(/\s+/)[0] || p.tag;
+    const name = prompt('컴포넌트 이름 (같은 이름이면 덮어씁니다)', guess);
+    if (name === null) return;
+    if (!name.trim()) { toast('이름이 필요합니다', 'warn'); return; }
+    try {
+        const res = await fetch('/__api/components', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                name: name.trim(), html: p.html, sketch: p.sketch, needs: p.needs,
+                css: p.css, vars: p.vars,
+                note: p.text ? `"${p.text}"` : '', from: currentPage,
+            }),
+        });
+        const out = await res.json();
+        if (!res.ok) { toast(out.error || '등록 실패', 'warn'); return; }
+        savedComps = out.items || [];
+        loadComponentPatterns();
+        selectTab('components');
+        const css = p.cssCount ? ` · 스타일 ${p.cssCount}줄 포함` : '';
+        toast((out.replaced ? `"${out.saved}" 을(를) 덮어썼습니다` : `"${out.saved}" 등록 완료`) + css, 'ok');
+    } catch (e) { toast('등록 실패: ' + e.message, 'warn'); }
+}
+
 function toast(msg, kind) {
     const t = $('#toast');
     t.textContent = msg;
@@ -1086,10 +1202,11 @@ function setAppMode(ds) {
     $('#editTab').classList.toggle('on', !ds);
     $('#dsTab').classList.toggle('on', ds);
 
-    // 편집 전용 구역(중앙 뷰포트 제어 + 우측 도구/액션)은 DS 모드에서 통째로 숨김.
-    // 좌측 구역(브랜드·모드·파일)은 두 모드 공통으로 유지.
+    // 편집 전용인 것만 DS 모드에서 숨긴다: 중앙 뷰포트 제어와 우측 액션(되돌리기·저장).
+    // 브랜드·경로(좌)와 모드 스위처(우)는 두 모드 공통이라 그대로 둔다.
+    // ※ .bar-right 를 통째로 숨기면 모드 스위처까지 사라져 편집으로 돌아올 수 없다.
     document.querySelector('.bar-center').hidden = ds;
-    document.querySelector('.bar-right').hidden = ds;
+    document.getElementById('barActions').hidden = ds;
     leftPanel.hidden = ds;          // 디자인 시스템 모드에선 라이브러리 패널을 숨긴다
 
     document.querySelector('.layout').style.display = ds ? 'none' : '';
@@ -1153,26 +1270,40 @@ const COMPONENT_COUNT = { carousel: 3, flow: 3, timeline: 3 };
 const compCount = { ...COMPONENT_COUNT };
 
 // 각 컴포넌트가 실제로 넣는 HTML — vibra 의 기존 클래스를 그대로 쓴다.
+//
+// 폭은 .vb-wrap(max-width: 1280px × --vb-s)이 정한다. vibra 의 블록은 전부 이 안에 있어서,
+// 래퍼 없이 넣으면 .vb-wrap 밖에 떨어졌을 때 뷰포트 폭까지 퍼져 실제보다 크게 나온다
+// (노트북 1536px 기준 1024px → 1536px, 1.5 배). 그래서 스스로 .vb-wrap 을 두른다.
+// 이미 .vb-wrap 안에 떨어져 중첩되어도 max-width 가 같아 크기는 달라지지 않는다.
+// 예외: .vb-carousel-block 은 자체 max-width(1120px × --vb-s)가 있어 두르지 않는다.
 const COMPONENT_HTML = {
     sechead:
 `<div class="vb-wrap">
     <span class="vb-eyebrow reveal">00 — Label</span>
     <h2 class="vb-title reveal">제목<br><span style="color:var(--vb-muted);font-weight:500;">부제목</span></h2>
 </div>`,
+    // 리드 문단은 vibra 에서 늘 --vb-lead-gap 만큼 아래를 벌린다 (기본 여백의 4 배)
     lead:
-`<p class="vb-body reveal">설명 문장을 여기에 씁니다. <span class="sky-lead__n">1.</span> <span class="sky-lead__k">첫 번째 강조</span>, <span class="sky-lead__n">2.</span> <span class="sky-lead__k">두 번째 강조</span> 할 수 있습니다.</p>`,
+`<div class="vb-wrap">
+    <p class="vb-body reveal" style="margin-bottom:var(--vb-lead-gap);">설명 문장을 여기에 씁니다. <span class="sky-lead__n">1.</span> <span class="sky-lead__k">첫 번째 강조</span>, <span class="sky-lead__n">2.</span> <span class="sky-lead__k">두 번째 강조</span> 할 수 있습니다.</p>
+</div>`,
     titledesc:
-`<div class="reveal">
-    <h3 class="vb-subtitle">소제목</h3>
-    <p class="vb-body">본문 설명을 여기에 씁니다.</p>
+`<div class="vb-wrap">
+    <div class="reveal">
+        <h3 class="vb-subtitle">소제목</h3>
+        <p class="vb-body">본문 설명을 여기에 씁니다.</p>
+    </div>
 </div>`,
     grouphead:
-`<div class="vb-group__head vb-group__head--lead reveal">
-    <span class="vb-group__num">A</span>
-    <span class="vb-group__name">Group Name</span>
+`<div class="vb-wrap">
+    <div class="vb-group__head vb-group__head--lead reveal">
+        <span class="vb-group__num">A</span>
+        <span class="vb-group__name">Group Name</span>
+    </div>
 </div>`,
     // 캐러셀 — vibra 실제 구조: .vb-carousel-block(가운데 정렬) > .vb-carousel > __track
-    // 미디어는 '높이는 CSS · 폭은 이미지'라 빈 이미지면 찌그러진다 → 자리표시에 폭을 준다.
+    // 미디어는 '높이는 CSS · 폭은 이미지'라 빈 이미지면 찌그러진다 → 자리표시에 비율을 준다.
+    // vibra 실제 미디어가 3840×2160(16:9)이라, 높이 clamp 에 이 비율을 곱한 폭이 나온다.
     carousel: (n = 3) => {
         // 화살표가 트랙을 id 로 찾으므로 겹치지 않는 이름을 만든다
         const id = 'carousel-' + Math.random().toString(36).slice(2, 7);
@@ -1184,7 +1315,7 @@ const COMPONENT_HTML = {
     <div class="vb-carousel">
         <div class="vb-carousel__track" id="${id}">
 ${Array.from({ length: n }, (_, i) => `            <div class="vb-carousel__item">
-                <div class="vb-carousel__media ed-ph" style="width:min(560px,72vw)"><img src="" alt=""></div>
+                <div class="vb-carousel__media ed-ph ed-ph--16x9"><img src="" alt=""></div>
                 <p class="vb-carousel__caption"><span class="vb-carousel__num">${i + 1}.</span><strong>제목</strong><br>설명을 여기에 씁니다.</p>
             </div>`).join('\n')}
         </div>
@@ -1197,19 +1328,24 @@ ${Array.from({ length: n }, (_, i) => `            <div class="vb-carousel__item
     },
     // 3단 카드 — vibra 의 .sky-features (미디어 + 번호 캡션). 이름 그대로 3장 고정.
     cols3:
-`<div class="sky-features">
+`<div class="vb-wrap">
+<div class="sky-features">
 ${Array.from({ length: 3 }, (_, i) => `    <div class="sky-feature reveal">
         <div class="sky-feature__media ed-ph"><img src="" alt=""></div>
         <p class="sky-feature__caption"><span class="sky-feature__num">${i + 1}.</span>항목 이름</p>
     </div>`).join('\n')}
+</div>
 </div>`,
-    // ig-card 의 이미지는 height:auto 라 비어 있으면 높이가 0 → 자리표시로 비율을 준다
+    // ig-card 의 이미지는 height:auto 라 비어 있으면 높이가 0 → 자리표시로 비율을 준다.
+    // vibra 실제 미디어는 1080×1440 세로(3:4) 라서 16:9 를 쓰면 높이가 2 배 넘게 어긋난다.
     grid22:
-`<div class="ig-grid">
+`<div class="vb-wrap">
+<div class="ig-grid">
 ${Array.from({ length: 4 }, (_, i) => `    <div class="ig-card reveal">
-        <div class="ig-card__media ed-ph ed-ph--16x9"><img src="" alt=""></div>
+        <div class="ig-card__media ed-ph ed-ph--3x4"><img src="" alt=""></div>
         <p class="ig-card__cap"><span class="ig-card__num">${i + 1}.</span>항목</p>
     </div>`).join('\n')}
+</div>
 </div>`,
     // 가로 플로우 — 단계 사이에 화살표가 들어간다 (vibra .bg-flow)
     flow: (n = 3) => {
@@ -1217,21 +1353,27 @@ ${Array.from({ length: 4 }, (_, i) => `    <div class="ig-card reveal">
         const step = i => `    <div class="bg-step"><div class="bg-step__year">연도</div><div class="bg-step__label">단계 ${i + 1}</div></div>`;
         const parts = [];
         for (let i = 0; i < n; i++) { if (i) parts.push('    ' + arrow); parts.push(step(i)); }
-        return `<div class="bg-flow reveal">\n${parts.join('\n')}\n</div>`;
+        return `<div class="vb-wrap">\n<div class="bg-flow reveal">\n${parts.join('\n')}\n</div>\n</div>`;
     },
     // 타임라인 — 한 단계(열) 안에 항목들이 쌓인다 (vibra .tl-col)
     timeline: (n = 3) =>
-`<div class="tl-col reveal">
+`<div class="vb-wrap">
+<div class="tl-grid">
+<div class="tl-col reveal">
     <div class="tl-col__head"><div class="tl-col__title">STEP</div></div>
 ${Array.from({ length: n }, () => `    <div class="tl-item">
         <div class="tl-item__name">항목 이름</div>
         <div class="tl-item__desc">짧은 설명</div>
     </div>`).join('\n')}
+</div>
+</div>
 </div>`,
     media:
-`<div class="reveal">
-    <img src="" alt="" loading="lazy" style="width:100%;height:auto;display:block;border-radius:16px;border:1px solid var(--vb-line);">
-    <p class="vb-cap">이미지 설명</p>
+`<div class="vb-wrap">
+    <div class="reveal">
+        <img src="" alt="" loading="lazy" style="width:100%;height:auto;display:block;border-radius:16px;border:1px solid var(--vb-line);">
+        <p class="vb-cap">이미지 설명</p>
+    </div>
 </div>`,
 };
 const PATTERN_THUMB = {
@@ -1290,11 +1432,16 @@ const MEDIA_HTML = {
 };
 // 자리표시 스타일 — 삽입할 때 페이지에 한 번만 넣는다
 const MEDIA_PH_CSS =
-`.ed-ph{position:relative;width:100%;background:rgba(127,127,140,.08);border:1px dashed rgba(127,127,140,.45);border-radius:16px;overflow:hidden}
-.ed-ph--16x9{aspect-ratio:16/9}
+`/* 크기·모서리는 :where() 로 우선순위를 0 으로 둬서 원래 클래스가 이기게 한다.
+   (.ig-card__media 8px, .vb-carousel__media 20px 같은 vibra 본래 값이 유지된다) */
+:where(.ed-ph){width:100%;border-radius:16px}
+:where(.ed-ph--16x9){aspect-ratio:16/9}
+:where(.ed-ph--3x4){aspect-ratio:3/4}
+/* 테두리는 outline — border 와 달리 박스 크기를 키우지 않는다 */
+.ed-ph{position:relative;background:rgba(127,127,140,.08);overflow:hidden;outline:1px dashed rgba(127,127,140,.45);outline-offset:-1px}
 .ed-ph::after{content:'미디어 링크를 넣어주세요';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:13px;color:rgba(127,127,140,.9);pointer-events:none}
 .ed-ph:has(img[src]:not([src=""]))::after,.ed-ph:has(video[src]:not([src=""]))::after,.ed-ph:has(iframe[src]:not([src=""]))::after{display:none}
-.ed-ph:has(img[src]:not([src=""])),.ed-ph:has(video[src]:not([src=""])),.ed-ph:has(iframe[src]:not([src=""])){background:none;border:0}
+.ed-ph:has(img[src]:not([src=""])),.ed-ph:has(video[src]:not([src=""])),.ed-ph:has(iframe[src]:not([src=""])){background:none;outline:none}
 /* 링크가 비어 있는 동안은 이미지가 자리를 차지하지 않게 (0px 찌그러짐 방지) */
 .ed-ph > img[src=""],.ed-ph > video:not([src]),.ed-ph > img:not([src]){position:absolute;inset:0;width:100%;height:100%}
 `;
@@ -1351,10 +1498,71 @@ function loadSimpleList(hostId, items, dragType) {
     }
 }
 
+// 유저가 등록한 컴포넌트 — 서버(components.json)에 쌓이고 페이지끼리 함께 쓴다
+let savedComps = [];
+let pageClassSet = new Set();   // 지금 열린 페이지의 CSS 가 아는 클래스
+let pageVarSet = new Set();     // 지금 열린 페이지가 정의한 CSS 변수(디자인 토큰)
+
+/** 이 컴포넌트가 기대는데 지금 페이지엔 없는 클래스 (모양이 깨질 신호) */
+function missingClasses(item) {
+    if (!pageClassSet.size || !Array.isArray(item.needs)) return [];
+    return item.needs.filter(c => !pageClassSet.has(c));
+}
+
+/** 뼈대 스케치를 카드 썸네일 SVG 로 (등록할 때 실제 비율을 떠 둔 것) */
+function sketchSvg(sk) {
+    if (!Array.isArray(sk) || !sk.length) {
+        return '<rect x="20" y="16" width="100" height="8" rx="3" fill="currentColor" opacity=".35"/>' +
+               '<rect x="20" y="30" width="72" height="8" rx="3" fill="currentColor" opacity=".2"/>';
+    }
+    return sk.map(r =>
+        `<rect x="${r.x}" y="${r.y}" width="${Math.max(r.w, 2)}" height="${Math.max(r.h, 2)}" rx="2" fill="currentColor" opacity=".3"/>`
+    ).join('');
+}
+
+async function loadSavedComponents() {
+    try {
+        const res = await fetch('/__api/components');
+        savedComps = (await res.json()).items || [];
+    } catch { savedComps = []; }
+    loadComponentPatterns();
+}
+
 function loadComponentPatterns() {
     const host = $('#lpCards');
     if (!host) return;
     host.innerHTML = '';
+
+    // 내가 등록한 것을 맨 위에 — 가장 자주 쓰게 되는 자산이다
+    if (savedComps.length) {
+        host.appendChild(el('div', 'lp-group-sub', '내 컴포넌트'));
+        for (const it of savedComps) {
+            const card = el('div', 'lp-card'); card.draggable = true;
+            card.dataset.saved = it.id;
+            card.innerHTML =
+                `<div class="lp-card__thumb"><svg viewBox="0 0 140 54" width="100%" height="54" aria-hidden="true">${sketchSvg(it.sketch)}</svg></div>` +
+                `<div class="lp-card__name">${escapeHtml(it.name)}</div>` +
+                `<div class="lp-card__use">${escapeHtml(it.note || it.from || '내가 등록함')}</div>` +
+                `<button class="lp-card__del" title="등록 취소">×</button>`;
+            card.addEventListener('dragstart', ev => {
+                ev.dataTransfer.effectAllowed = 'copy';
+                ev.dataTransfer.setData('text/x-hnkl-saved', it.id);
+                ev.dataTransfer.setData('text/plain', it.name);
+            });
+            card.querySelector('.lp-card__del').addEventListener('click', async ev => {
+                ev.stopPropagation();
+                if (!confirm(`"${it.name}" 등록을 취소할까요?\n(이미 페이지에 넣은 것은 그대로 남습니다)`)) return;
+                await fetch('/__api/components', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ remove: it.id }),
+                });
+                toast('등록을 취소했습니다', 'ok');
+                loadSavedComponents();
+            });
+            host.appendChild(card);
+        }
+    }
+
     for (const g of COMPONENT_GROUPS) {
         host.appendChild(el('div', 'lp-group-sub', g.label));
         for (const it of g.items) {
@@ -1374,6 +1582,7 @@ function loadComponentPatterns() {
     }
 }
 loadComponentPatterns();
+loadSavedComponents();
 loadSimpleList('lpMedia', MEDIA_ITEMS, 'text/x-hnkl-media');
 loadSimpleList('lpMotion', MOTION_ITEMS, 'text/x-hnkl-motion');
 
@@ -1388,6 +1597,10 @@ function el(tag, cls, text) {
     return d;
 }
 function dEl(tag, cls, key, val) { const d = el(tag, cls); d.dataset[key] = val; return d; }
+/** 사용자가 지은 이름을 카드에 넣을 때 — 이름에 <, & 가 있어도 깨지지 않게 */
+function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
 
 function currentScale() {
     const w = bp.w;
