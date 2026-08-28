@@ -54,7 +54,10 @@
             --vb-gap: var(--space-md);        /* 그리드 기본 간격 = 32px */
             --vb-eyebrow-gap: calc(16px * var(--vb-s));  /* 작은 라벨(eyebrow) ↔ 큰 제목(title) 간격 */
             --vb-cap-gap: calc(20px * var(--vb-s));      /* 미디어(이미지·영상) ↔ 그 아래 캡션 간격 (전역 통일) */
-            --vb-gray-mid: var(--gray-400);   /* 밝은 구간 → 다크 구간 사이의 회색 (기존 #b3b5bb) */
+            --vb-gray-mid: var(--gray-40);   /* 밝은 구간 → 다크 구간 사이의 회색 (기존 #b3b5bb) */
+            --vb-divider: var(--gray-5);    /* 카드 안쪽 구분선 (외곽 --vb-line 보다 연함) */
+            --vb-mark:    var(--gray-15);   /* 인라인 하이라이트 배경 */
+            --vb-track:   var(--gray-20);   /* 차트 트랙·구분선·다크 구간 보조 글자 */
             --vb-lead-gap: clamp(calc(44px * var(--vb-s)), 5vw, calc(72px * var(--vb-s))); /* 설명 문단 ↔ 그 아래 미디어/그리드 간격 */
 
             /* 타이포 스케일 — common.css 기본값보다 페이지 전역에서 살짝 키움 */
@@ -71,6 +74,14 @@
             --space-md: calc(32px * var(--vb-s));
             --space-lg: calc(64px * var(--vb-s));
             --space-xl: calc(128px * var(--vb-s));
+        }
+
+        /* 다크 모드 — 페이지 고유 토큰 재매핑 (tokens.css 2층이 안 닿는 vb-* 전용) */
+        .dark-mode {
+            --vb-gray-mid: var(--gray-70);
+            --vb-divider:  var(--gray-90);
+            --vb-mark:     var(--gray-80);
+            --vb-track:    var(--gray-80);
         }
 
         /* 노트북 구간에서만 배율을 실제로 적용. 태블릿·모바일(1024px 미만)은 기존 반응형 규칙이 담당 */
@@ -1320,10 +1331,119 @@
         .reveal { opacity: 0; transform: translateY(40px); will-change: opacity, transform; }
 
         /* =========================================================
-           반응형 (뼈대만 — 추후 확장 지점)
+           반응형 — 모바일 대응
+           (1024px 미만은 base 크기라 폰에서 제목이 과하게 큼 → 타입·간격을 여기서 축소.
+            열 분해·가로 스크롤은 각 섹션 미디어쿼리가 이미 담당. 기존 규칙은 그대로 둠.)
            ========================================================= */
         @media (max-width: 768px) {
+            /* 타입 스케일을 폰에 맞게 비례 축소 (데스크탑 clamp 축소와 같은 결) */
+            :root {
+                --fs-display: 42px;
+                --fs-h1:      30px;
+                --fs-h2:      24px;
+                --fs-h3:      20px;
+                --fs-body:    16px;
+                --fs-cap:     15px;
+                --fs-caption: 13px;
+            }
+            /* 가로로 삐져나가지 않게 (모바일에서 좌우로 밀리는 것 방지) */
+            html, body { overflow-x: hidden; }
+
+            /* 섹션 세로 리듬 축소 */
+            .vb-section { padding-block: clamp(56px, 12vw, 96px); }
+            /* 프로젝트 인포 2열 → 1열 */
             .vb-info-grid { grid-template-columns: 1fr; }
+            .vb-info-col { max-width: none; }
+            /* 커버 오버뷰: 1.5배는 폰에서 과함 → 조금 낮춤 */
+            .vb-cover__inner .vb-subtitle { font-size: calc(var(--fs-h3) * 1.3); }
+            .vb-cover__inner .vb-body { font-size: calc(var(--fs-body) * 1.2); }
+            /* 크레딧 로고 축소 */
+            .vb-logo { height: 52px; }
+
+            /* 화면 꽉 채우기 블록: 100vw 는 스크롤바 폭만큼 넘친다 → 실제 보이는 폭 기준으로 */
+            .vb-fullbleed,
+            .vb-affinity,
+            .vb-carousel {
+                width: 100%;
+                margin-left: 0;
+                margin-right: 0;
+            }
+            .vb-carousel {
+                padding-left: var(--vb-pad-inline);
+                padding-right: var(--vb-pad-inline);
+                scroll-padding-left: var(--vb-pad-inline);
+            }
+            /* 미디어는 칸을 넘지 않게 */
+            img, video, iframe { max-width: 100%; }
+
+            /* XR 카드가 폰에서 과하게 큼 */
+            .bg-xr  { width: min(300px, 78vw); }
+            .bg-step { width: min(260px, 68vw); }
+
+            /* 가로 타임라인·다이어그램은 손가락으로 밀어서 보게 */
+            .sf-scroll, .mr-timeline { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+            .sf-track { min-width: 680px; }
+
+            /* ── 프로세스 타임라인: 가로 5단 → 세로 흐름 ──
+               그냥 1열로 쌓으면 '단계가 이어진다'는 뜻이 사라져 글 무더기가 된다.
+               왼쪽에 세로 연결선을 두고 단계마다 점을 찍어 진행을 보이게 한다. */
+            .tl-grid {
+                grid-template-columns: 1fr;
+                gap: 0;
+            }
+            .tl-col {
+                position: relative;
+                padding-left: 26px;
+                padding-bottom: 28px;
+            }
+            .tl-col:last-child { padding-bottom: 0; }
+            /* 세로 연결선 */
+            .tl-col::before {
+                content: '';
+                position: absolute; left: 5px; top: 6px; bottom: -6px;
+                width: 1.5px; background: var(--vb-line);
+            }
+            .tl-col:last-child::before { display: none; }
+            /* 단계 점 */
+            .tl-col::after {
+                content: '';
+                position: absolute; left: 0; top: 4px;
+                width: 11px; height: 11px; border-radius: 50%;
+                background: var(--vb-bg);
+                border: 2px solid var(--vb-text);
+            }
+            .tl-col__head { margin-bottom: 12px; }
+            /* 가로 화살표 선은 세로 흐름에서 의미가 없다 */
+            .tl-col__rule { display: none; }
+            /* 단계 이름은 확실히 도드라지게 (항목과 같은 크기면 흐름이 안 읽힌다) */
+            .tl-col__title {
+                margin-bottom: 0;
+                font-size: var(--fs-caption);
+                letter-spacing: .1em;
+                color: var(--accent-color);
+                font-weight: 800;
+            }
+            .tl-item { margin-bottom: 12px; }
+            .tl-item:last-child { margin-bottom: 0; }
+            .tl-item__name { font-size: var(--fs-body); }
+            .tl-item__desc { line-height: 1.55; }
+        }
+        @media (max-width: 480px) {
+            :root {
+                --fs-display: 34px;
+                --fs-h1:      26px;
+                --fs-h2:      21px;
+                --fs-h3:      18px;
+                --fs-body:    15px;
+                --fs-caption: 12px;
+            }
+            .vb-section { padding-block: clamp(44px, 11vw, 72px); }
+            .vb-logo { height: 46px; }
+            .vb-back-btn { padding: 14px 34px; }
+            /* 좌우 여백을 조금 더 좁혀 본문 폭 확보 */
+            :root { --vb-pad-inline: 20px; }
+            .bg-xr  { width: min(280px, 82vw); }
+            .bg-step { width: min(240px, 72vw); }
         }
 
         /* =========================================================
@@ -1703,7 +1823,7 @@
         <!-- ====================================================
              3. QUANTITATIVE RESEARCH (업데이트됨)
              ==================================================== -->
-        <section class="vb-section" style="padding-top: 6rem; padding-bottom: 6rem; text-align: center;">
+        <section class="vb-section" style="text-align: center;">
             <div class="vb-wrap">
                 <p class="vb-eyebrow reveal" style="color: var(--vb-muted); font-weight: 600; font-size: 0.75rem; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 1rem;">01 — RESEARCH</p>
                 <h2 class="vb-title reveal" style="font-size: 2.5rem; font-weight: 800; margin-bottom: 4rem; color: var(--vb-text);">Quantitative Research</h2>
@@ -1724,8 +1844,8 @@
                             <h4 style="font-size: 1.875rem; font-weight: 900; color: var(--vb-text); margin-bottom: 1rem; line-height: 1.25;">Live<br>Experience</h4>
                             <p style="font-size: 0.875rem; color: var(--vb-body); line-height: 1.6; margin: 0;">시간 부족이나 시차라는 물리적 제약에도 불구하고,<br>팬들은 하이라이트보다 <strong style="color: var(--vb-text);">라이브 중계 시청을 고집</strong>합니다.</p>
                         </div>
-                        <div style="padding: 2rem; display: flex; align-items: center; justify-content: space-between; background-color: var(--surface); border-top: 1px solid var(--gray-100);">
-                            <div style="text-align: center; width: 50%; border-right: 1px solid var(--gray-100); padding-right: 1rem;">
+                        <div style="padding: 2rem; display: flex; align-items: center; justify-content: space-between; background-color: var(--surface); border-top: 1px solid var(--vb-divider);">
+                            <div style="text-align: center; width: 50%; border-right: 1px solid var(--vb-divider); padding-right: 1rem;">
                                 <div style="font-size: 2.25rem; font-weight: 900; color: var(--vb-text); margin-bottom: 0.5rem;">46%</div>
                                 <div style="font-size: 0.75rem; font-weight: 700; color: var(--vb-muted); word-break: keep-all;">직관 갈증 달래는 중계 시청</div>
                             </div>
@@ -1743,8 +1863,8 @@
                             <h4 style="font-size: 1.875rem; font-weight: 900; color: var(--vb-text); margin-bottom: 1rem; line-height: 1.25;">Understanding<br>&amp; Analysis</h4>
                             <p style="font-size: 0.875rem; color: var(--vb-body); line-height: 1.6; margin: 0;">단순히 경기를 감상하는 것을 넘어, 전문가처럼 <strong style="color: var(--vb-text);">경기를 분석하고 이해하려는 갈증</strong>이 뚜렷하게 나타납니다.</p>
                         </div>
-                        <div style="padding: 2rem; display: flex; flex-direction: column; justify-content: center; gap: 1.25rem; background-color: var(--surface); border-top: 1px solid var(--gray-100);">
-                            <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 1rem; border-bottom: 1px solid var(--gray-100);">
+                        <div style="padding: 2rem; display: flex; flex-direction: column; justify-content: center; gap: 1.25rem; background-color: var(--surface); border-top: 1px solid var(--vb-divider);">
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 1rem; border-bottom: 1px solid var(--vb-divider);">
                                 <span style="font-size: 0.75rem; font-weight: 700; color: var(--vb-muted);">관련 검색어 2위</span>
                                 <span style="font-size: 1.5rem; font-weight: 900; color: var(--vb-text);">'분석하다'</span>
                             </div>
@@ -1801,21 +1921,21 @@
                                     <span style="color: var(--vb-text);">경기 재미</span>
                                     <span class="chart-text-blue font-bold">69%</span>
                                 </div>
-                                <div style="width: 100%; background-color: var(--gray-300); height: 0.5rem; border-radius: 9999px;"><div class="chart-blue" style="height: 0.5rem; border-radius: 9999px; width: 69%"></div></div>
+                                <div style="width: 100%; background-color: var(--vb-track); height: 0.5rem; border-radius: 9999px;"><div class="chart-blue" style="height: 0.5rem; border-radius: 9999px; width: 69%"></div></div>
                             </div>
                             <div>
                                 <div style="display: flex; justify-content: space-between; font-size: 0.875rem; margin-bottom: 0.5rem;">
                                     <span style="color: var(--vb-muted);">팬심</span>
                                     <span style="color: var(--vb-muted);">41%</span>
                                 </div>
-                                <div style="width: 100%; background-color: var(--gray-300); height: 0.5rem; border-radius: 9999px;"><div style="background-color: var(--vb-muted); height: 0.5rem; border-radius: 9999px; width: 41%"></div></div>
+                                <div style="width: 100%; background-color: var(--vb-track); height: 0.5rem; border-radius: 9999px;"><div style="background-color: var(--vb-muted); height: 0.5rem; border-radius: 9999px; width: 41%"></div></div>
                             </div>
                             <div>
                                 <div style="display: flex; justify-content: space-between; font-size: 0.875rem; margin-bottom: 0.5rem;">
                                     <span style="color: var(--vb-muted);">지식 습득</span>
                                     <span style="color: var(--vb-muted);">28%</span>
                                 </div>
-                                <div style="width: 100%; background-color: var(--gray-300); height: 0.5rem; border-radius: 9999px;"><div style="background-color: var(--vb-muted); height: 0.5rem; border-radius: 9999px; width: 28%"></div></div>
+                                <div style="width: 100%; background-color: var(--vb-track); height: 0.5rem; border-radius: 9999px;"><div style="background-color: var(--vb-muted); height: 0.5rem; border-radius: 9999px; width: 28%"></div></div>
                             </div>
                         </div>
                     </div>
@@ -1835,21 +1955,21 @@
                                     <span style="color: var(--vb-text);">축구 관련 커뮤니티</span>
                                     <span class="chart-text-blue font-bold">62%</span>
                                 </div>
-                                <div style="width: 100%; background-color: var(--gray-300); height: 0.5rem; border-radius: 9999px;"><div class="chart-blue" style="height: 0.5rem; border-radius: 9999px; width: 62%"></div></div>
+                                <div style="width: 100%; background-color: var(--vb-track); height: 0.5rem; border-radius: 9999px;"><div class="chart-blue" style="height: 0.5rem; border-radius: 9999px; width: 62%"></div></div>
                             </div>
                             <div>
                                 <div style="display: flex; justify-content: space-between; font-size: 0.875rem; margin-bottom: 0.5rem;">
                                     <span style="color: var(--vb-muted);">데이터 분석 사이트</span>
                                     <span style="color: var(--vb-muted);">49%</span>
                                 </div>
-                                <div style="width: 100%; background-color: var(--gray-300); height: 0.5rem; border-radius: 9999px;"><div style="background-color: var(--vb-muted); height: 0.5rem; border-radius: 9999px; width: 49%"></div></div>
+                                <div style="width: 100%; background-color: var(--vb-track); height: 0.5rem; border-radius: 9999px;"><div style="background-color: var(--vb-muted); height: 0.5rem; border-radius: 9999px; width: 49%"></div></div>
                             </div>
                             <div>
                                 <div style="display: flex; justify-content: space-between; font-size: 0.875rem; margin-bottom: 0.5rem;">
                                     <span style="color: var(--vb-muted);">SNS</span>
                                     <span style="color: var(--vb-muted);">41%</span>
                                 </div>
-                                <div style="width: 100%; background-color: var(--gray-300); height: 0.5rem; border-radius: 9999px;"><div style="background-color: var(--vb-muted); height: 0.5rem; border-radius: 9999px; width: 41%"></div></div>
+                                <div style="width: 100%; background-color: var(--vb-track); height: 0.5rem; border-radius: 9999px;"><div style="background-color: var(--vb-muted); height: 0.5rem; border-radius: 9999px; width: 41%"></div></div>
                             </div>
                         </div>
                     </div>
@@ -1929,7 +2049,7 @@
                         <p style="font-size: 1.25rem; font-weight: 700; color: var(--vb-text); margin: 0;">재미를 위한 최우선 니즈는 경기 관련 심층 정보일 것이다.</p>
                         
                         <!-- 중앙 구분선 -->
-                        <div style="border-top: 1px solid var(--gray-300); margin: 1.5rem 0;"></div>
+                        <div style="border-top: 1px solid var(--vb-track); margin: 1.5rem 0;"></div>
                         
                         <span style="font-size: 0.75rem; font-weight: 700; color: var(--vb-body); margin-bottom: 0.75rem; display: block;">검증 결과</span>
                         
@@ -1942,7 +2062,7 @@
                         
                         <p style="font-size: 1.25rem; font-weight: 700; color: var(--vb-text); margin: 0;">온전히 몰입해 보는 니즈가 가장 클 것이다.</p>
                         
-                        <div style="border-top: 1px solid var(--gray-300); margin: 1.5rem 0;"></div>
+                        <div style="border-top: 1px solid var(--vb-track); margin: 1.5rem 0;"></div>
                         
                         <span style="font-size: 0.75rem; font-weight: 700; color: var(--vb-body); margin-bottom: 0.75rem; display: block;">검증 결과</span>
                         
@@ -1957,7 +2077,7 @@
                     <h4 style="font-size: 1.125rem; font-weight: 700; margin-top: 0; margin-bottom: 0.75rem; color: var(--vb-text);">실제 관찰된 가장 큰 니즈</h4>
                     
                     <p style="font-size: 1.5rem; font-weight: 700; color: var(--vb-text); margin: 0;">
-                        경기를 함께 시청하는 사람들과의 <span style="background-color: var(--gray-200); padding: 0.25rem 0.5rem; border-radius: 0.25rem;">소통과 감정 공유</span>
+                        경기를 함께 시청하는 사람들과의 <span style="background-color: var(--vb-mark); padding: 0.25rem 0.5rem; border-radius: 0.25rem;">소통과 감정 공유</span>
                     </p>
                     
                 </div>
@@ -1989,7 +2109,7 @@
                         
                         <p style="font-size: 1.25rem; font-weight: 700; color: var(--surface); margin-top: 0; margin-bottom: 0.75rem;">단절 없는 경험</p>
                         
-                        <p style="font-size: 1rem; color: var(--gray-300); margin: 0;">디바이스를 벗지 않고도 소통 등 다른 활동이 XR 환경 내에서 자연스럽게 이어져야 함.</p>
+                        <p style="font-size: 1rem; color: var(--vb-track); margin: 0;">디바이스를 벗지 않고도 소통 등 다른 활동이 XR 환경 내에서 자연스럽게 이어져야 함.</p>
                     </div>
                     
                 </div>
@@ -2494,7 +2614,7 @@
         <!-- ====================================================
              11. BEHIND — 경기장 VR 촬영 이미지 (밝은 구간)
              ==================================================== -->
-        <section class="vb-section sec-centered" style="padding-bottom: clamp(80px, 10vh, 140px);">
+        <section class="vb-section sec-centered">
             <div class="vb-wrap">
                 <span class="vb-eyebrow reveal">Behind</span>
                 <h2 class="vb-title reveal">현장감을 담아낸 360° 레코딩</h2>
