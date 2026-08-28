@@ -24,17 +24,21 @@
         :root {
             /* 색은 디자인 시스템 토큰으로 매핑 (기본 라이트 = 흰 배경 + 검정 글씨) */
             --vb-bg: #ffffff;                 /* 페이지 베이스 흰색 */
-            --vb-panel: var(--gray-50);       /* 면·카드  (다크: #1C1C1E) */
-            --vb-line: var(--gray-300);       /* 테두리   (다크: #3A3A3C) */
-            --vb-text: var(--gray-ink);       /* 제목·강조 (다크: #F5F5F7) */
-            --vb-body: var(--gray-700);       /* 본문 보조 (다크: #A1A1A6) */
-            --vb-muted: var(--label-color);   /* 캡션·라벨 → 역할토큰(=gray-500) (다크: #8E8E93) */
+            --vb-panel: var(--panel);          /* 면·카드 → 역할토큰 */
+            --vb-line: var(--gray-20);        /* 테두리 — 메인 페이지보다 한 단계 진함 */
+            --vb-text: var(--text-color);     /* 제목·강조 → 역할토큰 */
+            --vb-body: var(--text-sub);       /* 본문 보조 → 역할토큰 */
+            --vb-muted: var(--label-color);   /* 캡션·라벨 → 역할토큰 */
 
             /* 페이지 고유 레이아웃 리듬 (반응형 대비 clamp) */
             --vb-pad-block: clamp(80px, 11vw, 180px);
             --vb-pad-inline: clamp(24px, 6vw, 100px);
             --vb-maxw: 1280px;
             --vb-gap: var(--space-md);        /* 그리드 기본 간격 = 32px */
+        }
+
+        .dark-mode {
+            --vb-line: var(--gray-80);        /* 라이트 gray-20 의 다크 대응 */
         }
 
         /* common.css의 main 기본 패딩 무력화 (히어로 풀스크린을 위해) */
@@ -344,7 +348,7 @@
             --qr-maxw: 658px;        /* 카드 최대 너비 */
             /* ▲▲▲ 조절 패널 - 작업용 ▲▲▲ */
 
-            background: var(--vb-panel);            /* 연한 회색 면 (--gray-50) */
+            background: var(--vb-panel);            /* 연한 회색 면 (--panel) */
             border: 1px solid var(--vb-line);
             border-radius: 18px;
             padding: var(--qr-pad);
@@ -411,7 +415,7 @@
             --stroke: 3.6;                          /* 링 두께 (viewBox 36 기준) */
             --fill: var(--accent-color);            /* 채움: 포인트 파랑 */
             --fill-2: color-mix(in srgb, var(--accent-color) 40%, #fff); /* 두번째 구간(연한 파랑) */
-            --track: var(--gray-300);               /* 빈 부분: 연한 회색 */
+            --track: var(--vb-line);                /* 빈 부분: 테두리와 동일 톤 */
             position: relative;
             flex-shrink: 0;                         /* 좁은 칸에서도 원형 유지 */
             width: var(--size);
@@ -566,7 +570,7 @@
         .qr-bar__label { color: var(--vb-body); word-break: keep-all; }
         .qr-bar__track {
             height: 10px;
-            background: var(--gray-300);
+            background: var(--vb-line);
             border-radius: 99px;
             overflow: hidden;
         }

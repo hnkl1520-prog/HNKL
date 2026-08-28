@@ -1,72 +1,93 @@
 /* =========================================================================
-   tokens.css  —  3중 :root 통합용 토큰 정의 (아직 어디에도 link 안 됨)
+   tokens.css  —  3층 토큰 시스템 (Static Primitives + Contextual Roles)
 
-   목적: common.css(:root 2개) + vibra.html(:root 1개) 로 흩어진 값을
-         한 곳으로 모으되, "새 이름을 만들지 않고" 기존 역할 이름을
-         그대로 두면서 회색 램프에 연결만 한다.
+   구조:
+     1층  원시값 — 절대 색상. 라이트/다크와 무관하게 고정.
+                  · gray 램프 (1–100): 단일 팔레트 (밝음→어두움)
+                  · 흑·백, 포인트 컬러
+     2층  역할   — 1층을 의미론적 이름으로 매핑.
+                  :root = 라이트, .dark-mode = 다크.
+                  모드 전환은 이 층에서만 일어남.
+     3층  스케일 — --s, 타이포·간격. 색상 무관.
 
-   구조 (3층):
-     1층  원시값 — 회색 램프(--gray-100~900) · 표면(--bg/--surface/--panel)
-                    · 기타(--blue/--purple/--teal/--dark-surface)
-                    → 라이트/다크에서 값이 뒤집힘. 여기'만' 모드별로 바뀐다.
-     2층  역할 이름 — 기존 이름(--bg-color, --text-color …)을 1층에 연결.
-                    라이트/다크 공통으로 '한 번만' 정의. 모드 전환은 1층이 담당.
-     3층  스케일 — --s(=vibra --vb-s) 와 타이포/간격.
-
-   주의: 다크 램프는 뒤집혀 숫자가 클수록 밝다.
-         --gray-900 은 라이트든 다크든 항상 "본문 글자색".
+   Figma Variables 대응:
+     1층 = Primitives 컬렉션
+     2층 = Semantic 컬렉션 (Light / Dark 모드)
+     3층 = Scale 컬렉션
    ========================================================================= */
 
 :root {
     /* ------------------------------------------------------------------
-       1층 · 회색 램프 (라이트) — 콘텐츠용: 글자·선
+       1층 · 원시값 — 절대 고정 (모드 전환에 영향받지 않음)
        ------------------------------------------------------------------ */
-    --gray-100: #EFEFF1;
-    --gray-200: #E3E3E6;   /* 현재 --line-color (선·테두리) */
-    --gray-300: #D2D2D7;   /* vibra 차트 트랙·일부 구분선(인라인) */
-    --gray-400: #ACACB1;
-    --gray-500: #86868B;   /* 현재 --label-color (기존 dim → 대비 위해 600으로 이관) */
-    --gray-600: #6E6E73;   /* 현재 --dim-color (기존 --text-sub) */
-    --gray-700: #515154;   /* 현재 --text-sub (기존 --gray-700) */
-    --gray-800: #363639;
-    --gray-900: #1D1D1F;   /* 기존 --gray-ink / --text-color */
 
-    /* 1층 · 표면 (라이트) — 배경·카드. 램프와 별개 */
-    --bg:      #F5F5F7;
-    --surface: #FFFFFF;
-    /* --panel 은 회색 100 과 값이 같았다(라이트·다크 모두). 중복을 없애고 램프를 가리킨다.
-       이름은 vibra 본문이 var(--panel) 로 직접 쓰고 있어 그대로 둔다. */
-    --panel:   var(--gray-100);
+    /* 회색 램프 — 단일 팔레트 (1 밝음 → 100 어두움). 라이트·다크가 같은 램프를 쓴다. */
+    --gray-1:   #FCFCFF;
+    --gray-5:   #F1F1F3;
+    --gray-10:  #E9E9EC;
+    --gray-15:  #E4E4E7;
+    --gray-20:  #CCCCCE;
+    --gray-30:  #B7B7BB;
+    --gray-40:  #A3A3A7;
+    --gray-50:  #848487;
+    --gray-60:  #636368;
+    --gray-70:  #4D4D52;
+    --gray-80:  #3A3A3D;
+    --gray-90:  #252528;
+    --gray-95:  #17171A;
+    --gray-100: #010102;
 
-    /* 1층 · 기타 원시값 (모드 무관) */
-    --blue:         #3B82F6;
-    --purple:       #9c6dff;   /* 기존 --sub-color-1 */
-    --teal:         #4fd1c5;   /* 기존 --sub-color-2 */
-    --dark-surface: #101115;   /* vibra 다크 구간 배경 */
+    /* 흑·백 */
+    --black: #000000;
+    --white: #FFFFFF;
+
+    /* 포인트 — Primary 램프 (10단계, 50 = 브랜드 기준색) */
+    --primary-10:  #DDE9FD;
+    --primary-20:  #B6D0FC;
+    --primary-30:  #8FB7FA;
+    --primary-40:  #689FF8;
+    --primary-50:  #3B82F6;
+    --primary-60:  #156AF4;
+    --primary-70:  #0A58D7;
+    --primary-80:  #0848B0;
+    --primary-90:  #063684;
+    --primary-100: #042458;
+
+    /* 서브 — Secondary 퍼플 (5단계, 50 = 기준색) */
+    --purple-10:   #D6C2FF;
+    --purple-30:   #BA99FF;
+    --purple-50:   #9C6DFF;
+    --purple-70:   #590AFF;
+    --purple-90:   #3800AD;
+
+    /* 서브 — Secondary 틸 (5단계, 50 = 기준색) */
+    --teal-10:     #C6F0EC;
+    --teal-30:     #8AE0D8;
+    --teal-50:     #4FD1C5;
+    --teal-70:     #2CAA9E;
+    --teal-90:     #1E7169;
 
     /* ------------------------------------------------------------------
-       2층 · 역할 이름 (라이트/다크 공통 — 여기서 한 번만 정의)
-       모드 전환은 1층 값만 바뀌면 자동으로 따라온다.
+       2층 · 역할 토큰 — 라이트 모드 매핑
        ------------------------------------------------------------------ */
-    --bg-color:     var(--bg);
-    --card-bg:      var(--surface);
-    --text-color:   var(--gray-900);
-    --text-sub:     var(--gray-700);   /* 보조 텍스트(nav·라벨·본문보조). 다크는 원본과 동일, 라이트는 한 단계 진하게 */
-    --dim-color:    var(--gray-600);   /* 흐린 텍스트(캡션). 대비 4.5 확보 위해 gray-500이 아닌 600 (커밋 317f0b1) */
-    --label-color:  var(--gray-500);   /* 가장 연한 글자 — eyebrow·메타 키·태그·캡션 등 라벨류. vibra --vb-muted 기존값과 동일 */
-    --line-color:   var(--gray-200);   /* 선·테두리. vibra --vb-line 기존값과 동일 */
-    --accent-color: var(--blue);
-    --sub-color-1:  var(--purple);
-    --sub-color-2:  var(--teal);
-    --gray-ink:     var(--gray-900);   /* 하위호환 별칭 */
-    --gray-50:      var(--gray-100);   /* 하위호환 별칭 */
+    --bg-color:     var(--gray-5);
+    --bg:           var(--gray-5);
+    --card-bg:      var(--gray-1);
+    --surface:      var(--gray-1);
+    --panel:        var(--gray-10);
+    --text-color:   var(--gray-95);
+    --text-sub:     var(--gray-70);
+    --dim-color:    var(--gray-60);
+    --label-color:  var(--gray-50);
+    --line-color:   var(--gray-15);
+    --accent-color: var(--primary-50);
+    --sub-color-1:  var(--purple-50);
+    --sub-color-2:  var(--teal-50);
+    --gray-ink:     var(--gray-95);
 
     /* ------------------------------------------------------------------
        3층 · 스케일
        ------------------------------------------------------------------ */
-    /* --s : vibra.html 의 --vb-s 를 그대로 옮긴 값.
-       기본 1 로 두고, 1024px 이상에서 length÷length clamp 를 지원할 때만 덮어씀
-       (미지원 브라우저는 100% 크기 유지). 값 계산식·중단점 모두 원본과 동일. */
     --s: 1;
 
     /* 타이포 (전부 × var(--s)) */
@@ -78,16 +99,13 @@
     --fs-small:   calc(15px * var(--s));
     --fs-caption: calc(12px * var(--s));
 
-    /* 굵기 — 지금 코드에서 실제로 쓰이는 단계를 이름만 붙인 것.
-       요소에는 아직 적용하지 않았다(현재 font-weight 값은 그대로).
-       규칙으로 강제 통일하지 않는 이유: 같은 크기에서도 역할(제목/라벨/본문)에 따라
-       굵기가 다르게 쓰이고 있어, 한 값으로 묶으면 위계가 무너진다. */
-    --fw-regular:  400;   /* 본문 순수 텍스트용 — 기본 자리로 예약 (현재 거의 미사용) */
-    --fw-medium:   500;   /* nav · work-cat · 본문 계열 */
-    --fw-semibold: 600;   /* 서브타이틀 · 카드 제목 · eyebrow */
-    --fw-bold:     700;   /* 제목 · 라벨 · 본문 속 strong (가장 많음) */
-    --fw-heavy:    800;   /* 대형 타이틀 · 번호 */
-    --fw-black:    900;   /* 정량조사 큰 숫자 */
+    /* 굵기 */
+    --fw-regular:  400;
+    --fw-medium:   500;
+    --fw-semibold: 600;
+    --fw-bold:     700;
+    --fw-heavy:    800;
+    --fw-black:    900;
 
     /* 간격 (전부 × var(--s)) : 4·8·12·16·24·32·48·64·96·128 */
     --space-1:  calc(4px   * var(--s));
@@ -101,8 +119,7 @@
     --space-9:  calc(96px  * var(--s));
     --space-10: calc(128px * var(--s));
 
-    /* 하위호환 — 최종 청소 시 제거 예정.
-       _preview_bg.html 이 아직 옛 이름(--space-xs~xl)을 참조하므로 잇는다. */
+    /* 하위호환 */
     --space-xs: var(--space-2);
     --space-sm: var(--space-4);
     --space-md: var(--space-6);
@@ -111,29 +128,21 @@
 }
 
 /* ----------------------------------------------------------------------
-   1층 · 다크 재정의 — 램프가 뒤집힌다(숫자 클수록 밝음). 표면도 다크값으로.
-   2층/원시값/스케일은 여기서 다시 쓰지 않는다.
-
-   선택자가 body 가 아니라 .dark-mode 인 이유:
-   2층 별칭(--bg-color: var(--bg) …)이 :root(html)에 선언돼 있어서,
-   다크 오버라이드도 같은 html 층에서 일어나야 var() 가 다크값으로 다시 풀린다.
-   그래서 다크 토글 클래스는 <html>(document.documentElement)에 붙인다.
+   2층 · 다크 모드 재매핑
+   1층 원시값은 건드리지 않음. 역할 토큰만 다크 팔레트로 전환.
    ---------------------------------------------------------------------- */
 .dark-mode {
-    --gray-100: #2C2C2E;
-    --gray-200: #333336;
-    --gray-300: #3A3A3C;   /* 기존 다크 --gray-300 */
-    --gray-400: #48484A;
-    --gray-500: #636366;   /* 기존 다크 --dim-color */
-    --gray-600: #8E8E93;   /* 기존 다크 --gray-500 */
-    --gray-700: #A1A1A6;   /* 기존 다크 --gray-700 / --text-sub */
-    --gray-800: #C7C7CC;
-    --gray-900: #F5F5F7;   /* 기존 다크 --text-color / --gray-ink */
-
-    --bg:      #050505;
-    --surface: #1C1C1E;
-    /* --panel 은 :root 에서 var(--gray-100) 을 가리킨다.
-       다크 클래스도 같은 html 요소에 붙으므로 위 --gray-100(#2C2C2E)으로 자동 해석된다. */
+    --bg-color:     var(--gray-100);
+    --bg:           var(--gray-100);
+    --card-bg:      var(--gray-95);
+    --surface:      var(--gray-95);
+    --panel:        var(--gray-90);
+    --text-color:   var(--gray-5);
+    --text-sub:     var(--gray-40);
+    --dim-color:    var(--gray-50);
+    --label-color:  var(--gray-60);
+    --line-color:   var(--gray-80);
+    --gray-ink:     var(--gray-5);
 }
 
 /* ----------------------------------------------------------------------
