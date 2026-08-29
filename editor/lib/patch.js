@@ -572,6 +572,38 @@ export function linkAsset(source, kind, url) {
 }
 
 /**
+ * 요소 안의 글자를 바꾼다. 자식 태그가 없는 '잎' 요소만 다룬다.
+ * (안에 <br> 이나 <span> 이 있는 경우까지 건드리면 구조가 깨진다)
+ *
+ * 여는 태그 끝 ~ 닫는 태그 시작 사이만 갈아끼우므로 속성·들여쓰기는 그대로 남는다.
+ */
+export function patchText(source, path, text) {
+    const document = parse(source, { sourceCodeLocationInfo: true });
+    const el = findByPath(document, path);
+    if (!el) throw new Error('요소를 찾지 못했습니다. 파일이 그 사이 바뀌었을 수 있어요.');
+
+    const loc = el.sourceCodeLocation;
+    if (!loc || !loc.startTag || !loc.endTag) {
+        throw new Error('여는/닫는 태그를 찾을 수 없어 글자를 바꿀 수 없습니다.');
+    }
+    const kids = (el.childNodes || []).filter(n => n.nodeName !== '#text');
+    if (kids.length) throw new Error('안에 다른 태그가 있어 글자만 바꿀 수 없습니다.');
+
+    const from = loc.startTag.endOffset;
+    const to = loc.endTag.startOffset;
+    const before = source.slice(from, to);
+    // & < > 만 막는다. 사용자가 넣은 글자를 그대로 보이게 하는 최소한의 처리.
+    const safe = String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+    return {
+        text: source.slice(0, from) + safe + source.slice(to),
+        before: before.trim().slice(0, 60) || '(빈 글자)',
+        after: safe.trim().slice(0, 60) || '(빈 글자)',
+        mode: 'text'
+    };
+}
+
+/**
  * 요소의 속성 하나를 바꾸거나(있으면) 새로 넣는다(없으면).
  * 이미지 src·영상 링크처럼 style 이 아닌 값을 고칠 때 쓴다.
  * value 가 null 이면 속성을 지운다.

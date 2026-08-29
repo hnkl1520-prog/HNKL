@@ -32,14 +32,28 @@ window.addEventListener('message', e => {
         toFrame('setMoving', tool === 'move');
         applyPendingPreview();
     }
+    else if (msg.type === 'textEdited') {
+        // 미리보기에서 글자를 고쳤다 — 화면은 이미 바뀌었고 파일에 쓸 것만 쌓는다.
+        // 같은 요소를 이어서 고치면 마지막 값만 남긴다.
+        const { path, value } = msg.payload;
+        const last = pending[pending.length - 1];
+        if (last && last.kind === 'text' && String(last.path) === String(path)) last.value = value;
+        else pending.push({ kind: 'text', path, value });
+        updateDirty();
+        toast('Text changed — save to write it to the file', 'ok');
+    }
+    else if (msg.type === 'textEditing') {
+        // 글자를 고치는 동안에는 Delete 로 덩어리가 지워지지 않게 막는다
+        editingText = !!msg.payload?.on;
+    }
     else if (msg.type === 'blockDone') {
         const p = msg.payload || {};
         if (p.error) { toast(p.error, 'warn'); return; }
         pending.push({ kind: p.act === 'remove' ? 'remove' : 'duplicate', path: p.path });
         updateDirty();
         if (p.act === 'remove') { selection = null; renderInspector(); }
-        toast(p.act === 'remove' ? '지웠습니다 — 저장해야 파일에 반영됩니다'
-                                 : '하나 더 만들었습니다 — 저장해야 파일에 반영됩니다', 'ok');
+        toast(p.act === 'remove' ? 'Deleted — save to write it to the file'
+                                 : 'Duplicated — save to write it to the file', 'ok');
     }
     else if (msg.type === 'grabbed') {
         onGrabbed(msg.payload);
@@ -54,14 +68,14 @@ window.addEventListener('message', e => {
             pending.push({ kind: 'move', path: [...mainPath, idx], dir });
         }
         updateDirty();
-        toast(`${steps}칸 옮겼습니다 — 저장해야 파일에 반영됩니다`, 'ok');
+        toast(`Moved ${steps} step(s) — save to write it to the file`, 'ok');
     }
     else if (msg.type === 'moved') {
         // 미리보기에서는 이미 옮겨졌다. 파일에 반영할 내용만 쌓아 둔다.
         // 경로는 '옮기기 전' 기준이고 서버가 순서대로 적용하므로, 여러 번 눌러도 어긋나지 않는다.
         pending.push({ kind: 'move', path: msg.payload.path, dir: msg.payload.dir });
         updateDirty();
-        toast('섹션을 옮겼습니다 — 저장해야 파일에 반영됩니다', 'ok');
+        toast('Section moved — save to write it to the file', 'ok');
     }
     else if (msg.type === 'selected' || msg.type === 'previewApplied') {
         selection = msg.payload;
@@ -113,6 +127,37 @@ window.addEventListener('message', e => {
     }
 });
 
+/**
+ * 프로젝트 정보를 넣을 때 항목과 역할을 받는다.
+ * 러프한 구조만 잡고 세부는 나중에 고치는 흐름이라, 비워 두면 예시가 들어간다.
+ * @returns {{rows: string[][], roles: string[][]}|null}  null 이면 취소
+ */
+function askProjectInfo() {
+    const rowText = prompt(
+        'Project info rows — one per line, "Label: Value"\n(leave empty for the default example)',
+        'Type: Team Project\nDuration: 2024.03 – 2024.11\nMembers: 2\nContribution: 70%'
+    );
+    if (rowText === null) return null;
+
+    const roleText = prompt(
+        'Contribution breakdown — one per line, "Role: 70"\n(leave empty to skip the ▾ toggle)',
+        'Research: 50\nUX · UI: 70\nPrototype: 80'
+    );
+    if (roleText === null) return null;
+
+    const parse = (t, isRole) => String(t).split('\n')
+        .map(l => l.trim()).filter(Boolean)
+        .map(l => {
+            const i = l.indexOf(':');
+            if (i < 0) return [l, ''];
+            const k = l.slice(0, i).trim();
+            const v = l.slice(i + 1).trim();
+            return isRole ? [k, (parseInt(v, 10) || 0)] : [k, v];
+        });
+
+    return { rows: parse(rowText, false), roles: parse(roleText, true) };
+}
+
 // 라이브러리에서 미리보기로 떨어뜨렸을 때: 화면에 바로 넣고, 저장 대기열에 쌓는다.
 function onComponentDropped({ key, kind, path, position }) {
     // ① 인터랙션 — 그 요소에 클래스를 붙이고, 필요한 CSS 를 페이지에 넣는다
@@ -122,7 +167,7 @@ function onComponentDropped({ key, kind, path, position }) {
         pending.push({ kind: 'motion', path, className: def.className, css: def.css });
         toFrame('motionPreview', { path, className: def.className, css: def.css });
         updateDirty();
-        toast(`인터랙션 적용 — ${def.className}`, 'ok');
+        toast(`Interaction applied — ${def.className}`, 'ok');
         return;
     }
     // ② 내가 등록한 컴포넌트 — 저장해 둔 HTML 을 그대로 넣는다
@@ -149,16 +194,16 @@ function onComponentDropped({ key, kind, path, position }) {
 
         const missingVars = (it.vars || []).filter(v => !pageVarSet.has(v));
         if (it.block) {
-            toast(`${it.name} — blocks/${it.block.slug} 를 이 페이지에 연결했습니다`, 'ok');
+            toast(`${it.name} — linked blocks/${it.block.slug} to this page`, 'ok');
         } else if (missing.length && it.css) {
             toast(missingVars.length
-                ? `${it.name} — 스타일도 함께 넣었습니다. 다만 토큰 ${missingVars.length}개가 이 페이지에 없습니다 (${missingVars.slice(0, 3).join(', ')}…)`
-                : `${it.name} — 이 페이지에 없던 스타일도 함께 넣었습니다`,
+                ? `${it.name} — styles added, but ${missingVars.length} token(s) are missing here (${missingVars.slice(0, 3).join(', ')}…)`
+                : `${it.name} — its missing styles were added to this page`,
                 missingVars.length ? 'warn' : 'ok');
         } else if (missing.length) {
-            toast(`${it.name} — 없는 클래스 ${missing.length}개인데 저장된 스타일이 없습니다 (다시 등록하면 함께 저장됩니다)`, 'warn');
+            toast(`${it.name} — ${missing.length} class(es) missing and no styles were saved (re-save it to include them)`, 'warn');
         } else {
-            toast(`${it.name} 을(를) 넣었습니다 — 저장해야 파일에 반영됩니다`, 'ok');
+            toast(`${it.name} inserted — save to write it to the file`, 'ok');
         }
         return;
     }
@@ -169,7 +214,11 @@ function onComponentDropped({ key, kind, path, position }) {
     const n = (typeof src === 'function')
         ? (compCount[key] || COMPONENT_COUNT[key] || 3)
         : 0;
-    const html = (typeof src === 'function') ? src(n) : src;
+    // 표처럼 '무엇을 적을지'가 정해져야 뜻이 생기는 컴포넌트는 넣을 때 물어본다.
+    // 값이 비면 기본 예시가 들어가고, 나머지는 인스펙터에서 고치면 된다.
+    const opt = (key === 'projectinfo') ? askProjectInfo() : undefined;
+    if (opt === null) return;    // 창에서 취소
+    const html = (typeof src === 'function') ? src(n, opt) : src;
     // 자리표시(ed-ph) 스타일은 미디어·컴포넌트 둘 다 필요하다.
     // (캐러셀·카드 안의 빈 이미지가 0px 로 찌그러지는 걸 막는다)
     if (html.includes('ed-ph')) {
@@ -179,7 +228,7 @@ function onComponentDropped({ key, kind, path, position }) {
     pending.push({ kind: 'insert', path, html, position });
     toFrame('insertPreview', { path, html, position });
     updateDirty();
-    toast(kind === 'media' ? '미디어를 넣었습니다 — 링크는 인스펙터에서' : '넣었습니다 — 저장해야 파일에 반영됩니다', 'ok');
+    toast(kind === 'media' ? 'Media added — set the link in the inspector' : 'Inserted — save to write it to the file', 'ok');
 }
 
 /** 현재 파일 위치를 경로로 보여준다 (works/projects/vibra/vibra.html → Works / Projects / Vibra / vibra.html) */
@@ -204,7 +253,7 @@ async function loadPages() {
     for (const p of pages) {
         const o = document.createElement('option');
         o.value = p.rel;
-        o.textContent = (p.isScratch ? '(임시) ' : '') + p.rel;
+        o.textContent = (p.isScratch ? '(temp) ' : '') + p.rel;
         sel.appendChild(o);
     }
     // 최근에 고친 '본 페이지'를 기본으로
@@ -214,7 +263,7 @@ async function loadPages() {
 }
 
 function openPage(rel) {
-    if (pending.length && !confirm('저장하지 않은 변경이 있습니다. 버리고 이동할까요?')) {
+    if (pending.length && !confirm('You have unsaved changes. Discard them and switch?')) {
         $('#pageSelect').value = currentPage;
         return;
     }
@@ -228,7 +277,7 @@ function openPage(rel) {
 
 $('#pageSelect').addEventListener('change', e => openPage(e.target.value));
 $('#reloadBtn')?.addEventListener('click', () => {
-    if (pending.length && !confirm('저장하지 않은 변경이 사라집니다. 계속할까요?')) return;
+    if (pending.length && !confirm('Unsaved changes will be lost. Continue?')) return;
     pending = []; updateDirty();
     needsCenter = true;
     frame.src = frame.src;
@@ -250,7 +299,7 @@ function applyStage() {
     const stageEl = document.getElementById('stage');
     if (stageEl && (stageEl.scrollTop || stageEl.scrollLeft)) { stageEl.scrollTop = 0; stageEl.scrollLeft = 0; }
     $('#stageInfo').textContent =
-        `${bp.w}px 기준 렌더링 · ${Math.round(zoom * 100)}% · Ctrl+휠로 확대`;
+        `Rendering at ${bp.w}px · ${Math.round(zoom * 100)}% · Ctrl+wheel to zoom`;
 }
 
 /**
@@ -406,26 +455,26 @@ document.addEventListener('keydown', e => {
     if (e.key === 'v' || e.key === 'V') setTool('select');
     if (e.key === 'h' || e.key === 'H') setTool('pan');
     if (e.key === 'm' || e.key === 'M') setTool('move');
+    if (editingText) return;   // 미리보기에서 글자 고치는 중이면 단축키를 넘긴다
     if (e.key === 'Delete' || e.key === 'Backspace') { if (selection) { e.preventDefault(); blockAction('remove'); } }
 });
 $('#openRawBtn')?.addEventListener('click', () => {
     if (!currentPage) return;
     // 저장 전 변경은 파일에 없으니, 실제 모습과 다를 수 있다는 것만 알려 준다
-    if (pending.length) toast('저장하지 않은 변경은 빠진 채로 열립니다', 'warn');
+    if (pending.length) toast('Unsaved changes will not appear', 'warn');
     window.open('/raw/' + currentPage, '_blank', 'noopener');
 });
-$('#parentBtn')?.addEventListener('click', () => toFrame('selectParent'));
 $('#dupBtn')?.addEventListener('click', () => blockAction('duplicate'));
 $('#delBtn')?.addEventListener('click', () => blockAction('remove'));
 
 /** 고른 덩어리를 지우거나 복제한다 — 미리보기가 먼저 반영하고, 결과를 받아 대기열에 쌓는다 */
 function blockAction(act) {
-    if (!selection) { toast('먼저 미리보기에서 덩어리를 고르세요', 'warn'); return; }
+    if (!selection) { toast('Pick a block in the preview first', 'warn'); return; }
     toFrame(act === 'remove' ? 'removeElement' : 'duplicateElement', {});
 }
 
 $('#saveCompBtn')?.addEventListener('click', () => {
-    if (!selection) { toast('먼저 미리보기에서 덩어리를 고르세요', 'warn'); return; }
+    if (!selection) { toast('Pick a block in the preview first', 'warn'); return; }
     toFrame('grabComponent', {});
 });
 
@@ -477,7 +526,7 @@ function renderGapExceptions({ base, list }) {
     const box = $('#gapExc'), host = $('#gapExcList'), cnt = $('#gapExcCount');
     const applied = $('#gapApplyCount');
     const total = (dsData && 0) || null;   // 총 개수는 아래에서 목록으로 계산
-    if (applied) applied.textContent = list.length ? `(${list.length}개 제외)` : '';
+    if (applied) applied.textContent = list.length ? `(${list.length} hidden)` : '';
     if (!box || !host) return;
     if (!list.length) { box.hidden = true; return; }
     box.hidden = false;
@@ -490,10 +539,10 @@ function renderGapExceptions({ base, list }) {
         row.innerHTML =
             `<span class="sp-exc__name">섹션 ${it.index} · ${it.name}</span>` +
             `<span class="sp-exc__val">${값}</span>`;
-        row.title = `기본값 ${base}px 과 다릅니다 — 눌러서 위치 보기`;
+        row.title = `Differs from the ${base}px default — click to locate`;
         row.addEventListener('click', () => {
             toFrame('focusSection', { path: it.path });
-            toast(`섹션 ${it.index} 로 이동`, 'ok');
+            toast(`Go to section ${it.index}`, 'ok');
         });
         host.appendChild(row);
     }
@@ -511,7 +560,7 @@ function onGapEnd({ path, px, side }) {
         const i = pending.findIndex(p => p.kind === 'css' && p.selector === ':root' && p.prop === '--vb-pad-block');
         const edit = { kind: 'css', selector: ':root', prop: '--vb-pad-block', value: px + 'px' };
         if (i >= 0) pending[i] = edit; else pending.push(edit);
-        toast(`모든 섹션 여백 ${px}px — 저장해야 반영됩니다`, 'ok');
+        toast(`All sections ${px}px — save to write it to the file`, 'ok');
     } else {
         // 눈에 보이는 간격 = 맞닿은 두 여백의 합. 짝이 되는 섹션도 같이 저장한다.
         const put = (p, prop) => {
@@ -524,7 +573,7 @@ function onGapEnd({ path, px, side }) {
             ? path.slice(0, -1).concat(path[path.length - 1] + 1)
             : path.slice(0, -1).concat(path[path.length - 1] - 1);
         if (mate[mate.length - 1] >= 0) put(mate, side === 'bottom' ? 'padding-top' : 'padding-bottom');
-        toast(`이 경계 여백 ${px}px (양쪽)`, 'ok');
+        toast(`This edge ${px}px (both sides)`, 'ok');
     }
     updateDirty();
 }
@@ -532,25 +581,25 @@ function onGapEnd({ path, px, side }) {
 // ---------------------------------------------------------------- 속성 정의
 // 인스펙터 그룹.
 //   when : 어떤 요소일 때 보여줄지 (없으면 항상)
-//   adv  : 고급 — 기본은 접어 두고 '고급 속성 보기'로 펼친다
+//   adv  : 고급 — 기본은 접어 두고 'Show advanced'로 펼친다
 // 선택한 게 무엇이든 24개를 다 쏟아내면 정작 필요한 값을 못 찾는다.
 const GROUPS = [
-    { key: 'typo',    title: '텍스트',  props: ['font-size', 'line-height', 'font-weight', 'color'], when: s => s.hasText },
-    { key: 'margin',  title: '바깥 여백',  props: ['margin-top', 'margin-bottom'] },
-    { key: 'padding', title: '안쪽 여백',  props: ['padding-top', 'padding-bottom'] },
-    { key: 'margin2', title: '바깥 여백 (좌·우)', props: ['margin-left', 'margin-right'], adv: true },
-    { key: 'padding2',title: '안쪽 여백 (좌·우)', props: ['padding-left', 'padding-right'], adv: true },
-    { key: 'layout',  title: '배치',    props: ['gap', 'justify-content', 'align-items'], when: s => s.isFlexOrGrid },
-    { key: 'size',    title: '크기',    props: ['width', 'height', 'max-width', 'min-width'], adv: true },
-    { key: 'look',    title: '모양',    props: ['background-color', 'border-radius', 'opacity'] },
+    { key: 'typo',    title: 'Text',  props: ['font-size', 'line-height', 'font-weight', 'color'], when: s => s.hasText },
+    { key: 'margin',  title: 'Margin',  props: ['margin-top', 'margin-bottom'] },
+    { key: 'padding', title: 'Padding',  props: ['padding-top', 'padding-bottom'] },
+    { key: 'margin2', title: 'Margin (left/right)', props: ['margin-left', 'margin-right'], adv: true },
+    { key: 'padding2',title: 'Padding (left/right)', props: ['padding-left', 'padding-right'], adv: true },
+    { key: 'layout',  title: 'Layout',    props: ['gap', 'justify-content', 'align-items'], when: s => s.isFlexOrGrid },
+    { key: 'size',    title: 'Size',    props: ['width', 'height', 'max-width', 'min-width'], adv: true },
+    { key: 'look',    title: 'Appearance',    props: ['background-color', 'border-radius', 'opacity'] },
 ];
 const LABEL = {
-    'font-size': '글자 크기', 'line-height': '줄 간격', 'font-weight': '굵기', 'color': '글자색',
-    'margin-top': '위', 'margin-right': '오른쪽', 'margin-bottom': '아래', 'margin-left': '왼쪽',
-    'padding-top': '위', 'padding-right': '오른쪽', 'padding-bottom': '아래', 'padding-left': '왼쪽',
-    'width': '너비', 'max-width': '최대 너비', 'min-width': '최소 너비', 'height': '높이',
-    'gap': '간격', 'justify-content': '가로 정렬', 'align-items': '세로 정렬',
-    'border-radius': '모서리', 'background-color': '배경색', 'opacity': '투명도',
+    'font-size': 'Font size', 'line-height': 'Line height', 'font-weight': 'Weight', 'color': 'Color',
+    'margin-top': 'Top', 'margin-right': 'Right', 'margin-bottom': 'Bottom', 'margin-left': 'Left',
+    'padding-top': 'Top', 'padding-right': 'Right', 'padding-bottom': 'Bottom', 'padding-left': 'Left',
+    'width': 'Width', 'max-width': 'Max width', 'min-width': 'Min width', 'height': 'Height',
+    'gap': 'Gap', 'justify-content': 'Justify', 'align-items': 'Align',
+    'border-radius': 'Radius', 'background-color': 'Background', 'opacity': 'Opacity',
 };
 const ALIGN_OPTIONS = ['left', 'center', 'right'];
 
@@ -653,21 +702,326 @@ function stepFontWeight(val, dir) {
 }
 
 // ---------------------------------------------------------------- 인스펙터
+// ── 인스펙터 ────────────────────────────────────────────────────
+// 이 패널의 일은 하나다: "이 덩어리가 만드는 공간을 시스템 안에서 고친다."
+// 그래서 간격을 주인공으로 크게 두고, 나머지 속성은 접어 둔다.
+//
+//   · 네 변을 끌어서 조절한다 (클릭해 숫자를 치는 것보다 빠르다)
+//   · 끌면 디자인 시스템의 간격 단계에 자석처럼 붙는다 → 아무 값이나 나오지 않는다
+//   · Alt 를 누른 채 끌면 시스템 밖 값도 만질 수 있다 (예외를 둘 때만)
+
+let draggingEdge = false;   // 여백 숫자를 끌고 있는 중인지 (그동안 인스펙터를 다시 그리지 않는다)
+let quietEdits = false;     // 끌고 있는 동안에는 안내 토스트를 띄우지 않는다
+
+/** 간격 토큰 목록 — [{ name, px }] (없으면 빈 배열) */
+function spaceSteps() {
+    return (selection?.spaceTokens || []).filter(t => t && isFinite(t.px));
+}
+
+/** px 에 가장 가까운 토큰 단계 (없으면 null) */
+function nearestStep(px) {
+    const steps = spaceSteps();
+    if (!steps.length) return null;
+    return steps.reduce((a, b) => Math.abs(b.px - px) < Math.abs(a.px - px) ? b : a);
+}
+
+/** 한 변(위/오른쪽/아래/왼쪽)의 값 하나 — 끌어서 조절하고 토큰에 붙는다 */
+function edgeField(prop, label) {
+    const el = document.createElement('div');
+    el.className = 'sp-edge';
+    // 이 변이 페이지의 어디인지 색으로 짚어 준다
+    const [part, side] = prop.split('-');
+    el.addEventListener('mouseenter', ev => {
+        ev.stopPropagation();
+        toFrame('boxHint', { path: selection.path, part, side });
+    });
+
+    const raw = currentValue(prop) || '0px';
+    const startPx = Math.round(parseFloat(raw)) || 0;
+    const hit = nearestStep(startPx);
+    const onToken = hit && Math.abs(hit.px - startPx) < 1;
+
+    el.innerHTML =
+        `<span class="sp-edge__label">${label}</span>` +
+        `<span class="sp-edge__val${pendingFor(prop) ? ' is-changed' : ''}">${startPx}</span>` +
+        `<span class="sp-edge__unit">px</span>` +
+        // 0 은 '값이 없음'이지 '시스템 밖'이 아니다 — 굳이 경고처럼 보이지 않게 비운다
+        (startPx === 0 ? `<span class="sp-edge__tok"></span>`
+            : onToken ? `<span class="sp-edge__tok">${hit.name.replace('--space-', 'S')}</span>`
+                : `<span class="sp-edge__tok is-off" title="Not one of the system steps">·</span>`);
+
+    const valEl = el.querySelector('.sp-edge__val');
+
+    // 끌어서 조절 — 세로로 움직인 만큼 값이 변하고, 손을 떼면 가까운 단계에 붙는다
+    let dragging = false, from = 0, base = 0, snap = true;
+    const onMove = ev => {
+        if (!dragging) return;
+        ev.preventDefault();
+        const moved = from - ev.clientY;              // 위로 끌면 커진다
+        let next = Math.max(0, base + moved);
+        snap = !ev.altKey;                            // Alt 를 누르면 시스템 밖 값도 허용
+        if (snap) {
+            const st = nearestStep(next);
+            if (st && Math.abs(st.px - next) <= 12) next = st.px;   // 가까우면 자석처럼
+        }
+        next = Math.round(next);
+        if (String(next) === valEl.textContent) return;
+        valEl.textContent = next;
+        el.classList.toggle('is-free', !snap);
+        stageEdit(prop, next + 'px');                 // 확정과 같은 길 — 규칙에 가려지지 않는다
+    };
+    const onUp = () => {
+        if (!dragging) return;
+        dragging = false;
+        draggingEdge = false;
+        quietEdits = false;
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+        document.body.classList.remove('is-dragging-num');
+        stageEdit(prop, valEl.textContent + 'px');
+        renderInspector();                            // 끌기가 끝났으니 이제 다시 그린다
+    };
+    valEl.addEventListener('mousedown', ev => {
+        ev.preventDefault();
+        dragging = true; draggingEdge = true; quietEdits = true;
+        from = ev.clientY; base = parseFloat(valEl.textContent) || 0;
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', onUp);
+        document.body.classList.add('is-dragging-num');
+    });
+    // 숫자를 두 번 누르면 직접 입력 (드래그로 맞추기 어려운 값)
+    valEl.addEventListener('dblclick', () => {
+        const inp = document.createElement('input');
+        inp.className = 'sp-edge__input'; inp.value = valEl.textContent;
+        valEl.replaceWith(inp); inp.focus(); inp.select();
+        const done = () => stageEdit(prop, (parseFloat(inp.value) || 0) + 'px');
+        inp.addEventListener('blur', done);
+        inp.addEventListener('keydown', e => {
+            if (e.key === 'Enter') { e.preventDefault(); done(); }
+            if (e.key === 'Escape') inp.replaceWith(valEl);
+        });
+    });
+    return el;
+}
+
+/**
+ * 간격 판 — 바깥(margin) 안에 안쪽(padding), 그 안에 내용.
+ * 네 변을 모두 같은 방식으로 두어야 어느 값이 무엇인지 헷갈리지 않는다.
+ * (좌우만 따로 빼면 "이 마진은 뭐지?" 하고 다시 읽어야 한다)
+ *
+ * 패널이 270px 남짓이라 글자와 여백을 바짝 조여 네 변을 다 담는다.
+ */
+function spacingBoard() {
+    const wrap = document.createElement('div');
+    wrap.className = 'sp-board';
+
+    const ring = (cls, name, props) => {
+        const el = document.createElement('div');
+        el.className = `sp-ring sp-ring--${cls}`;
+        el.dataset.part = cls;
+        el.innerHTML = `<span class="sp-ring__name">${name}</span>`;
+        el.append(
+            edgeField(props[0], '↑'), edgeField(props[1], '→'),
+            edgeField(props[2], '↓'), edgeField(props[3], '←'),
+        );
+        return el;
+    };
+
+    const outer = ring('margin', 'MARGIN',
+        ['margin-top', 'margin-right', 'margin-bottom', 'margin-left']);
+    const inner = ring('padding', 'PADDING',
+        ['padding-top', 'padding-right', 'padding-bottom', 'padding-left']);
+
+    const core = document.createElement('div');
+    core.className = 'sp-core';
+    core.textContent = `${selection.rect.w} × ${selection.rect.h}`;
+
+    inner.appendChild(core);
+    outer.appendChild(inner);
+    wrap.appendChild(outer);
+
+    // 어느 부분인지 미리보기에서 색으로 알려 준다 (판을 떠나면 지운다)
+    for (const el of [outer, inner]) {
+        el.addEventListener('mouseenter', () => toFrame('boxHint', { path: selection.path, part: el.dataset.part }));
+    }
+    wrap.addEventListener('mouseleave', () => toFrame('boxHint', { path: null }));
+
+    const hint = document.createElement('p');
+    hint.className = 'sp-hint';
+    hint.textContent = 'Drag a number to change it — it snaps to the system steps. Alt to go off-system, double-click to type.';
+    wrap.appendChild(hint);
+    return wrap;
+}
+
+/**
+ * "값은 바꿨는데 왜 화면이 그대로지?" 를 미리 알려 준다.
+ * 도구가 조용히 있으면 사용자는 도구가 고장 난 줄 안다.
+ */
+function blockedNote(prop) {
+    const c = selection.computed || {};
+    const px = v => parseFloat(v) || 0;
+    let msg = '';
+
+    if (prop === 'width' && c['max-width'] && c['max-width'] !== 'none' && px(c['max-width']) <= px(c.width)) {
+        msg = `Capped by max-width (${c['max-width']}). Raise that first.`;
+    } else if (prop === 'height' && /auto/.test(c.height || '')) {
+        msg = 'Height follows the content right now.';
+    } else if (prop === 'text-align' && selection.childCount > 0) {
+        msg = 'Children that set their own alignment will keep it.';
+    }
+    if (!msg) return null;
+
+    const n = document.createElement('p');
+    n.className = 'blocked-note';
+    n.textContent = msg;
+    return n;
+}
+
+/** 접히는 묶음 — 자주 안 쓰는 것은 닫아 둔다 */
+function foldGroup(title, build, open = false) {
+    const d = document.createElement('details');
+    d.className = 'fold';
+    if (open) d.open = true;
+    const sum = document.createElement('summary');
+    sum.textContent = title;
+    d.appendChild(sum);
+    const body = document.createElement('div');
+    body.className = 'fold__body';
+    build(body);
+    d.appendChild(body);
+    return d;
+}
+
+/** 고른 게 있을 때만 덩어리 조작 버튼을 보여 준다 */
+function syncSelectionButtons() {
+    const on = !!selection;
+    for (const id of ['#dupBtn', '#delBtn', '#ctSep']) {
+        const el = $(id); if (el) el.hidden = !on;
+    }
+    const save = $('#saveCompBtn');
+    if (save) save.disabled = !on;
+}
+
+/**
+ * 고른 것을 사람 말로 부른다.
+ * 'div.vb-wrap' 은 코드 이름이지 디자이너가 화면에서 보는 것의 이름이 아니다.
+ */
+function friendlyName(sel) {
+    const t = (sel.tag || '').toLowerCase();
+    const cls = (sel.classes || []).filter(c => !c.startsWith('__ed'));
+    // 등록해 둔 컴포넌트라면 그 이름으로 부른다
+    const saved = savedComps.find(c => (c.needs || []).length && cls.includes((c.needs[0] || '')));
+    if (saved) return saved.name;
+    if (/^h[1-6]$/.test(t)) return 'Heading';
+    if (t === 'p') return 'Paragraph';
+    if (t === 'img') return 'Image';
+    if (t === 'video' || t === 'iframe') return 'Video';
+    if (t === 'a' || t === 'button') return 'Link';
+    if (t === 'ul' || t === 'ol' || t === 'li') return 'List';
+    if (t === 'section' || t === 'main' || t === 'header' || t === 'footer') return 'Section';
+    if (sel.textOnly) return 'Text';
+    return 'Group';
+}
+
 function renderInspector() {
+    if (draggingEdge) return;          // 값을 끌고 있는 중엔 화면을 갈아엎지 않는다
+    syncSelectionButtons();
     const empty = $('#emptyState'), insp = $('#inspector');
-    if (!selection) { empty.hidden = false; insp.hidden = true; return; }
+    if (!selection) { empty.hidden = false; insp.hidden = true; syncSelectionButtons(); return; }
     empty.hidden = true; insp.hidden = false;
 
-    $('#selTag').textContent =
-        selection.tag + (selection.id ? '#' + selection.id : '') +
+    $('#selTag').textContent = friendlyName(selection);
+    // 코드 이름은 필요할 때만 (마우스를 올리면 보인다)
+    $('#selTag').title = selection.tag.toLowerCase() +
         (selection.classes.length ? '.' + selection.classes.filter(c => !c.startsWith('__ed')).join('.') : '');
-    $('#selMeta').textContent =
-        `${selection.rect.w}×${selection.rect.h}px · 자식 ${selection.childCount}개` +
-        (selection.text ? ` · "${selection.text}"` : '');
+    $('#selMeta').textContent = `${selection.rect.w} × ${selection.rect.h}`;
+    $('#modeHelp').textContent = mode === 'css'
+        ? 'Every element using this selector changes. Edits the CSS rule itself.'
+        : 'Adds style="…" to this element only. Use it for a one-off exception.';
+
+    const box = $('#fields');
+    box.innerHTML = '';
+
+    // 무엇을 골랐느냐에 따라 보여줄 것이 다르다.
+    // 특히 '글자 속성'은 자식 태그가 없을 때만 뜻이 있다 — 제목과 설명이 묶인
+    // 덩어리를 고르고 글자 크기를 하나로 정할 수는 없기 때문이다.
+    const ctx = {
+        isLeafText: !!selection.textOnly,
+        isMedia: /^(IMG|VIDEO|IFRAME|SOURCE)$/i.test(selection.tag),
+        isFlexOrGrid: /flex|grid/.test(selection.computed?.display || ''),
+        isContainer: selection.childCount > 0,
+    };
+
+    // ① 값을 채우는 일이 먼저 (글자·링크)
+    if (ctx.isLeafText) box.appendChild(textRow());
+    if (ctx.isMedia) box.appendChild(mediaRow());
+
+    // ② 주인공 — 이 덩어리가 만드는 공간
+    box.appendChild(spacingBoard());
+
+    // ③ 이웃과의 실제 간격 (내 여백 + 이웃 여백이 겹쳐 만든 값)
+    const nb = neighborRow();
+    if (nb) box.appendChild(nb);
+
+    // ④ 나머지는 고른 것에 맞는 것만, 그것도 접어서
+    if (ctx.isLeafText) {
+        // 글자 하나짜리 — 크기·굵기·색이 하나로 정해지므로 뜻이 있다
+        box.appendChild(foldGroup('Text', b => {
+            b.appendChild(alignRow());
+            for (const prop of ['font-size', 'line-height', 'font-weight', 'color']) b.appendChild(fieldRow(prop));
+        }));
+    } else if (ctx.isContainer) {
+        // 덩어리 — 안에 여러 크기가 섞여 있어 '글자 크기' 하나를 정할 수 없다.
+        box.appendChild(foldGroup('Text', b => {
+            b.appendChild(alignRow());   // 정렬은 덩어리 단위로도 뜻이 있다
+            const warn = blockedNote('text-align');
+            if (warn) b.appendChild(warn);
+        }));
+    }
+    if (ctx.isFlexOrGrid) {
+        box.appendChild(foldGroup('Layout', b => {
+            for (const prop of ['gap', 'justify-content', 'align-items']) b.appendChild(fieldRow(prop));
+        }));
+    }
+    // 배경·모서리는 면이 있는 것에만
+    if (!ctx.isLeafText || ctx.isMedia) {
+        box.appendChild(foldGroup('Appearance', b => {
+            for (const prop of ['background-color', 'border-radius', 'opacity']) b.appendChild(fieldRow(prop));
+        }));
+    }
+    // 크기는 미디어와 덩어리에만 (인라인 글자에 폭을 주는 일은 거의 없다)
+    if (ctx.isMedia || ctx.isContainer) {
+        box.appendChild(foldGroup('Size', b => {
+            for (const prop of ['width', 'height', 'max-width', 'min-width']) {
+                b.appendChild(fieldRow(prop));
+                const warn = blockedNote(prop);
+                if (warn) b.appendChild(warn);
+            }
+        }));
+    }
+
+    const moreBtn = $('#inspMore');
+    if (moreBtn) moreBtn.hidden = true;    // 접기로 갈음한다
+}
+
+// ── 이전 인스펙터 ────────────────────────────────────────────────
+// 속성을 종류별로 전부 늘어놓던 방식. 무엇을 고르든 컨트롤이 38개쯤 떠서
+// 정작 제일 자주 쓰는 '간격'이 그 안에 파묻혔다.
+// 새 인스펙터(renderInspector)로 대체했고, 되돌릴 일이 있을까 봐 남겨 둔다.
+function renderInspectorLegacy() {
+    const empty = $('#emptyState'), insp = $('#inspector');
+    if (!selection) { empty.hidden = false; insp.hidden = true; syncSelectionButtons(); return; }
+    empty.hidden = true; insp.hidden = false;
+
+    $('#selTag').textContent = friendlyName(selection);
+    // 코드 이름은 필요할 때만 (마우스를 올리면 보인다)
+    $('#selTag').title = selection.tag.toLowerCase() +
+        (selection.classes.length ? '.' + selection.classes.filter(c => !c.startsWith('__ed')).join('.') : '');
+    $('#selMeta').textContent = `${selection.rect.w} × ${selection.rect.h}`;
 
     $('#modeHelp').textContent = mode === 'css'
-        ? '같은 선택자를 쓰는 요소 전부가 함께 바뀝니다. CSS 규칙을 직접 고칩니다.'
-        : '이 요소에만 style="…" 을 붙입니다. 하나만 예외로 두고 싶을 때 쓰세요.';
+        ? 'Every element using this selector changes. Edits the CSS rule itself.'
+        : 'Adds style="…" to this element only. Use it for a one-off exception.';
 
     const box = $('#fields');
     box.innerHTML = '';
@@ -679,6 +1033,8 @@ function renderInspector() {
         isMedia: /^(IMG|VIDEO|IFRAME|SOURCE)$/i.test(selection.tag),
     };
 
+    // 글자만 든 요소라면 내용부터 — 값을 채우는 게 먼저다
+    if (selection.textOnly) box.appendChild(textRow());
     // 이미지·영상이면 링크(src)부터 — 제일 자주 바꾸는 값
     if (ctx.isMedia) box.appendChild(mediaRow());
 
@@ -707,7 +1063,7 @@ function renderInspector() {
 
     const moreBtn = $('#inspMore');
     if (moreBtn) {
-        moreBtn.textContent = inspShowAdvanced ? '고급 속성 접기' : '고급 속성 보기';
+        moreBtn.textContent = inspShowAdvanced ? 'Hide advanced' : 'Show advanced';
         moreBtn.setAttribute('aria-expanded', inspShowAdvanced ? 'true' : 'false');
     }
 }
@@ -731,14 +1087,14 @@ function neighborRow() {
     const SPACE_TOKENS = selection.spaceTokens || [];
 
     const g = el('div', 'group');
-    const h = el('h3', null, '위·아래 간격');
+    const h = el('h3', null, 'Vertical spacing');
     h.addEventListener('click', () => g.classList.toggle('is-collapsed'));
     g.appendChild(h);
 
     const mk = (side, info) => {
         if (!info) return;
         const row = el('div', 'field nb-row');
-        row.appendChild(el('label', null, side === 'up' ? '위 사이' : '아래 사이'));
+        row.appendChild(el('label', null, side === 'up' ? 'Above' : 'Below'));
 
         // 간격도 디자인 시스템 안에서 고른다 (다른 여백 항목과 같은 규칙).
         // 이 요소가 가진 몫(margin)만 바꾸고, 상대 요소는 건드리지 않는다.
@@ -748,7 +1104,7 @@ function neighborRow() {
         // 지금 값이 토큰과 맞는지 표시
         const hit = SPACE_TOKENS.find(t => Math.abs(t.px - info.gap) <= 1);
         sel.appendChild(Object.assign(el('option'), {
-            value: '', textContent: hit ? `지금: ${info.gap}px (${hit.label})` : `지금: ${info.gap}px (토큰 아님)`,
+            value: '', textContent: hit ? `now: ${info.gap}px (${hit.label})` : `now: ${info.gap}px (not a token)`,
         }));
         for (const t of SPACE_TOKENS) {
             sel.appendChild(Object.assign(el('option'), {
@@ -764,7 +1120,7 @@ function neighborRow() {
         row.appendChild(sel);
 
         const who = el('span', 'nb-who', info.name);
-        who.title = '이 요소를 선택합니다';
+        who.title = 'Select this element';
         who.addEventListener('click', () => toFrame('reselect', { path: info.path }));
         row.appendChild(who);
         g.appendChild(row);
@@ -772,7 +1128,7 @@ function neighborRow() {
     mk('up', nb.up);
     mk('down', nb.down);
 
-    const note = el('p', 'nb-note', '눈에 보이는 간격입니다. 디자인 시스템의 간격 단계에서 고릅니다.');
+    const note = el('p', 'nb-note', 'The spacing you actually see. Pick from the design system steps.');
     g.appendChild(note);
     return g;
 }
@@ -780,9 +1136,9 @@ function neighborRow() {
 /** 이미지·영상 링크 편집 줄 (src 를 직접 고친다) */
 function mediaRow() {
     const g = el('div', 'group');
-    g.innerHTML = '<h3>미디어</h3>';
+    g.innerHTML = '<h3>Media</h3>';
     const row = el('div', 'field');
-    const label = el('label', null, '링크(src)');
+    const label = el('label', null, 'Link (src)');
     const inp = el('input');
     inp.type = 'text';
     inp.value = selection.attrs?.src || '';
@@ -792,7 +1148,7 @@ function mediaRow() {
         pending.push({ kind: 'attr', path: selection.path, name: 'src', value: v });
         toFrame('setAttr', { path: selection.path, name: 'src', value: v });
         updateDirty();
-        toast('링크를 바꿨습니다 — 저장해야 반영됩니다', 'ok');
+        toast('Link changed — save to write it to the file', 'ok');
     });
     row.append(label, inp);
     g.appendChild(row);
@@ -810,7 +1166,7 @@ function currentValue(prop) {
 
 function originOf(prop) {
     if (selection.inline[prop] != null) {
-        return { label: 'style="" (이 요소)', selector: null, kind: 'inline' };
+        return { label: 'style="" (this element)', selector: null, kind: 'inline' };
     }
     const hits = selection.rules[prop];
     if (hits?.length) {
@@ -826,21 +1182,54 @@ function originOf(prop) {
     if (target) {
         // 이 속성을 정하는 규칙이 아직 없음 → 고치면 이 규칙에 한 줄이 새로 생긴다.
         // (디자인 시스템이 아니라 '이 페이지의 CSS'가 바뀐다는 뜻)
-        return { label: `아직 없음 → ${target.selector} 규칙에 새 줄 생김`, selector: target.selector, kind: 'insert' };
+        return { label: `Not set yet → a new line will be added to ${target.selector}`, selector: target.selector, kind: 'insert' };
     }
-    return { label: '계산된 기본값 (규칙 없음)', selector: null, kind: 'none' };
+    return { label: 'Computed default (no rule)', selector: null, kind: 'none' };
+}
+
+/** 고른 요소의 글자를 그 자리에서 고친다 (자식 태그가 없는 잎 요소만) */
+function textRow() {
+    const g = document.createElement('div');
+    g.className = 'group';
+    g.innerHTML = '<h3>Content</h3>';
+
+    const area = document.createElement('textarea');
+    area.className = 'text-edit';
+    area.rows = 2;
+    area.value = selection.fullText || '';
+    area.placeholder = 'Text shown here';
+
+    let timer = null;
+    const push = () => {
+        const value = area.value;
+        // 같은 요소를 연달아 고치면 마지막 값만 남긴다 (한 글자마다 쌓이지 않게)
+        const last = pending[pending.length - 1];
+        if (last && last.kind === 'text' && String(last.path) === String(selection.path)) last.value = value;
+        else pending.push({ kind: 'text', path: selection.path, value });
+        updateDirty();
+        toFrame('textPreview', { path: selection.path, value });
+    };
+    area.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(push, 250); });
+    area.addEventListener('blur', () => { clearTimeout(timer); push(); });
+
+    g.appendChild(area);
+    const note = document.createElement('p');
+    note.className = 'modeHelp';
+    note.textContent = 'Edits the text in place. Save to write it to the file.';
+    g.appendChild(note);
+    return g;
 }
 
 function alignRow() {
     const g = document.createElement('div');
     g.className = 'group';
-    g.innerHTML = '<h3>텍스트 정렬</h3>';
+    g.innerHTML = '<h3>Text align</h3>';
     const row = document.createElement('div');
     row.className = 'segRow';
     const cur = currentValue('text-align');
     for (const v of ALIGN_OPTIONS) {
         const b = document.createElement('button');
-        b.textContent = { left: '왼쪽', center: '가운데', right: '오른쪽' }[v];
+        b.textContent = { left: 'Left', center: 'Center', right: 'Right' }[v];
         b.className = cur === v ? 'on' : '';
         b.onclick = () => stageEdit('text-align', v);
         row.appendChild(b);
@@ -848,14 +1237,14 @@ function alignRow() {
     g.appendChild(row);
     const o = document.createElement('div');
     o.className = 'origin';
-    o.innerHTML = `현재 값 <b>${cur || '-'}</b> · ${originOf('text-align').label}`;
+    o.innerHTML = `Current <b>${cur || '-'}</b> · ${originOf('text-align').label}`;
     o.style.marginLeft = '0';
     g.appendChild(o);
     return g;
 }
 
 // ---------------------------------------------------------------- 토큰 목록 (인스펙터용)
-// 기본은 '디자인 시스템 안에서만' 고르게 한다. 임의 값이 필요하면 '직접' 버튼으로 잠금을 푼다.
+// 기본은 '디자인 시스템 안에서만' 고르게 한다. 임의 값이 필요하면 'Custom' 버튼으로 잠금을 푼다.
 let insTokens = null;                 // { colors:[{label,name}], fs:[...], space:[...] }
 const freeMode = new Set();           // 직접 입력 잠금을 푼 속성들
 
@@ -863,18 +1252,18 @@ async function loadInsTokens() {
     try {
         const d = await (await fetch('/__api/designsystem')).json();
         const colors = [
-            ...d.roles.map(r => ({ label: r.label, name: r.name })),
-            ...d.ramp.map(g => ({ label: '회색 ' + g.step, name: g.name })),
-            ...d.primary.map(g => ({ label: 'Primary ' + g.step, name: g.name })),
-            ...d.purpleRamp.map(g => ({ label: '퍼플 ' + g.step, name: g.name })),
-            ...d.tealRamp.map(g => ({ label: '틸 ' + g.step, name: g.name })),
-            ...d.surfaces.map(s => ({ label: s.label, name: s.name })),
-            ...d.primitives.map(p => ({ label: p.label, name: p.name })),
+            ...d.roles.map(r => ({ label: r.label, name: r.name, hex: r.hex || r.lightHex })),
+            ...d.ramp.map(g => ({ label: 'Gray ' + g.step, name: g.name, hex: g.hex })),
+            ...d.primary.map(g => ({ label: 'Primary ' + g.step, name: g.name, hex: g.hex })),
+            ...d.purpleRamp.map(g => ({ label: 'Purple ' + g.step, name: g.name, hex: g.hex })),
+            ...d.tealRamp.map(g => ({ label: 'Teal ' + g.step, name: g.name, hex: g.hex })),
+            ...d.surfaces.map(s => ({ label: s.label, name: s.name, hex: s.hex })),
+            ...d.primitives.map(p => ({ label: p.label, name: p.name, hex: p.hex })),
         ];
         insTokens = {
             colors,
             fs: d.typo.map(t => ({ label: `${t.label} (${t.basePx}px)`, name: t.name })),
-            space: d.spacing.map(s => ({ label: `${s.step}단계 (${s.basePx}px)`, name: s.name })),
+            space: d.spacing.map(s => ({ label: `Step ${s.step} (${s.basePx}px)`, name: s.name })),
         };
     } catch { insTokens = null; }
 }
@@ -889,9 +1278,82 @@ function tokenChoicesFor(prop) {
 }
 
 function fieldRow(prop) {
+    // 색은 이름만 늘어놓으면 무슨 색인지 알 수 없다 — 견본을 보고 고르게 한다
+    if (/color$/.test(prop)) return colorRow(prop);
     const choices = tokenChoicesFor(prop);
     if (choices && !freeMode.has(prop)) return tokenFieldRow(prop, choices);
     return freeFieldRow(prop);
+}
+
+/** rgb(a) 문자열 → #RRGGBB (투명하면 null) */
+function toHex(v) {
+    const m = String(v).match(/rgba?\(([^)]+)\)/);
+    if (!m) return /^#[0-9a-f]{3,8}$/i.test(String(v).trim()) ? String(v).trim().toUpperCase() : null;
+    const n = m[1].split(',').map(x => parseFloat(x));
+    if (n.length > 3 && n[3] === 0) return null;                 // 완전 투명
+    return '#' + n.slice(0, 3).map(x => Math.round(x).toString(16).padStart(2, '0')).join('').toUpperCase();
+}
+
+/**
+ * 색 고르기 — 견본을 눌러 팔레트를 펴고, 거기서 고른다.
+ * 디자인 시스템에 있는 색이면 그 이름을, 아니면 헥스코드를 보여준다.
+ */
+function colorRow(prop) {
+    const wrap = document.createElement('div');
+    const row = document.createElement('div');
+    row.className = 'field';
+
+    const label = document.createElement('label');
+    label.textContent = LABEL[prop] || prop;
+    row.appendChild(label);
+
+    const cur = currentValue(prop);
+    const curVar = (cur.match(/var\(\s*(--[\w-]+)\s*\)/) || [])[1] || null;
+    const choices = tokenChoicesFor(prop) || [];
+    const hit = curVar ? choices.find(c => c.name === curVar) : null;
+    const hex = toHex(selection.computed?.[prop] || cur);
+
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'color-btn' + (pendingFor(prop) ? ' changed' : '');
+    btn.innerHTML =
+        `<span class="color-chip" style="background:${hex || 'transparent'}"></span>` +
+        `<span class="color-name">${hit ? hit.label : (hex || 'transparent')}</span>`;
+    row.appendChild(btn);
+    wrap.appendChild(row);
+
+    // 팔레트 — 견본 격자. 토큰이면 이름이 함께 뜬다.
+    const pop = document.createElement('div');
+    pop.className = 'color-pop';
+    pop.hidden = true;
+    const grid = document.createElement('div');
+    grid.className = 'color-grid';
+    for (const c of choices) {
+        const sw = document.createElement('button');
+        sw.type = 'button';
+        sw.className = 'color-sw' + (hit && hit.name === c.name ? ' is-on' : '');
+        sw.title = `${c.label}  ${c.hex || ''}`.trim();
+        sw.style.background = c.hex || `var(${c.name})`;
+        sw.addEventListener('click', () => { stageEdit(prop, `var(${c.name})`); });
+        grid.appendChild(sw);
+    }
+    pop.appendChild(grid);
+
+    // 시스템 밖 색이 필요할 때 — 헥스로 직접
+    const free = document.createElement('div');
+    free.className = 'color-free';
+    free.innerHTML = '<span>Custom</span>';
+    const inp = document.createElement('input');
+    inp.type = 'text'; inp.className = 'color-hex'; inp.placeholder = '#000000';
+    inp.value = hex || '';
+    inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); stageEdit(prop, inp.value.trim()); } });
+    inp.addEventListener('blur', () => { if (inp.value.trim() && inp.value.trim() !== hex) stageEdit(prop, inp.value.trim()); });
+    free.appendChild(inp);
+    pop.appendChild(free);
+    wrap.appendChild(pop);
+
+    btn.addEventListener('click', () => { pop.hidden = !pop.hidden; });
+    return wrap;
 }
 
 /** 토큰 중에서만 고르는 줄 */
@@ -913,7 +1375,7 @@ function tokenFieldRow(prop, choices) {
     // 토큰이 아닌 값이면 맨 위에 '지금 값'을 보여준다 (고르면 토큰으로 바뀜)
     if (!curVar) {
         const o = document.createElement('option');
-        o.value = ''; o.textContent = `지금: ${cur || '없음'} (토큰 아님)`;
+        o.value = ''; o.textContent = `now: ${cur || 'none'} (not a token)`;
         sel.appendChild(o);
     }
     for (const c of choices) {
@@ -930,8 +1392,8 @@ function tokenFieldRow(prop, choices) {
 
     const free = document.createElement('button');
     free.className = 'btn ghost tiny freeBtn';
-    free.textContent = '직접';
-    free.title = '디자인 시스템 밖의 값을 직접 넣습니다 (권장하지 않음)';
+    free.textContent = 'Custom';
+    free.title = 'Type a value outside the design system (not recommended)';
     free.addEventListener('click', () => {
         if (!confirm('디자인 시스템 밖의 값을 직접 넣습니다.\n이 값은 토큰과 연결되지 않아 나중에 한꺼번에 못 바꿉니다.\n계속할까요?')) return;
         freeMode.add(prop);
@@ -982,8 +1444,15 @@ function freeFieldRow(prop) {
         } else {
             const m = input.value.match(/^(-?[\d.]+)(px|rem|em|%|vw|vh)?$/);
             if (!m) return;
-            const step = e.shiftKey ? 10 : 1;
-            input.value = +(parseFloat(m[1]) + dir * step).toFixed(3) + (m[2] || '');
+            // 걸음은 값의 성격을 따른다 — 투명도를 1씩 올리면 0 아니면 1 밖에 안 나온다
+            const unit = m[2] || '';
+            const base = (prop === 'opacity') ? 0.05
+                : (!unit && prop === 'line-height') ? 0.1
+                    : (unit === 'rem' || unit === 'em') ? 0.1 : 1;
+            const step = e.shiftKey ? base * 10 : base;
+            let next = parseFloat(m[1]) + dir * step;
+            if (prop === 'opacity') next = Math.min(1, Math.max(0, next));
+            input.value = +next.toFixed(3) + unit;
         }
         stageEdit(prop, input.value);
     });
@@ -1008,12 +1477,12 @@ function freeFieldRow(prop) {
     }
     row.appendChild(stepper);
 
-    // '직접'으로 풀었던 속성은 다시 토큰 선택으로 돌아갈 수 있게
+    // 'Custom'으로 풀었던 속성은 다시 토큰 선택으로 돌아갈 수 있게
     if (freeMode.has(prop)) {
         const back = document.createElement('button');
         back.className = 'btn ghost tiny freeBtn';
-        back.textContent = '토큰';
-        back.title = '디자인 시스템 값에서 고르기로 돌아갑니다';
+        back.textContent = 'Token';
+        back.title = 'Go back to picking a design system value';
         back.addEventListener('click', () => { freeMode.delete(prop); renderInspector(); });
         row.appendChild(back);
     }
@@ -1042,12 +1511,14 @@ function stageEdit(prop, value) {
     if (mode === 'css') {
         const org = originOf(prop);
         if (!org.selector) {
-            toast('이 요소에 걸린 CSS 규칙이 없어 "이 요소만"으로 바꿉니다.', 'err');
+            toast('No CSS rule targets this element, so it switches to “This element”.', 'err');
             setMode('inline');
             return stageEdit(prop, value);
         }
-        if (org.media) toast(`이 값은 @${org.media} 안에서 정해집니다. 그 규칙을 고칩니다.`);
-        else if (org.kind === 'insert') toast(`${org.selector} 규칙에 ${prop} 을 새로 추가합니다.`);
+        if (!quietEdits) {
+            if (org.media) toast(`This value comes from @${org.media}. That rule will be edited.`);
+            else if (org.kind === 'insert') toast(`${prop} will be added to the ${org.selector} rule.`);
+        }
         const i = pending.findIndex(p => p.kind === 'css' && p.selector === org.selector && p.prop === prop);
         const edit = { kind: 'css', selector: org.selector, prop, value, path: selection.path };
         if (i >= 0) pending[i] = edit; else pending.push(edit);
@@ -1070,7 +1541,7 @@ function applyPendingPreview() {
         toFrame('preview', { path: p.path, changes: p.changes });
     }
     // 구조를 바꾼 편집(넣기·옮기기·지우기·복제·파일 연결)은 순서대로 다시 튼다
-    const steps = pending.filter(p => ['insert', 'move', 'remove', 'duplicate', 'link'].includes(p.kind));
+    const steps = pending.filter(p => ['insert', 'move', 'remove', 'duplicate', 'link', 'text'].includes(p.kind));
     if (steps.length) toFrame('replay', { steps });
 }
 
@@ -1124,7 +1595,7 @@ function redoLast() {
     updateDirty();
     updateHistoryButtons();
     reloadPreview();              // 화면을 새로 그리고 전부 재생
-    toast('다시 실행했습니다', 'ok');
+    toast('Redone', 'ok');
 }
 
 function undoLast() {
@@ -1142,11 +1613,11 @@ function undoLast() {
     } else {
         redoStack.push(pending.pop());
         // 구조를 바꾼 편집은 거꾸로 되짚기보다 화면을 새로 그리고 남은 것만 재생하는 편이 정확하다
-        if (['insert', 'motion', 'move', 'remove', 'duplicate', 'link'].includes(last.kind)) {
+        if (['insert', 'motion', 'move', 'remove', 'duplicate', 'link', 'text'].includes(last.kind)) {
             updateDirty();
             updateHistoryButtons();
             reloadPreview();
-            toast(pending.length ? '한 단계 되돌림' : '모두 되돌림', 'ok');
+            toast(pending.length ? 'Undid one step' : 'Undid everything', 'ok');
             return;
         }
     }
@@ -1154,11 +1625,11 @@ function undoLast() {
     updateDirty();
     updateHistoryButtons();
     applyPendingPreview();       // 남은 변경은 그대로 유지
-    toast(pending.length ? '한 단계 되돌림' : '모두 되돌림', 'ok');
+    toast(pending.length ? 'Undid one step' : 'Undid everything', 'ok');
 }
 $('#revertBtn').addEventListener('click', undoLast);
 $('#redoBtn')?.addEventListener('click', redoLast);
-$('#reloadBtn')?.addEventListener('click', () => { reloadPreview(); toast('미리보기를 새로 그렸습니다', 'ok'); });
+$('#reloadBtn')?.addEventListener('click', () => { reloadPreview(); toast('Preview redrawn', 'ok'); });
 
 // Ctrl/Cmd + Z 로도 되돌리기
 document.addEventListener('keydown', e => {
@@ -1181,7 +1652,7 @@ document.addEventListener('keydown', e => {
 $('#saveBtn').addEventListener('click', async () => {
     if (!pending.length) return;
     $('#saveBtn').disabled = true;
-    $('#saveBtn').textContent = '저장 중…';
+    $('#saveBtn').textContent = 'Saving…';
     try {
         const res = await fetch('/__api/patch', {
             method: 'POST',
@@ -1192,6 +1663,7 @@ $('#saveBtn').addEventListener('click', async () => {
                     if (p.kind === 'css') return { kind: 'css', selector: p.selector, prop: p.prop, value: p.value };
                     if (p.kind === 'insert') return { kind: 'insert', path: p.path, html: p.html, position: p.position };
                     if (p.kind === 'move') return { kind: 'move', path: p.path, dir: p.dir };
+                    if (p.kind === 'text') return { kind: 'text', path: p.path, value: p.value };
                     if (p.kind === 'link') return { kind: 'link', assetKind: p.assetKind, url: p.url };
                     if (p.kind === 'remove') return { kind: 'remove', path: p.path };
                     if (p.kind === 'duplicate') return { kind: 'duplicate', path: p.path };
@@ -1202,16 +1674,16 @@ $('#saveBtn').addEventListener('click', async () => {
             })
         });
         const data = await res.json();
-        if (!res.ok) throw new Error(data.error || '저장 실패');
-        toast(`저장 완료 — ${data.applied.length}건`, 'ok');
+        if (!res.ok) throw new Error(data.error || 'Save failed');
+        toast(`Saved — ${data.applied.length} change(s)`, 'ok');
         pending = [];
         updateDirty();
         needsCenter = true;
         frame.src = frame.src;      // 저장된 실제 파일을 다시 읽어온다
     } catch (err) {
-        toast('저장 실패: ' + err.message, 'err');
+        toast('Save failed: ' + err.message, 'err');
     } finally {
-        $('#saveBtn').textContent = '파일에 저장';
+        $('#saveBtn').textContent = 'Save to file';
         updateDirty();
     }
 });
@@ -1220,28 +1692,28 @@ $('#saveBtn').addEventListener('click', async () => {
 let toastTimer;
 /** 미리보기가 떠 준 덩어리를 이름 붙여 등록한다 */
 async function onGrabbed(p) {
-    if (!p || p.error) { toast(p?.error || '가져오지 못했습니다', 'warn'); return; }
+    if (!p || p.error) { toast(p?.error || 'Could not read the selection', 'warn'); return; }
     const guess = (p.className || '').split(/\s+/)[0] || p.tag;
-    const name = prompt('컴포넌트 이름 (같은 이름이면 덮어씁니다)', guess);
+    const name = prompt('Component name (same name overwrites)', guess);
     if (name === null) return;
-    if (!name.trim()) { toast('이름이 필요합니다', 'warn'); return; }
+    if (!name.trim()) { toast('A name is required', 'warn'); return; }
 
     // 마스터로 두면 스타일이 blocks/ 에 파일로 나가고, 페이지에는 링크만 걸린다.
     // 여러 페이지에서 같은 블록을 쓸 때 고칠 곳이 한 군데로 모인다.
     const master = confirm(
-        `"${name.trim()}" 을(를) 마스터 블록으로 둘까요?\n\n` +
-        `[확인] blocks/ 에 파일로 저장 — 어느 페이지에 넣어도 같은 파일을 씁니다.\n` +
-        `          나중에 고치면 넣어 둔 곳 전부에 반영됩니다.\n\n` +
-        `[취소] 그냥 컴포넌트 — 넣을 때마다 그 페이지에 스타일이 복사됩니다.`
+        `Make "${name.trim()}" a master block?\n\n` +
+        `[OK]     Saved as a file in blocks/ — every page uses that same file.\n` +
+        `            Edit it later and every page that uses it follows.\n\n` +
+        `[Cancel] Plain component — its styles are copied into each page you drop it on.`
     );
     let slug = '', js = '';
     if (master) {
-        slug = (prompt('블록 파일 이름 (영문 소문자·숫자·하이픈)',
+        slug = (prompt('Block file name (lowercase, digits, hyphen)',
             name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'block') || '').trim();
         if (!slug) return;
         js = (prompt(
             '이 블록에 필요한 JS 가 있으면 붙여 넣으세요.\n' +
-            '(스크롤 인터랙션·자동 넘김 같은 동작. 없으면 비워 두세요)', '') || '').trim();
+            '(scroll effects, autoplay, and so on. Leave empty if none)', '') || '').trim();
     }
     try {
         const res = await fetch('/__api/components', {
@@ -1253,16 +1725,16 @@ async function onGrabbed(p) {
             }),
         });
         const out = await res.json();
-        if (!res.ok) { toast(out.error || '등록 실패', 'warn'); return; }
+        if (!res.ok) { toast(out.error || 'Could not save', 'warn'); return; }
         savedComps = out.items || [];
         loadComponentPatterns();
         selectTab('components');
         const saved = out.items.find(c => c.name === name.trim());
         const where = saved?.block
-            ? ` · blocks/${saved.block.slug}.css${saved.block.js ? ' + .js' : ''} 로 저장`
-            : (p.cssCount ? ` · 스타일 ${p.cssCount}줄 포함` : '');
-        toast((out.replaced ? `"${out.saved}" 을(를) 덮어썼습니다` : `"${out.saved}" 등록 완료`) + where, 'ok');
-    } catch (e) { toast('등록 실패: ' + e.message, 'warn'); }
+            ? ` · written to blocks/${saved.block.slug}.css${saved.block.js ? ' + .js' : ''}`
+            : (p.cssCount ? ` · with ${p.cssCount} style rules` : '');
+        toast((out.replaced ? `"${out.saved}" overwritten` : `"${out.saved}" saved`) + where, 'ok');
+    } catch (e) { toast('Could not save: ' + e.message, 'warn'); }
 }
 
 function toast(msg, kind) {
@@ -1308,7 +1780,7 @@ function setAppMode(ds) {
 
 // ---------------------------------------------------------------- 좌측 컴포넌트 패널
 const leftPanel = $('#leftPanel');
-const TAB_TITLE = { components: '컴포넌트', media: '미디어', motion: '인터랙션' };
+const TAB_TITLE = { components: 'Components', media: 'Media', motion: 'Interactions' };
 let activeTab = 'components';
 
 function selectTab(name) {
@@ -1331,30 +1803,30 @@ document.querySelectorAll('.rail-btn').forEach(b =>
     b.addEventListener('click', () => selectTab(b.dataset.tab)));
 
 // 컴포넌트 = vibra 에서 실제로 쓰는 구조. 텍스트 블록 + 레이아웃 패턴.
+// 컴포넌트 = vibra 에서 실제로 쓰는 구조 그대로.
+// 쓰지 않는 모양을 만들어 두면 넣어 봐야 사이트와 안 맞아 결국 지우게 된다.
 const COMPONENT_GROUPS = [
     {
         label: 'TEXT', items: [
-            { key: 'sechead',   name: '섹션 헤더',     desc: '라벨 + 제목 2줄',      thumb: 'sechead' },
-            { key: 'lead',      name: '리드 문단',     desc: '번호 강조 본문',        thumb: 'lead' },
-            { key: 'titledesc', name: '제목 + 설명',   desc: '소제목 + 본문',        thumb: 'titledesc' },
-            { key: 'grouphead', name: '그룹 헤더',     desc: 'A · Key Features',     thumb: 'grouphead' },
+            { key: 'sechead',   name: 'Section header',     desc: 'Label · title · text',    thumb: 'sechead' },
+            { key: 'titledesc', name: 'Title + text',   desc: 'Subtitle + body',        thumb: 'titledesc' },
+            { key: 'grouphead', name: 'Group header',     desc: 'A · Key Features',     thumb: 'grouphead' },
         ],
     },
     {
         label: 'LAYOUT', items: [
-            { key: 'carousel',  name: '미디어 캐러셀', desc: '가로 스크롤 카드',      thumb: 'row' },
-            { key: 'cols3',     name: '3단 카드',      desc: '균등 3열 그리드',       thumb: 'cols3' },
-            { key: 'grid22',    name: '인터랙션 그리드', desc: '2×2 카드',           thumb: 'grid' },
-            { key: 'flow',      name: '가로 플로우',   desc: '단계 → 단계',          thumb: 'flow' },
-            { key: 'timeline',  name: '타임라인',      desc: '단계별 항목 나열',      thumb: 'timeline' },
-            { key: 'media',     name: '이미지 + 캡션', desc: '미디어와 설명',         thumb: 'media' },
+            { key: 'projectinfo', name: 'Project info', desc: 'Key–value table',        thumb: 'projectinfo' },
+            { key: 'credits',     name: 'Credit logos',   desc: 'Produced with · logos', thumb: 'credits' },
+            { key: 'mediadesc',   name: 'Image + text', desc: 'Large image, text below', thumb: 'mediadesc' },
+            { key: 'carousel',    name: 'Media carousel', desc: 'Horizontal scroll cards',      thumb: 'row' },
+            { key: 'cols3',       name: '3-column cards',      desc: 'Equal 3-column grid',       thumb: 'cols3' },
+            { key: 'grid22',      name: 'Interaction grid', desc: '4-column cards',           thumb: 'grid' },
         ],
     },
 ];
 
-// 이름에 개수가 박힌 것(3단 카드·2×2 그리드)은 고정.
-// 개수가 유동적인 것만 드롭할 때 정한다.
-const COMPONENT_COUNT = { carousel: 3, flow: 3, timeline: 3 };
+// 개수가 유동적인 것만 드롭할 때 정한다 (카드에서 −/+ 로 조절)
+const COMPONENT_COUNT = { carousel: 3, projectinfo: 4 };
 const compCount = { ...COMPONENT_COUNT };
 
 // 각 컴포넌트가 실제로 넣는 HTML — vibra 의 기존 클래스를 그대로 쓴다.
@@ -1365,15 +1837,14 @@ const compCount = { ...COMPONENT_COUNT };
 // 이미 .vb-wrap 안에 떨어져 중첩되어도 max-width 가 같아 크기는 달라지지 않는다.
 // 예외: .vb-carousel-block 은 자체 max-width(1120px × --vb-s)가 있어 두르지 않는다.
 const COMPONENT_HTML = {
+    // 섹션 머리 — 라벨·제목·설명. 게시물마다 반복해서 쓰는 기본 묶음이다.
     sechead:
 `<div class="vb-wrap">
-    <span class="vb-eyebrow reveal">00 — Label</span>
-    <h2 class="vb-title reveal">제목<br><span style="color:var(--vb-muted);font-weight:500;">부제목</span></h2>
-</div>`,
-    // 리드 문단은 vibra 에서 늘 --vb-lead-gap 만큼 아래를 벌린다 (기본 여백의 4 배)
-    lead:
-`<div class="vb-wrap">
-    <p class="vb-body reveal" style="margin-bottom:var(--vb-lead-gap);">설명 문장을 여기에 씁니다. <span class="sky-lead__n">1.</span> <span class="sky-lead__k">첫 번째 강조</span>, <span class="sky-lead__n">2.</span> <span class="sky-lead__k">두 번째 강조</span> 할 수 있습니다.</p>
+    <div class="bg-head">
+        <span class="vb-eyebrow reveal">Label</span>
+        <h2 class="vb-title reveal">제목을 여기에 씁니다</h2>
+        <p class="bg-desc reveal">설명 문장을 여기에 씁니다.<br>줄을 나누고 싶으면 br 로 끊습니다.</p>
+    </div>
 </div>`,
     titledesc:
 `<div class="vb-wrap">
@@ -1389,6 +1860,85 @@ const COMPONENT_HTML = {
         <span class="vb-group__name">Group Name</span>
     </div>
 </div>`,
+
+    // 프로젝트 정보 — 항목/값이 좌우로 갈리는 표. 행 수는 드롭할 때 정한다.
+    // 프로젝트 정보 — 항목/값 표 + 접었다 펴는 역할별 기여도.
+    // 드롭할 때 창이 떠서 항목과 역할을 직접 적는다 (rows·roles 로 넘어온다).
+    projectinfo: (n = 4, opt = {}) => {
+        const rows = opt.rows && opt.rows.length ? opt.rows : [
+            ['Type', 'Team Project'],
+            ['Duration', '2024.03 – 2024.11'],
+            ['Members', '2'],
+            ['Contribution', '70%'],
+        ].slice(0, n);
+        const roles = opt.roles || [];
+        // 같은 페이지에 두 번 넣어도 서로 간섭하지 않게 매번 새 이름을 만든다
+        // (id 가 겹치면 getElementById 가 늘 첫 번째만 찾아 두 번째 화살표가 먹지 않는다)
+        const rid = 'roles-' + Math.random().toString(36).slice(2, 7);
+
+        const roleBars = roles.map(([name, pct]) => `                                    <div class="vb-role">
+                                        <div class="vb-role__head"><span class="vb-role__name">${name}</span><span class="vb-role__pct">${pct}%</span></div>
+                                        <div class="vb-bar"><div class="vb-bar__fill" data-pct="${pct}"></div></div>
+                                    </div>`).join('\n');
+
+        const body = rows.map(([k, v], i) => {
+            // 역할을 적었다면 마지막 행에 펼침 버튼을 붙인다
+            const withToggle = roles.length && i === rows.length - 1;
+            return `        <div class="vb-meta__row">
+            <span class="vb-meta__key">${k}</span>
+            <span class="vb-meta__val">${v}${withToggle ? `
+                <button type="button" class="vb-toggle-btn hover-trigger"
+                        aria-expanded="false" aria-controls="${rid}" aria-label="역할별 기여도 보기">
+                    <span class="vb-toggle__icon" aria-hidden="true">▾</span>
+                </button>` : ''}</span>
+        </div>`;
+        }).join('\n');
+
+        return `<div class="vb-wrap">
+<div class="vb-info-col reveal">
+    <span class="vb-info-label">Project Info</span>
+    <div class="vb-meta">
+${body}
+${roles.length ? `
+        <div class="vb-roles-wrap" id="${rid}" role="region" aria-label="역할별 기여도">
+            <div class="vb-roles-inner">
+                <div class="vb-roles">
+${roleBars}
+                </div>
+            </div>
+        </div>` : ''}
+    </div>
+</div>
+</div>`;
+    },
+
+    // 크레딧 — 로고는 '높이 64px · 폭은 이미지'라 비어 있으면 폭이 0 이 된다 → 자리표시로 비율을 준다
+    credits:
+`<div class="vb-wrap">
+<div class="vb-credits reveal">
+    <div class="vb-credit">
+        <div class="vb-credit__label">Produced with</div>
+        <div class="vb-logos">
+            <span class="vb-logo ed-ph ed-ph--logo"><img src="" alt=""></span>
+            <span class="vb-logo ed-ph ed-ph--logo"><img src="" alt=""></span>
+        </div>
+    </div>
+    <div class="vb-credit">
+        <div class="vb-credit__label">Featured by</div>
+        <div class="vb-logos">
+            <span class="vb-logo ed-ph ed-ph--logo"><img src="" alt=""></span>
+        </div>
+    </div>
+</div>
+</div>`,
+
+    // 큰 이미지 한 장 + 그 아래 가운데 정렬 설명
+    mediadesc:
+`<div class="vb-wrap">
+    <div class="ai-sec__below-media reveal ed-ph ed-ph--16x9"><img src="" alt="" loading="lazy"></div>
+    <p class="ai-sec__below-desc reveal">이미지에 대한 설명을 여기에 씁니다.</p>
+</div>`,
+
     // 캐러셀 — vibra 실제 구조: .vb-carousel-block(가운데 정렬) > .vb-carousel > __track
     // 미디어는 '높이는 CSS · 폭은 이미지'라 빈 이미지면 찌그러진다 → 자리표시에 비율을 준다.
     // vibra 실제 미디어가 3840×2160(16:9)이라, 높이 clamp 에 이 비율을 곱한 폭이 나온다.
@@ -1435,65 +1985,43 @@ ${Array.from({ length: 4 }, (_, i) => `    <div class="ig-card reveal">
     </div>`).join('\n')}
 </div>
 </div>`,
-    // 가로 플로우 — 단계 사이에 화살표가 들어간다 (vibra .bg-flow)
-    flow: (n = 3) => {
-        const arrow = '<div class="bg-arrow"><svg viewBox="0 0 22 22" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 11h13M13 6l5 5-5 5"/></svg></div>';
-        const step = i => `    <div class="bg-step"><div class="bg-step__year">연도</div><div class="bg-step__label">단계 ${i + 1}</div></div>`;
-        const parts = [];
-        for (let i = 0; i < n; i++) { if (i) parts.push('    ' + arrow); parts.push(step(i)); }
-        return `<div class="vb-wrap">\n<div class="bg-flow reveal">\n${parts.join('\n')}\n</div>\n</div>`;
-    },
-    // 타임라인 — 한 단계(열) 안에 항목들이 쌓인다 (vibra .tl-col)
-    timeline: (n = 3) =>
-`<div class="vb-wrap">
-<div class="tl-grid">
-<div class="tl-col reveal">
-    <div class="tl-col__head"><div class="tl-col__title">STEP</div></div>
-${Array.from({ length: n }, () => `    <div class="tl-item">
-        <div class="tl-item__name">항목 이름</div>
-        <div class="tl-item__desc">짧은 설명</div>
-    </div>`).join('\n')}
-</div>
-</div>
-</div>`,
-    media:
-`<div class="vb-wrap">
-    <div class="reveal">
-        <img src="" alt="" loading="lazy" style="width:100%;height:auto;display:block;border-radius:16px;border:1px solid var(--vb-line);">
-        <p class="vb-cap">이미지 설명</p>
-    </div>
-</div>`,
 };
+// 자리표시 스타일 — 삽입할 때 페이지에 한 번만 넣는다
+const MEDIA_PH_CSS =
+`/* 크기·모서리는 :where() 로 우선순위를 0 으로 둬서 원래 클래스가 이기게 한다.
+   (.ig-card__media 8px, .vb-carousel__media 20px 같은 vibra 본래 값이 유지된다) */
+:where(.ed-ph){width:100%;border-radius:16px}
+:where(.ed-ph--16x9){aspect-ratio:16/9}
+:where(.ed-ph--3x4){aspect-ratio:3/4}
+/* 로고는 '높이 고정 · 폭 자동'이라 빈 이미지면 폭이 0 이 된다 */
+:where(.ed-ph--logo){display:inline-block;width:120px;aspect-ratio:2/1}
+/* 테두리는 outline — border 와 달리 박스 크기를 키우지 않는다 */
+.ed-ph{position:relative;background:rgba(127,127,140,.08);overflow:hidden;outline:1px dashed rgba(127,127,140,.45);outline-offset:-1px}
+.ed-ph::after{content:'Add a media link';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:13px;color:rgba(127,127,140,.9);pointer-events:none}
+.ed-ph--logo::after{font-size:11px;content:'Logo'}
+.ed-ph:has(img[src]:not([src=""]))::after,.ed-ph:has(video[src]:not([src=""]))::after,.ed-ph:has(iframe[src]:not([src=""]))::after{display:none}
+.ed-ph:has(img[src]:not([src=""])),.ed-ph:has(video[src]:not([src=""])),.ed-ph:has(iframe[src]:not([src=""])){background:none;outline:none}
+/* 링크가 비어 있는 동안은 이미지가 자리를 차지하지 않게 (0px 찌그러짐 방지) */
+.ed-ph > img[src=""],.ed-ph > video:not([src]),.ed-ph > img:not([src]){position:absolute;inset:0;width:100%;height:100%}
+`;
+
+// 카드 썸네일 — 실제 배치를 네모로 옮겨 그린다 (140×54 기준)
 const PATTERN_THUMB = {
-    sechead:   '<rect x="46" y="12" width="26" height="4" rx="2" fill="#3B82F6" opacity=".8"/><rect x="30" y="24" width="80" height="8" rx="3" fill="currentColor" opacity=".55"/><rect x="44" y="37" width="52" height="6" rx="3" fill="currentColor" opacity=".3"/>',
-    lead:      '<rect x="20" y="16" width="8" height="5" rx="2" fill="#3B82F6"/><rect x="32" y="16" width="88" height="5" rx="2.5" fill="currentColor" opacity=".4"/><rect x="20" y="26" width="8" height="5" rx="2" fill="#3B82F6"/><rect x="32" y="26" width="76" height="5" rx="2.5" fill="currentColor" opacity=".4"/><rect x="20" y="36" width="8" height="5" rx="2" fill="#3B82F6"/><rect x="32" y="36" width="60" height="5" rx="2.5" fill="currentColor" opacity=".4"/>',
-    titledesc: '<rect x="24" y="15" width="54" height="7" rx="3" fill="currentColor" opacity=".55"/><rect x="24" y="28" width="92" height="4" rx="2" fill="currentColor" opacity=".28"/><rect x="24" y="36" width="72" height="4" rx="2" fill="currentColor" opacity=".28"/>',
-    grouphead: '<circle cx="28" cy="27" r="8" fill="#3B82F6" opacity=".75"/><rect x="44" y="23" width="60" height="7" rx="3" fill="currentColor" opacity=".5"/>',
-    row:       '<rect x="18" y="16" width="30" height="22" rx="4" fill="currentColor" opacity=".5"/><rect x="55" y="16" width="30" height="22" rx="4" fill="currentColor" opacity=".3"/><rect x="92" y="16" width="30" height="22" rx="4" fill="currentColor" opacity=".2"/>',
-    cols3:     '<rect x="16" y="14" width="32" height="26" rx="4" fill="currentColor" opacity=".45"/><rect x="54" y="14" width="32" height="26" rx="4" fill="currentColor" opacity=".45"/><rect x="92" y="14" width="32" height="26" rx="4" fill="currentColor" opacity=".45"/>',
-    grid:      '<rect x="40" y="10" width="26" height="15" rx="3" fill="currentColor" opacity=".45"/><rect x="74" y="10" width="26" height="15" rx="3" fill="currentColor" opacity=".3"/><rect x="40" y="29" width="26" height="15" rx="3" fill="currentColor" opacity=".3"/><rect x="74" y="29" width="26" height="15" rx="3" fill="currentColor" opacity=".2"/>',
-    flow:      '<rect x="24" y="18" width="20" height="18" rx="3" fill="currentColor" opacity=".45"/><path d="M48 27h9" stroke="currentColor" stroke-width="1.5" opacity=".5"/><rect x="60" y="18" width="20" height="18" rx="3" fill="currentColor" opacity=".3"/><path d="M84 27h9" stroke="currentColor" stroke-width="1.5" opacity=".5"/><rect x="96" y="18" width="20" height="18" rx="3" fill="#3B82F6" opacity=".6"/>',
-    timeline:  '<line x1="46" y1="8" x2="46" y2="46" stroke="currentColor" stroke-width="2" opacity=".4"/><circle cx="46" cy="14" r="4" fill="#3B82F6"/><rect x="60" y="18" width="40" height="18" rx="4" fill="currentColor" opacity=".3"/>',
-    media:     '<rect x="26" y="10" width="88" height="26" rx="4" fill="currentColor" opacity=".4"/><rect x="26" y="41" width="56" height="4" rx="2" fill="currentColor" opacity=".25"/>',
-
-    // 미디어 전용
-    mImage:    '<rect x="34" y="10" width="72" height="34" rx="4" fill="none" stroke="currentColor" stroke-width="1.6" opacity=".55"/><circle cx="49" cy="21" r="4" fill="currentColor" opacity=".5"/><path d="M38 40l16-14 12 10 8-6 12 10" fill="none" stroke="currentColor" stroke-width="1.6" opacity=".55"/>',
-    mVideo:    '<rect x="30" y="10" width="66" height="34" rx="4" fill="none" stroke="currentColor" stroke-width="1.6" opacity=".55"/><path d="M56 20l14 7-14 7z" fill="#3B82F6"/><rect x="100" y="16" width="10" height="22" rx="2" fill="currentColor" opacity=".25"/>',
-    mYoutube:  '<rect x="32" y="12" width="76" height="30" rx="7" fill="#3B82F6" opacity=".18"/><rect x="32" y="12" width="76" height="30" rx="7" fill="none" stroke="#3B82F6" stroke-width="1.5" opacity=".6"/><path d="M64 20l14 7-14 7z" fill="#3B82F6"/>',
-    mFigure:   '<rect x="34" y="8" width="72" height="26" rx="4" fill="none" stroke="currentColor" stroke-width="1.6" opacity=".55"/><path d="M38 30l14-11 10 8 7-5 11 8" fill="none" stroke="currentColor" stroke-width="1.5" opacity=".5"/><rect x="34" y="40" width="48" height="4" rx="2" fill="currentColor" opacity=".3"/>',
-
-    // 인터랙션 전용
-    xLift:     '<rect x="44" y="26" width="52" height="20" rx="4" fill="currentColor" opacity=".18"/><rect x="44" y="14" width="52" height="20" rx="4" fill="#3B82F6" opacity=".55"/><path d="M70 12V4M70 4l-4 4M70 4l4 4" stroke="#3B82F6" stroke-width="1.6" fill="none" stroke-linecap="round"/>',
-    xGrow:     '<rect x="52" y="18" width="36" height="18" rx="4" fill="currentColor" opacity=".2"/><rect x="44" y="12" width="52" height="30" rx="5" fill="none" stroke="#3B82F6" stroke-width="1.7" opacity=".8"/><path d="M100 8l6-4-1 6M40 46l-6 4 1-6" stroke="#3B82F6" stroke-width="1.4" fill="none" stroke-linecap="round"/>',
-    xPulse:    '<circle cx="70" cy="27" r="16" fill="none" stroke="#3B82F6" stroke-width="1.3" opacity=".35"/><circle cx="70" cy="27" r="10" fill="#3B82F6" opacity=".55"/><path d="M70 41v5M70 8v5M84 27h5M51 27h5" stroke="#3B82F6" stroke-width="1.4" stroke-linecap="round" opacity=".6"/>',
-    xFade:     '<rect x="46" y="30" width="48" height="14" rx="3" fill="#3B82F6" opacity=".55"/><rect x="46" y="18" width="48" height="9" rx="3" fill="currentColor" opacity=".28"/><rect x="46" y="9" width="48" height="6" rx="3" fill="currentColor" opacity=".12"/>',
+    sechead:     '<rect x="52" y="10" width="36" height="4" rx="2" fill="currentColor" opacity=".45"/><rect x="30" y="21" width="80" height="9" rx="3" fill="currentColor" opacity=".6"/><rect x="26" y="36" width="88" height="4" rx="2" fill="currentColor" opacity=".25"/><rect x="40" y="44" width="60" height="4" rx="2" fill="currentColor" opacity=".25"/>',
+    titledesc:   '<rect x="24" y="15" width="54" height="7" rx="3" fill="currentColor" opacity=".55"/><rect x="24" y="28" width="92" height="4" rx="2" fill="currentColor" opacity=".28"/><rect x="24" y="36" width="72" height="4" rx="2" fill="currentColor" opacity=".28"/>',
+    grouphead:   '<circle cx="28" cy="27" r="8" fill="#3B82F6" opacity=".75"/><rect x="44" y="23" width="60" height="7" rx="3" fill="currentColor" opacity=".5"/>',
+    projectinfo: '<rect x="26" y="8" width="34" height="4" rx="2" fill="currentColor" opacity=".4"/>' + [18, 28, 38, 48].map(y => `<rect x="26" y="${y}" width="26" height="4" rx="2" fill="currentColor" opacity=".3"/><rect x="86" y="${y}" width="28" height="4" rx="2" fill="currentColor" opacity=".55"/>`).join(''),
+    credits:     '<rect x="26" y="10" width="30" height="4" rx="2" fill="currentColor" opacity=".4"/><rect x="26" y="20" width="26" height="14" rx="3" fill="currentColor" opacity=".3"/><rect x="58" y="20" width="26" height="14" rx="3" fill="currentColor" opacity=".3"/><rect x="26" y="42" width="30" height="4" rx="2" fill="currentColor" opacity=".4"/>',
+    mediadesc:   '<rect x="20" y="8" width="100" height="30" rx="4" fill="currentColor" opacity=".32"/><rect x="38" y="44" width="64" height="4" rx="2" fill="currentColor" opacity=".28"/>',
+    row:         '<rect x="18" y="14" width="42" height="26" rx="4" fill="currentColor" opacity=".35"/><rect x="66" y="14" width="42" height="26" rx="4" fill="currentColor" opacity=".28"/><rect x="114" y="14" width="20" height="26" rx="4" fill="currentColor" opacity=".18"/>',
+    cols3:       '<rect x="16" y="14" width="32" height="26" rx="4" fill="currentColor" opacity=".32"/><rect x="54" y="14" width="32" height="26" rx="4" fill="currentColor" opacity=".32"/><rect x="92" y="14" width="32" height="26" rx="4" fill="currentColor" opacity=".32"/>',
+    grid:        '<rect x="22" y="10" width="44" height="15" rx="3" fill="currentColor" opacity=".35"/><rect x="74" y="10" width="44" height="15" rx="3" fill="currentColor" opacity=".28"/><rect x="22" y="30" width="44" height="15" rx="3" fill="currentColor" opacity=".28"/><rect x="74" y="30" width="44" height="15" rx="3" fill="currentColor" opacity=".35"/>',
 };
-// ── 미디어: 끌어다 놓으면 그 자리에 이미지·영상 자리를 만든다 (링크는 인스펙터에서) ──
+
 const MEDIA_ITEMS = [
-    { key: 'image',   name: '이미지',        desc: '단일 이미지',        thumb: 'mImage' },
-    { key: 'video',   name: '동영상',        desc: '자동재생 · 반복',     thumb: 'mVideo' },
-    { key: 'youtube', name: 'YouTube',       desc: '외부 영상 임베드',    thumb: 'mYoutube' },
-    { key: 'figure',  name: '이미지 + 캡션', desc: '설명이 붙는 미디어',  thumb: 'mFigure' },
+    { key: 'image',   name: 'Image',        desc: 'A single image',        thumb: 'mImage' },
+    { key: 'video',   name: 'Video',        desc: 'Autoplay · loop',     thumb: 'mVideo' },
+    { key: 'youtube', name: 'YouTube',       desc: 'Embedded external video',    thumb: 'mYoutube' },
 ];
 // 링크가 비어 있어도 '자리'가 보이도록 감싼다 (빈 <img> 는 높이가 0 이라 화면에서 사라진다).
 // .ed-ph 는 링크를 채우면 저절로 티가 안 나는 얇은 점선 자리표시다.
@@ -1519,27 +2047,13 @@ const MEDIA_HTML = {
 </div>`,
 };
 // 자리표시 스타일 — 삽입할 때 페이지에 한 번만 넣는다
-const MEDIA_PH_CSS =
-`/* 크기·모서리는 :where() 로 우선순위를 0 으로 둬서 원래 클래스가 이기게 한다.
-   (.ig-card__media 8px, .vb-carousel__media 20px 같은 vibra 본래 값이 유지된다) */
-:where(.ed-ph){width:100%;border-radius:16px}
-:where(.ed-ph--16x9){aspect-ratio:16/9}
-:where(.ed-ph--3x4){aspect-ratio:3/4}
-/* 테두리는 outline — border 와 달리 박스 크기를 키우지 않는다 */
-.ed-ph{position:relative;background:rgba(127,127,140,.08);overflow:hidden;outline:1px dashed rgba(127,127,140,.45);outline-offset:-1px}
-.ed-ph::after{content:'미디어 링크를 넣어주세요';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:13px;color:rgba(127,127,140,.9);pointer-events:none}
-.ed-ph:has(img[src]:not([src=""]))::after,.ed-ph:has(video[src]:not([src=""]))::after,.ed-ph:has(iframe[src]:not([src=""]))::after{display:none}
-.ed-ph:has(img[src]:not([src=""])),.ed-ph:has(video[src]:not([src=""])),.ed-ph:has(iframe[src]:not([src=""])){background:none;outline:none}
-/* 링크가 비어 있는 동안은 이미지가 자리를 차지하지 않게 (0px 찌그러짐 방지) */
-.ed-ph > img[src=""],.ed-ph > video:not([src]),.ed-ph > img:not([src]){position:absolute;inset:0;width:100%;height:100%}
-`;
 
 // ── 인터랙션: 요소에 끌어다 놓으면 클래스 + CSS 규칙이 붙는다 ──
 const MOTION_ITEMS = [
-    { key: 'hover-lift',  name: '호버 시 떠오름', desc: '살짝 위로 + 그림자', thumb: 'xLift' },
-    { key: 'hover-grow',  name: '호버 시 커짐',   desc: '1.04배 확대',        thumb: 'xGrow' },
-    { key: 'click-pulse', name: '클릭 시 펄스',   desc: '눌렀다 튀어오름',    thumb: 'xPulse' },
-    { key: 'fade-up',     name: '스크롤 등장',    desc: '아래에서 떠오름',    thumb: 'xFade' },
+    { key: 'hover-lift',  name: 'Lift on hover', desc: 'Rises slightly + shadow', thumb: 'xLift' },
+    { key: 'hover-grow',  name: 'Grow on hover',   desc: 'Scales to 1.04',        thumb: 'xGrow' },
+    { key: 'click-pulse', name: 'Pulse on click',   desc: 'Presses in, springs back',    thumb: 'xPulse' },
+    { key: 'fade-up',     name: 'Reveal on scroll',    desc: 'Rises from below',    thumb: 'xFade' },
 ];
 // class 는 요소에 붙이고, css 는 페이지 <style> 에 한 번만 넣는다.
 const MOTION_DEFS = {
@@ -1588,6 +2102,7 @@ function loadSimpleList(hostId, items, dragType) {
 
 // 유저가 등록한 컴포넌트 — 서버(components.json)에 쌓이고 페이지끼리 함께 쓴다
 let savedComps = [];
+let editingText = false;        // 미리보기에서 글자를 고치는 중인지
 let pageClassSet = new Set();   // 지금 열린 페이지의 CSS 가 아는 클래스
 let pageVarSet = new Set();     // 지금 열린 페이지가 정의한 CSS 변수(디자인 토큰)
 let mainPath = null;            // 미리보기에서 최상위 블록을 담는 그릇(<main>)의 경로
@@ -1627,15 +2142,15 @@ function loadComponentPatterns() {
 
     // 내가 등록한 것을 맨 위에 — 가장 자주 쓰게 되는 자산이다
     if (savedComps.length) {
-        host.appendChild(el('div', 'lp-group-sub', '내 컴포넌트'));
+        host.appendChild(el('div', 'lp-group-sub', 'My components'));
         for (const it of savedComps) {
             const card = el('div', 'lp-card'); card.draggable = true;
             card.dataset.saved = it.id;
             card.innerHTML =
                 `<div class="lp-card__thumb"><svg viewBox="0 0 140 54" width="100%" height="54" aria-hidden="true">${sketchSvg(it.sketch)}</svg></div>` +
                 `<div class="lp-card__name">${escapeHtml(it.name)}</div>` +
-                `<div class="lp-card__use">${escapeHtml(it.note || it.from || '내가 등록함')}</div>` +
-                `<button class="lp-card__del" title="등록 취소">×</button>`;
+                `<div class="lp-card__use">${escapeHtml(it.note || it.from || 'Saved by you')}</div>` +
+                `<button class="lp-card__del" title="Remove">×</button>`;
             card.addEventListener('dragstart', ev => {
                 ev.dataTransfer.effectAllowed = 'copy';
                 ev.dataTransfer.setData('text/x-hnkl-saved', it.id);
@@ -1643,12 +2158,12 @@ function loadComponentPatterns() {
             });
             card.querySelector('.lp-card__del').addEventListener('click', async ev => {
                 ev.stopPropagation();
-                if (!confirm(`"${it.name}" 등록을 취소할까요?\n(이미 페이지에 넣은 것은 그대로 남습니다)`)) return;
+                if (!confirm(`Remove "${it.name}" from the library?\n(Anything already placed on a page stays)`)) return;
                 await fetch('/__api/components', {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ remove: it.id }),
                 });
-                toast('등록을 취소했습니다', 'ok');
+                toast('Removed', 'ok');
                 loadSavedComponents();
             });
             host.appendChild(card);
@@ -1736,12 +2251,12 @@ function buildDsBase(d) {
     if (blackPrim) add(dsGroups.whites, blackPrim.name, blackPrim.label, blackPrim.hex, null);
 
     // ② 회색 램프 (단일 팔레트)
-    for (const g of d.ramp) add(dsGroups.ramp, g.name, '회색 ' + g.step, g.hex, g.darkHex);
+    for (const g of d.ramp) add(dsGroups.ramp, g.name, 'Gray ' + g.step, g.hex, g.darkHex);
 
     // ③ 포인트(Primary) · 서브(Secondary 퍼플·틸)
     for (const g of d.primary)    add(dsGroups.primary, g.name, 'Primary ' + g.step, g.hex, null);
-    for (const g of d.purpleRamp) add(dsGroups.purple,  g.name, '퍼플 ' + g.step, g.hex, null);
-    for (const g of d.tealRamp)   add(dsGroups.teal,    g.name, '틸 ' + g.step, g.hex, null);
+    for (const g of d.purpleRamp) add(dsGroups.purple,  g.name, 'Purple ' + g.step, g.hex, null);
+    for (const g of d.tealRamp)   add(dsGroups.teal,    g.name, 'Teal ' + g.step, g.hex, null);
 
     const panel = byName('--panel');
     if (panel) { dsBaseHex[panel.name] = panel.hex; if (panel.darkHex) dsDarkHex[panel.name] = panel.darkHex; }
@@ -1792,7 +2307,7 @@ function contrast(a, b) {
 
 async function fetchDesignSystem() {
     const canvas = document.getElementById('dsCanvas');
-    canvas.innerHTML = '<div class="ds-loading">디자인 토큰 읽는 중…</div>';
+    canvas.innerHTML = '<div class="ds-loading">Reading design tokens…</div>';
     try {
         const res = await fetch('/__api/designsystem');
         if (!res.ok) throw new Error('HTTP ' + res.status);
@@ -1801,14 +2316,14 @@ async function fetchDesignSystem() {
     const srcEl = document.getElementById('dsSrc');
     if (srcEl && dsData?.meta) {
         const list = (dsData.meta.scanned || []);
-        const shown = list.slice(0, 3).join(', ') + (list.length > 3 ? ` 외 ${list.length - 3}개` : '');
-        srcEl.innerHTML = `기준: <b>${dsData.meta.source}</b> · 스캔: ${shown}`;
+        const shown = list.slice(0, 3).join(', ') + (list.length > 3 ? ` +${list.length - 3} more` : '');
+        srcEl.innerHTML = `Source: <b>${dsData.meta.source}</b> · scanned: ${shown}`;
     }
         dsEdits = {};
         buildDsBase(dsData);
         renderDesignSystem(dsData);
     } catch (e) {
-        canvas.innerHTML = '<div class="ds-loading">불러오기 실패: ' + e.message + '</div>';
+        canvas.innerHTML = '<div class="ds-loading">Could not load: ' + e.message + '</div>';
     }
 }
 function applyEdit(name, value) { dsEdits[name] = value; refresh(); }
@@ -1835,7 +2350,7 @@ function chipCard(name, label) {
     const inp = el('input', 'ds3-chip-color');
     inp.type = 'color';
     inp.dataset.chip = name;
-    inp.title = label + ' — 눌러서 색 고르기';
+    inp.title = label + ' — click to pick a color';
     inp.addEventListener('input', () => applyEdit(name, inp.value.toUpperCase()));
     const meta = el('div', 'ds3-chip-meta');
     meta.append(el('div', 'ds3-chip-name', label), dEl('div', 'ds3-chip-hex', 'hex', name));
@@ -1851,28 +2366,28 @@ function chipRow(items) {
 
 // ① 팔레트
 function sectionPalette(d) {
-    const s = dsSection('팔레트');
+    const s = dsSection('Palette');
 
-    s.appendChild(el('h3', 'ds3-sub', '흰색 & 검정'));
+    s.appendChild(el('h3', 'ds3-sub', 'White & Black'));
     s.appendChild(chipRow(dsGroups.whites));
 
-    s.appendChild(el('h3', 'ds3-sub', '회색'));
+    s.appendChild(el('h3', 'ds3-sub', 'Gray'));
     s.appendChild(chipRow(dsGroups.ramp));
 
     s.appendChild(el('h3', 'ds3-sub', 'Primary'));
     s.appendChild(chipRow(dsGroups.primary));
 
-    s.appendChild(el('h3', 'ds3-sub', 'Secondary · 퍼플'));
+    s.appendChild(el('h3', 'ds3-sub', 'Secondary · Purple'));
     s.appendChild(chipRow(dsGroups.purple));
 
-    s.appendChild(el('h3', 'ds3-sub', 'Secondary · 틸'));
+    s.appendChild(el('h3', 'ds3-sub', 'Secondary · Teal'));
     s.appendChild(chipRow(dsGroups.teal));
     return s;
 }
 
 // ② 역할 — 역할마다 카드. 이름 아래 라이트·다크 버튼을 나란히. 버튼 = 스와치 + 색상 이름.
 function sectionRoles(d) {
-    const s = dsSection('역할');
+    const s = dsSection('Roles');
     const grid = el('div', 'ds3-roles');
     for (const r of d.roles) {
         if (ROLE_SKIP.has(r.name) || !dsBaseLink[r.name]) continue;
@@ -1887,7 +2402,7 @@ function sectionRoles(d) {
             const isLight = m === 'light';
             const key = isLight ? r.name : darkKey(r.name);
             const col = el('div', 'ds3-mode-col');
-            col.appendChild(el('span', 'ds3-mode-cap', isLight ? '라이트' : '다크'));
+            col.appendChild(el('span', 'ds3-mode-cap', isLight ? 'Light' : 'Dark'));
 
             const btn = el('div', 'ds3-mode-btn');
             btn.appendChild(dEl('span', 'ds3-mode-swatch', isLight ? 'rolechip' : 'rolechipdark', r.name));
@@ -1916,11 +2431,11 @@ function sectionRoles(d) {
 const TYPO_GROUP_BREAK = new Set(['--fs-body']);
 
 function sectionTypo(d) {
-    const s = dsSection('타이포');
+    const s = dsSection('Type');
 
     const table = el('div', 'ds3-typo');
     const head = el('div', 'ds3-typo-row is-head');
-    for (const h of ['카테고리', '크기', '굵기', '용도']) head.appendChild(el('div', 'ds3-th', h));
+    for (const h of ['Category', 'Size', 'Weight', 'Usage']) head.appendChild(el('div', 'ds3-th', h));
     table.appendChild(head);
 
     for (const t of d.typo) {
@@ -1952,7 +2467,7 @@ function sectionTypo(d) {
             }
         } else {
             wCell.appendChild(el('div', 'ds3-wline is-none', '—'));
-            useCell.appendChild(el('div', 'ds3-useline is-none', '아직 쓰이지 않음'));
+            useCell.appendChild(el('div', 'ds3-useline is-none', 'Not used yet'));
         }
 
         row.append(nameCell, sizeCell, wCell, useCell);
@@ -1992,7 +2507,7 @@ document.addEventListener('dblclick', e => {
 // ── 실시간 갱신 ──
 function refresh() {
     const scale = currentScale();
-    const SAMPLE = '다람쥐 헌 쳇바퀴';
+    const SAMPLE = 'The quick brown fox';
     const q = s => document.querySelectorAll(s);
 
     q('[data-chip]').forEach(i => { const h = effHex(i.dataset.chip); if (h) i.value = h.toLowerCase(); });
@@ -2021,7 +2536,7 @@ function refresh() {
                 : n in dsBaseHex ? dsBaseHex[n]
                     : n in dsBaseLink ? labelOf(dsBaseLink[n])
                         : dsBasePx[n] + 'px';
-            b.textContent = '바뀜 · 원래 ' + orig;
+            b.textContent = 'changed · was ' + orig;
             b.hidden = false;
         } else { b.hidden = true; b.textContent = ''; }
     });
@@ -2063,7 +2578,7 @@ function dsSaveConfirm() {
     const list = $('#dsConfirmList'); list.innerHTML = '';
     for (const n of names) {
         const isDk = isDarkKey(n);
-        const label = isDk ? roleOfDark(n) + ' · 다크' : n;
+        const label = isDk ? roleOfDark(n) + ' · dark' : n;
         const before = isDk ? `var(${darkBaseLink(roleOfDark(n))})`
             : n in dsBaseHex ? dsBaseHex[n]
                 : n in dsBaseLink ? `var(${dsBaseLink[n]})`
@@ -2092,12 +2607,12 @@ async function dsSaveCommit() {
             body: JSON.stringify({ edits, darkEdits }),
         });
         const data = await res.json();
-        if (!res.ok) throw new Error(data.error || '저장 실패');
+        if (!res.ok) throw new Error(data.error || 'Save failed');
         $('#dsConfirm').hidden = true;
-        toast(`저장됨 — ${data.applied.length}건 · 백업 ${data.backup}`, 'ok');
+        toast(`Saved — ${data.applied.length} change(s) · backup ${data.backup}`, 'ok');
         await fetchDesignSystem();
     } catch (e) {
-        toast('저장 실패: ' + e.message, 'err');
+        toast('Save failed: ' + e.message, 'err');
     } finally { $('#dsConfirmOk').disabled = false; }
 }
 
@@ -2113,13 +2628,13 @@ $('#dsShowVars')?.addEventListener('change', e => {
 // 칩 크기·색 면적·아래 텍스트 여백을 직접 만져볼 수 있는 작은 창.
 // CSS 변수만 바꾸므로 파일에는 아무 영향이 없다.
 const CHIP_VARS = [
-    { v: '--chip-w', label: '칩 너비', min: 60, max: 200, def: 96 },
-    { v: '--chip-h', label: '색 높이', min: 40, max: 180, def: 96 },
-    { v: '--chip-px', label: '글자 좌우 여백', min: 0, max: 24, def: 10 },
-    { v: '--chip-pt', label: '글자 위 여백', min: 0, max: 24, def: 8 },
-    { v: '--chip-pb', label: '글자 아래 여백', min: 0, max: 24, def: 8 },
-    { v: '--chip-gap', label: '이름 ↔ 코드 간격', min: 0, max: 16, def: 0 },
-    { v: '--chip-radius', label: '모서리', min: 0, max: 24, def: 10 },
+    { v: '--chip-w', label: 'Chip width', min: 60, max: 200, def: 96 },
+    { v: '--chip-h', label: 'Swatch height', min: 40, max: 180, def: 96 },
+    { v: '--chip-px', label: 'Text padding X', min: 0, max: 24, def: 10 },
+    { v: '--chip-pt', label: 'Text padding top', min: 0, max: 24, def: 8 },
+    { v: '--chip-pb', label: 'Text padding bottom', min: 0, max: 24, def: 8 },
+    { v: '--chip-gap', label: 'Name–code gap', min: 0, max: 16, def: 0 },
+    { v: '--chip-radius', label: 'Radius', min: 0, max: 24, def: 10 },
 ];
 function buildChipTuner() {
     const host = $('#chipTunerRows');

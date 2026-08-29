@@ -174,7 +174,7 @@
             const name = `--space-${i}`;
             probe.style.marginTop = `var(${name})`;
             const px = Math.round(parseFloat(getComputedStyle(probe).marginTop)) || 0;
-            if (px > 0) out.push({ name, label: `간격 ${i}`, px });
+            if (px > 0) out.push({ name, label: `Gap ${i}`, px });
         }
         probe.remove();
         return out;
@@ -205,6 +205,9 @@
             id: el.id || null,
             classes: [...el.classList],
             text: (el.textContent || '').trim().slice(0, 60),
+            // 자식 태그 없이 글자만 들어 있으면 인스펙터에서 직접 고칠 수 있다
+            textOnly: !el.children.length,
+            fullText: el.children.length ? '' : (el.textContent || ''),
             computed, inline, rules,
             elementRules: rulesForElement(el).slice(0, 8),
             rect: { w: Math.round(r.width), h: Math.round(r.height) },
@@ -236,6 +239,18 @@
             background-image: linear-gradient(rgba(59,130,246,.16), rgba(59,130,246,.16)) !important;
         }
         .__ed-dragging { opacity: .45 !important; }
+        /* 인스펙터에서 여백에 손을 올리면, 그 여백이 페이지의 어디인지 색으로 짚어 준다 */
+        .__ed-boxhint {
+            position: absolute; z-index: 2147483644; pointer-events: none; border-radius: 2px;
+        }
+        .__ed-boxhint--margin  { background: rgba(245,158,11,.38); outline: 1px solid rgba(245,158,11,.7); }
+        .__ed-boxhint--padding { background: rgba(59,130,246,.34); outline: 1px solid rgba(59,130,246,.7); }
+        /* 글자 고치는 중 — 어디를 고치고 있는지 분명히 */
+        .__ed-editing {
+            outline: 2px solid #16a34a !important; outline-offset: -2px !important;
+            background-image: linear-gradient(rgba(22,163,74,.08), rgba(22,163,74,.08)) !important;
+            cursor: text !important;
+        }
         /* 놓을 자리 — 섹션 사이에 굵은 선으로 */
         .__ed-move-line {
             position: absolute; z-index: 2147483646; height: 4px; border-radius: 2px;
@@ -274,6 +289,7 @@
     }, true);
 
     document.addEventListener('click', e => {
+        if (editing && editing.contains(e.target)) return;   // 글자 고치는 중엔 선택하지 않는다
         if (moving) {
             if (e.target.closest && e.target.closest('.__ed-movebar')) return;  // 화살표는 그대로 통과
             e.preventDefault(); e.stopPropagation();
@@ -289,6 +305,7 @@
     }, true);
 
     function select(el) {
+        clearBoxHint();
         selected?.classList.remove('__ed-selected');
         clearHover();
         selected = el;
@@ -419,6 +436,113 @@
         return [...new Set([...String(cssText).matchAll(/var\(\s*(--[\w-]+)/g)].map(m => m[1]))];
     }
 
+    // ---------- 여백이 페이지의 어디인지 짚어 주기 ----------
+    // 인스펙터의 간격 판에 손을 올리면 그 자리에 색을 덮는다.
+    // 숫자만 봐서는 '이 144px 가 어디인지' 알 수 없기 때문이다.
+    let boxHints = [];
+    function clearBoxHint() { boxHints.forEach(n => n.remove()); boxHints = []; }
+
+    function showBoxHint(path, part, side) {
+        clearBoxHint();
+        const el = elementAtPath(path);
+        if (!el || !part) return;
+        const r = el.getBoundingClientRect();
+        const cs = getComputedStyle(el);
+        const num = n => parseFloat(cs.getPropertyValue(n)) || 0;
+        const sx = window.scrollX, sy = window.scrollY;
+
+        // margin 은 요소 바깥, padding 은 요소 안쪽에 그린다
+        const band = (x, y, w, h) => {
+            if (w <= 0 || h <= 0) return;
+            const d = document.createElement('div');
+            d.className = `__ed-boxhint __ed-boxhint--${part}`;
+            d.style.cssText = `left:${sx + x}px;top:${sy + y}px;width:${w}px;height:${h}px`;
+            document.body.appendChild(d);
+            boxHints.push(d);
+        };
+        const sides = side ? [side] : ['top', 'right', 'bottom', 'left'];
+        for (const sd of sides) {
+            const v = num(`${part}-${sd}`);
+            if (!v) continue;
+            if (part === 'margin') {
+                if (sd === 'top')    band(r.left, r.top - v, r.width, v);
+                if (sd === 'bottom') band(r.left, r.bottom, r.width, v);
+                if (sd === 'left')   band(r.left - v, r.top, v, r.height);
+                if (sd === 'right')  band(r.right, r.top, v, r.height);
+            } else {
+                if (sd === 'top')    band(r.left, r.top, r.width, v);
+                if (sd === 'bottom') band(r.left, r.bottom - v, r.width, v);
+                if (sd === 'left')   band(r.left, r.top, v, r.height);
+                if (sd === 'right')  band(r.right - v, r.top, v, r.height);
+            }
+        }
+        // 짚은 자리가 화면 밖이면 보이도록 끌어온다
+        if (boxHints.length) {
+            const first = boxHints[0].getBoundingClientRect();
+            if (first.bottom < 0 || first.top > window.innerHeight) {
+                el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+            }
+        }
+    }
+
+    // ---------- 미리보기에서 글자 바로 고치기 ----------
+    // 요소를 두 번 누르면 그 자리에서 글자를 고친다. Enter 나 바깥을 누르면 확정, Esc 면 취소.
+    // 자식 태그가 없는 '잎' 요소만 다룬다 — 안에 <br>·<span> 이 있으면 구조가 깨진다.
+    let editing = null, editBefore = '';
+
+    function canEditText(el) {
+        return el && el.nodeType === 1 && !el.children.length
+            && !/^(IMG|VIDEO|IFRAME|INPUT|TEXTAREA|SELECT|BR|HR|SVG|PATH)$/i.test(el.tagName)
+            && (el.textContent || '').trim().length > 0;
+    }
+
+    function startTextEdit(el) {
+        if (editing) endTextEdit(true);
+        editing = el;
+        editBefore = el.textContent;
+        el.classList.add('__ed-editing');
+        el.setAttribute('contenteditable', 'plaintext-only');
+        el.focus();
+        // 글자 전체를 잡아 둔다 (바로 새로 쓸 수 있게)
+        const r = document.createRange();
+        r.selectNodeContents(el);
+        const sel = window.getSelection();
+        sel.removeAllRanges(); sel.addRange(r);
+        post('textEditing', { path: pathOf(el), on: true });
+    }
+
+    function endTextEdit(commit) {
+        if (!editing) return;
+        const el = editing;
+        editing = null;
+        const value = (el.textContent || '');
+        el.removeAttribute('contenteditable');
+        el.classList.remove('__ed-editing');
+        if (!commit) { el.textContent = editBefore; post('textEditing', { on: false }); return; }
+        if (value === editBefore) { post('textEditing', { on: false }); return; }
+        post('textEdited', { path: pathOf(el), value });
+        setTimeout(reportHeight, 80);
+    }
+
+    document.addEventListener('dblclick', e => {
+        if (!picking || moving) return;
+        const el = e.target;
+        if (!canEditText(el)) return;
+        e.preventDefault(); e.stopPropagation();
+        startTextEdit(el);
+    }, true);
+
+    document.addEventListener('keydown', e => {
+        if (!editing) return;
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); endTextEdit(true); }
+        else if (e.key === 'Escape') { e.preventDefault(); endTextEdit(false); }
+    }, true);
+
+    // 편집 중 다른 곳을 누르면 확정 (선택 핸들러보다 먼저 잡는다)
+    document.addEventListener('mousedown', e => {
+        if (editing && !editing.contains(e.target)) endTextEdit(true);
+    }, true);
+
     // ---------- 고른 것을 컴포넌트로 뜨기 ----------
     /**
      * 선택한 요소의 HTML 을 '저장해도 되는 상태'로 만들어 돌려준다.
@@ -432,6 +556,8 @@
             n.classList.remove('__ed-selected', '__ed-hover', '__ed-move-pick');
             if (!n.classList.length) n.removeAttribute('class');
             n.removeAttribute('data-ed-inserted');
+            n.removeAttribute('contenteditable');
+            n.classList.remove('__ed-editing');
             // revealNow 가 눈에 보이게 하려고 넣은 값만 되돌린다 (원래는 CSS 가 맡는다)
             if (n.classList && n.classList.contains('reveal')) {
                 if (n.style.opacity === '1') n.style.removeProperty('opacity');
@@ -490,9 +616,9 @@
             moveBar = document.createElement('div');
             moveBar.className = '__ed-movebar';
             moveBar.innerHTML =
-                '<button data-dir="up" title="위로">\u2191</button>' +
+                '<button data-dir="up" title="Move up">\u2191</button>' +
                 '<span></span>' +
-                '<button data-dir="down" title="아래로">\u2193</button>';
+                '<button data-dir="down" title="Move down">\u2193</button>';
             moveBar.addEventListener('click', onMoveClick, true);
             document.body.appendChild(moveBar);
         }
@@ -632,7 +758,7 @@
      */
     function demoMotion(el, className) {
         const badge = document.createElement('div');
-        badge.textContent = '인터랙션 적용됨 · ' + className.replace('ed-', '');
+        badge.textContent = 'Interaction applied · ' + className.replace('ed-', '');
         badge.style.cssText =
             'position:absolute;z-index:2147483647;background:#3B82F6;color:#fff;' +
             'font:600 11px/1.7 system-ui,sans-serif;padding:2px 8px;border-radius:6px;' +
@@ -708,7 +834,7 @@
             name.style.cssText =
                 'position:absolute;top:6px;left:8px;background:#3B82F6;color:#fff;' +
                 'font:700 12px/1.7 system-ui,sans-serif;padding:1px 9px;border-radius:6px;white-space:nowrap';
-            name.textContent = `섹션 ${i + 1}`;
+            name.textContent = `Section ${i + 1}`;
             box.appendChild(name);
             box.__sec = sec; box.__kind = 'box';
             document.body.appendChild(box);
@@ -734,7 +860,7 @@
                     'background:#B45309;color:#fff;font:700 12px/1.8 system-ui,sans-serif;' +
                     'padding:1px 10px;border-radius:6px;white-space:nowrap;pointer-events:none;' +
                     'box-shadow:0 1px 4px rgba(0,0,0,.25)';
-                tag.textContent = `여백 ${Math.round(pad)}px  ↕ 끌어서 조절`;
+                tag.textContent = `${Math.round(pad)}px  ↕ drag to adjust`;
                 band.appendChild(tag);
 
                 band.addEventListener('mouseenter', () => {
@@ -773,7 +899,7 @@
                 el.style.height = pad + 'px';
                 el.style.top = (el.__side === 'top' ? top : top + r.height - pad) + 'px';
                 const t = el.querySelector('span');
-                if (t) t.textContent = `여백 ${Math.round(pad)}px  ↕ 끌어서 조절`;
+                if (t) t.textContent = `${Math.round(pad)}px  ↕ drag to adjust`;
             }
         }
     }
@@ -795,7 +921,7 @@
         };
         const onMove = ev => {
             const next = calc(ev);
-            tag.textContent = `여백 ${next}px  ↕ 끌어서 조절`;
+            tag.textContent = `${next}px  ↕ drag to adjust`;
             // 여백을 여기서 바로 적용한다. 호스트를 거쳐 돌아오면 한 박자 늦어
             // 띠와 실제 콘텐츠가 어긋나 겹쳐 보인다.
             if (gapScopeLocal === 'all') {
@@ -942,7 +1068,7 @@
         const name = el.tagName.toLowerCase() +
             (el.classList[0] ? '.' + el.classList[0] : '');
         zone.querySelector('#__ed-drop-label').textContent =
-            `${name} ${t.position === 'before' ? '위' : '아래'}에 넣기`;
+            `Insert ${t.position === 'before' ? 'above' : 'below'} ${name}`;
         return t;
     }
     function hideDrop() {
@@ -984,7 +1110,7 @@
 
         if (type === 'removeElement' || type === 'duplicateElement') {
             const el = selected;
-            if (!el || !el.parentNode) { post('blockDone', { error: '고른 요소가 없습니다.' }); return; }
+            if (!el || !el.parentNode) { post('blockDone', { error: 'Nothing is selected.' }); return; }
             const path = pathOf(el);                       // 파일 수정은 '건드리기 전' 경로 기준
             if (type === 'removeElement') {
                 // 되돌릴 수 있게 어디에 있었는지 함께 적어 둔다
@@ -1009,6 +1135,11 @@
             if (!last) return;
             if (last.act === 'remove') last.parent.insertBefore(last.node, last.next);
             else last.node.remove();
+            setTimeout(reportHeight, 80);
+        }
+        else if (type === 'textPreview') {
+            const el = elementAtPath(payload.path);
+            if (el && !el.children.length) el.textContent = payload.value;
             setTimeout(reportHeight, 80);
         }
         else if (type === 'replay') {
@@ -1044,6 +1175,9 @@
                         copy.classList?.remove('__ed-selected', '__ed-hover', '__ed-move-pick');
                         el.parentNode.insertBefore(copy, el.nextSibling);
                         revealNow(copy); bindCarouselNav(copy);
+                    } else if (st.kind === 'text') {
+                        const el = elementAtPath(st.path);
+                        if (el && !el.children.length) el.textContent = st.value;
                     } else if (st.kind === 'link') {
                         if (!st.url || document.querySelector(`[data-ed-asset="${st.url}"]`)) continue;
                         const el = st.assetKind === 'js'
@@ -1055,6 +1189,10 @@
                 } catch (e) { /* 한 단계가 실패해도 나머지는 이어서 적용한다 */ }
             }
             setTimeout(reportHeight, 120);
+        }
+        else if (type === 'boxHint') {
+            if (!payload || !payload.path) clearBoxHint();
+            else showBoxHint(payload.path, payload.part, payload.side);
         }
         else if (type === 'linkAsset') {
             // 마스터 블록의 파일을 미리보기에도 걸어 준다 (저장 전에 모양을 보려고)
@@ -1069,7 +1207,7 @@
             setTimeout(reportHeight, 200);
         }
         else if (type === 'grabComponent') {
-            if (!selected) { post('grabbed', { error: '고른 요소가 없습니다.' }); return; }
+            if (!selected) { post('grabbed', { error: 'Nothing is selected.' }); return; }
             const css = collectCss(selected);
             post('grabbed', {
                 html: cleanHtml(selected),
@@ -1184,7 +1322,7 @@
                 if (Math.abs(t - base) > 2 || Math.abs(b - base) > 2) {
                     out.push({
                         index: i + 1, path: pathOf(s), top: t, bottom: b,
-                        name: s.className.toString().replace('vb-section', '').trim().split(/\s+/)[0] || '기본',
+                        name: s.className.toString().replace('vb-section', '').trim().split(/\s+/)[0] || 'Default',
                     });
                 }
             });

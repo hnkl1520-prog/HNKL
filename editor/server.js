@@ -13,7 +13,7 @@ import fs from 'node:fs';
 import fsp from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { patchInlineStyle, patchCssRule, insertHtml, patchAttr, applyMotion, moveElement, removeElement, duplicateElement, linkAsset } from './lib/patch.js';
+import { patchInlineStyle, patchCssRule, insertHtml, patchAttr, applyMotion, moveElement, removeElement, duplicateElement, linkAsset, patchText } from './lib/patch.js';
 import { buildDesignSystem, saveTokens } from './lib/designsystem.js';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -236,6 +236,10 @@ const server = http.createServer(async (req, res) => {
                     const r = moveElement(text, edit.path, edit.dir);
                     text = r.text;
                     applied.push({ kind: 'move', dir: edit.dir, before: r.before, after: r.after });
+                } else if (edit.kind === 'text') {
+                    const r = patchText(text, edit.path, edit.value);
+                    text = r.text;
+                    applied.push({ kind: 'text', before: r.before, after: r.after });
                 } else if (edit.kind === 'link') {
                     const r = linkAsset(text, edit.assetKind, edit.url);
                     text = r.text;
@@ -356,7 +360,7 @@ server.on('error', err => {
 });
 
 server.listen(PORT, () => {
-    console.log(`\n  HNKL 에디터`);
+    console.log(`\n  HNKL Editor`);
     console.log(`  ${URL_}\n`);
     console.log(`  대상 폴더: ${PUBLIC}`);
     console.log(`  (원본 파일에는 편집 스크립트가 저장되지 않습니다)`);
