@@ -80,11 +80,7 @@ body { font-weight: 400; }
 /* ── 면으로 구분하기 ──
    사이트는 카드에 테두리를 두르지 않고 '옅은 회색 면'만으로 구분한다.
    그래서 에디터도 선을 걷어내고 면과 여백으로 위계를 만든다. */
-.lp-card, .sp-block, .ds3-role, .toast {
-    border-color: transparent !important;
-    background: var(--gray-5);
-}
-.lp-card:hover { background: var(--gray-10); border-color: transparent !important; }
+.lp-card, .lp-card:hover { background: var(--gray-10); border-color: transparent !important; }
 /* 입력·드롭다운은 눌러야 할 곳이므로 아주 옅은 선만 남긴다 */
 .tokenSel, .select, .field input[type=text], .ds3-select {
     border-color: var(--gray-10);
@@ -197,13 +193,16 @@ body { font-weight: 400; }
 /* 캔버스 도구 — 사이트의 .floating-dock 을 그대로 따른다.
    (반투명 + 블러 + 밝은 테두리 + 부드러운 그림자, 활성은 검은 알약) */
 .canvas-tools {
-    position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
+    /* 스크롤되는 stage 안에 absolute 로 두면 미리보기를 내릴 때 함께 밀려 사라진다.
+       화면에 붙여 늘 같은 자리에 있게 한다. */
+    position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%);
     z-index: 70; display: flex; align-items: center; gap: 8px; padding: 8px;
-    background: rgba(255, 255, 255, 0.6);
+    /* 흰 페이지 위에 흰 유리를 얹으면 경계가 사라진다 — 회색기를 넣어 띄운다 */
+    background: rgba(236, 236, 240, 0.82);
     backdrop-filter: blur(20px) saturate(180%);
     -webkit-backdrop-filter: blur(20px) saturate(180%);
-    border: 1px solid rgba(255, 255, 255, 0.5);
-    box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    box-shadow: 0 16px 36px rgba(0,0,0,0.14);
     border-radius: var(--r-group-lg);
     transition: background .5s ease, border-color .5s ease;
 }
@@ -218,10 +217,6 @@ body { font-weight: 400; }
 .ct-tool:hover:not(.on) { background: rgba(0, 0, 0, 0.11); }
 /* 활성 = 검은 알약 위 흰 아이콘 (사이트 .dock-pill 과 같은 방식) */
 .ct-tool.on { background: var(--text); color: #fff; }
-.ct-tool--danger { color: #b03a30; }
-.ct-tool--danger:hover:not(.on) { background: rgba(176,58,48,.10); }
-/* 도구와 '고른 것에 하는 일' 사이 칸막이 */
-.ct-sep { width: 1px; height: 22px; background: var(--line); margin: 0 2px; }
 /* 덩어리 안에 여러 크기가 섞여 있을 때의 안내 */
 .fold-note { margin: 2px 2px 6px; font-size: 11px; line-height: 1.5; color: var(--dim); }
 /* 값은 들어갔는데 화면이 그대로일 때의 이유 */
@@ -401,20 +396,6 @@ body { font-weight: 400; }
     pointer-events: none;
 }
 /* 섹션 여백 — 인스펙터 안의 '페이지 전체 설정' 블록 */
-.sp-block {
-    border: 1px solid var(--line); border-radius: 9px;
-    margin-bottom: 16px; background: var(--surface-1);
-}
-.sp-block > summary {
-    cursor: pointer; padding: 9px 11px; font-size: 12px; font-weight: 700;
-    color: var(--text); list-style: none; user-select: none;
-}
-.sp-block > summary::-webkit-details-marker { display: none; }
-.sp-block > summary::before {
-    content: '▸'; display: inline-block; margin-right: 6px; color: var(--dim);
-    transition: transform .15s;
-}
-.sp-block[open] > summary::before { transform: rotate(90deg); }
 .sp-pane { padding: 2px 11px 12px; display: flex; flex-direction: column; gap: 12px; }
 .sp-row > span em { font-style: normal; color: var(--warn); font-weight: 600; }
 /* 토큰을 따르지 않는 섹션 목록 */
@@ -439,6 +420,8 @@ body { font-weight: 400; }
 .sp-check { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--dim); cursor: pointer; }
 .sp-check input { accent-color: var(--accent); margin: 0; }
 .sp-row { display: flex; flex-direction: column; gap: 8px; }
+/* display 를 정해 두면 hidden 속성이 먹지 않는다 — 숨김이 이기게 한다 */
+.sp-row[hidden], .sp-exc[hidden] { display: none; }
 .sp-row > span { font-size: 11px; color: var(--dim); font-weight: 600; }
 .sp-label { font-size: 11px; color: var(--dim); font-weight: 600; }
 .sp-presets { display: flex; flex-direction: column; gap: 8px; }
@@ -983,3 +966,12 @@ body.is-dragging-num, body.is-dragging-num * { cursor: ns-resize !important; use
     background: var(--bg); border: 1px solid var(--line); border-radius: var(--r-btn); padding: 5px 8px;
 }
 .color-hex:focus { outline: none; border-color: var(--accent); }
+
+
+/* 아무것도 고르지 않았을 때 — 페이지 전체 설정 */
+#emptyState .selTag { font-weight: 600; font-size: 15px; color: var(--text); }
+#emptyState .selMeta { color: var(--dim); font-size: 11px; margin: 3px 0 14px; }
+.empty-hint {
+    margin: 16px 2px 0; font-size: 11px; line-height: 1.7; color: var(--dim);
+    padding-top: 14px; border-top: 1px solid var(--line);
+}

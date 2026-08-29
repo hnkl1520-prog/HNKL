@@ -270,6 +270,7 @@ function openPage(rel) {
     pending = []; selection = null; updateDirty(); renderInspector();
     needsCenter = true;
     currentPage = rel;
+    if (!selection) renderInspector();     // '페이지 설정'의 파일 이름을 채운다
     renderCrumb(rel);
     // 브릿지가 100vh 를 '기기 높이' 기준으로 굳히도록 알려준다 (iframe 은 전체 높이로 늘어나므로)
     frame.src = '/preview/' + rel + '?__edvh=' + bp.h;
@@ -464,9 +465,6 @@ $('#openRawBtn')?.addEventListener('click', () => {
     if (pending.length) toast('Unsaved changes will not appear', 'warn');
     window.open('/raw/' + currentPage, '_blank', 'noopener');
 });
-$('#dupBtn')?.addEventListener('click', () => blockAction('duplicate'));
-$('#delBtn')?.addEventListener('click', () => blockAction('remove'));
-
 /** 고른 덩어리를 지우거나 복제한다 — 미리보기가 먼저 반영하고, 결과를 받아 대기열에 쌓는다 */
 function blockAction(act) {
     if (!selection) { toast('Pick a block in the preview first', 'warn'); return; }
@@ -513,10 +511,7 @@ $('#gapShow')?.addEventListener('change', e => {
     const row = $('#gapScopeRow'); if (row) row.hidden = !e.target.checked;
     if (e.target.checked) setTimeout(refreshGapExceptions, 300);
 });
-// 여백 블록을 펼치면 예외 목록을 불러온다 (표시를 안 켜도 확인 가능)
-$('#spBlock')?.addEventListener('toggle', e => {
-    if (e.target.open) setTimeout(refreshGapExceptions, 200);
-});
+// 예외 목록은 '페이지 설정'이 보일 때 불러온다 (renderInspector 참고)
 
 /**
  * 토큰을 따르지 않는 섹션 목록.
@@ -892,14 +887,14 @@ function foldGroup(title, build, open = false) {
     return d;
 }
 
-/** 고른 게 있을 때만 덩어리 조작 버튼을 보여 준다 */
+/**
+ * 고른 게 있을 때만 켜지는 것들.
+ * 복제·삭제는 버튼을 두지 않는다 — Ctrl+D 와 Delete 로 하고,
+ * 캔버스 툴바는 '커서 상태'(이동·선택)를 고르는 곳으로 남긴다.
+ */
 function syncSelectionButtons() {
-    const on = !!selection;
-    for (const id of ['#dupBtn', '#delBtn', '#ctSep']) {
-        const el = $(id); if (el) el.hidden = !on;
-    }
     const save = $('#saveCompBtn');
-    if (save) save.disabled = !on;
+    if (save) save.disabled = !selection;
 }
 
 /**
@@ -927,8 +922,16 @@ function renderInspector() {
     if (draggingEdge) return;          // 값을 끌고 있는 중엔 화면을 갈아엎지 않는다
     syncSelectionButtons();
     const empty = $('#emptyState'), insp = $('#inspector');
-    if (!selection) { empty.hidden = false; insp.hidden = true; syncSelectionButtons(); return; }
-    empty.hidden = true; insp.hidden = false;
+    if (!selection) {
+        // 고른 게 없으면 이 패널은 '페이지 전체'를 다룬다
+        const meta = $('#pageMeta');
+        if (meta) meta.textContent = currentPage || '';
+        empty.hidden = false; insp.hidden = true; syncSelectionButtons();
+        // 토큰을 안 따르는 섹션이 몇인지 — 슬라이더가 일부에만 먹히는 이유가 된다
+        if (!emptyShown) { emptyShown = true; setTimeout(refreshGapExceptions, 200); }
+        return;
+    }
+    empty.hidden = true; insp.hidden = false; emptyShown = false;
 
     $('#selTag').textContent = friendlyName(selection);
     // 코드 이름은 필요할 때만 (마우스를 올리면 보인다)
@@ -1010,8 +1013,16 @@ function renderInspector() {
 // 새 인스펙터(renderInspector)로 대체했고, 되돌릴 일이 있을까 봐 남겨 둔다.
 function renderInspectorLegacy() {
     const empty = $('#emptyState'), insp = $('#inspector');
-    if (!selection) { empty.hidden = false; insp.hidden = true; syncSelectionButtons(); return; }
-    empty.hidden = true; insp.hidden = false;
+    if (!selection) {
+        // 고른 게 없으면 이 패널은 '페이지 전체'를 다룬다
+        const meta = $('#pageMeta');
+        if (meta) meta.textContent = currentPage || '';
+        empty.hidden = false; insp.hidden = true; syncSelectionButtons();
+        // 토큰을 안 따르는 섹션이 몇인지 — 슬라이더가 일부에만 먹히는 이유가 된다
+        if (!emptyShown) { emptyShown = true; setTimeout(refreshGapExceptions, 200); }
+        return;
+    }
+    empty.hidden = true; insp.hidden = false; emptyShown = false;
 
     $('#selTag').textContent = friendlyName(selection);
     // 코드 이름은 필요할 때만 (마우스를 올리면 보인다)
@@ -2103,6 +2114,7 @@ function loadSimpleList(hostId, items, dragType) {
 // 유저가 등록한 컴포넌트 — 서버(components.json)에 쌓이고 페이지끼리 함께 쓴다
 let savedComps = [];
 let editingText = false;        // 미리보기에서 글자를 고치는 중인지
+let emptyShown = false;         // '페이지 설정'이 이미 떠 있는지 (예외 목록을 한 번만 부르려고)
 let pageClassSet = new Set();   // 지금 열린 페이지의 CSS 가 아는 클래스
 let pageVarSet = new Set();     // 지금 열린 페이지가 정의한 CSS 변수(디자인 토큰)
 let mainPath = null;            // 미리보기에서 최상위 블록을 담는 그릇(<main>)의 경로

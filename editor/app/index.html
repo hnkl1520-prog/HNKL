@@ -128,14 +128,6 @@
                     <path d="M340-596.38h40v359.3l83.54-83.54 28.77 28.31L360-160 227.69-292.31l28.77-28.31L340-237.08v-359.3ZM620-421h-40v-302.38l-84 84-28.31-28.31L600-800l132.31 132.31L704-639.38l-84-84V-421Z"/>
                 </svg>
             </button>
-            <!-- 고른 덩어리에 하는 일 — 손이 캔버스를 떠나지 않게 여기 둔다 (고른 게 있을 때만 보인다) -->
-            <span class="ct-sep" id="ctSep" hidden></span>
-            <button id="dupBtn" class="ct-tool" title="Duplicate below (Ctrl+D)" hidden>
-                <svg class="ico" viewBox="0 -960 960 960" aria-hidden="true"><path d="M362.31-260q-27.61 0-46.5-18.89-18.89-18.88-18.89-46.5v-455.38q0-27.62 18.89-46.5Q334.7-846.15 362.31-846.15h335.38q27.62 0 46.5 18.88 18.89 18.88 18.89 46.5v455.38q0 27.62-18.89 46.5Q725.31-260 697.69-260H362.31Zm0-40h335.38q10.77 0 17.7-6.92 6.92-6.93 6.92-17.7v-455.38q0-10.77-6.92-17.7-6.93-6.92-17.7-6.92H362.31q-10.77 0-17.7 6.92-6.92 6.93-6.92 17.7v455.38q0 10.77 6.92 17.7 6.93 6.92 17.7 6.92Zm-100 140q-27.62 0-46.5-18.89-18.89-18.88-18.89-46.5v-495.38h40v495.38q0 10.77 6.93 17.7 6.92 6.92 17.69 6.92h375.39v40H262.31Z"/></svg>
-            </button>
-            <button id="delBtn" class="ct-tool ct-tool--danger" title="Delete this block (Delete)" hidden>
-                <svg class="ico" viewBox="0 -960 960 960" aria-hidden="true"><path d="M312.31-140Q285-140 266-159q-19-19-19-46.31V-720h-40v-40h153.85v-30.77h238.3V-760H753v40h-40v514.69Q713-178 694-159q-19 19-46.31 19H312.31ZM673-720H287v514.69q0 10.77 6.92 17.7 6.93 6.92 17.7 6.92h335.38q10.77 0 17.7-6.92 6.92-6.93 6.92-17.7V-720ZM390.16-280h40v-360h-40v360Zm139.68 0h40v-360h-40v360ZM287-720v539.31V-720Z"/></svg>
-            </button>
             <button id="pickBtn" class="ct-tool on" title="Select (V)" aria-pressed="true">
                 <!-- material: left_click (wght 200) -->
                 <svg class="ico" viewBox="0 -960 960 960" aria-hidden="true">
@@ -151,9 +143,16 @@
         <div class="panel-head">Inspector</div>
 
         <!-- 요소를 고르지 않아도 쓰는 페이지 전체 설정 -->
-        <details class="sp-block" id="spBlock">
-            <summary>Section spacing</summary>
-            <div class="sp-pane">
+
+        <!-- 아무것도 고르지 않았을 때 — 이 패널은 '페이지 전체'를 다룬다.
+             요소를 고르면 그 요소로 바뀐다. (접어 두면 못 찾는다는 걸 겪었다) -->
+        <div id="emptyState">
+            <div class="selTag">Page</div>
+            <div class="selMeta" id="pageMeta"></div>
+
+            <div class="group">
+                <h3>Section rhythm</h3>
+<div class="sp-pane">
                 <label class="sp-row sp-slider">
                     <span>All sections <em id="gapApplyCount"></em></span>
                     <input type="range" id="gapRange" min="0" max="320" step="4" value="144">
@@ -178,12 +177,9 @@
                     </div>
                 </div>
             </div>
-        </details>
+            </div>
 
-        <div class="empty" id="emptyState">
-            <p><b>Select an element</b>, then<br>click what you want to change in the preview.</p>
-            <p class="hint">Changes show in the preview right away;<br><b>Save to file</b> writes them to the code.</p>
-            <p class="hint">Double-click any text in the preview to edit it in place.</p>
+            <p class="empty-hint">Pick anything in the preview to change just that part.<br>Double-click text to edit it in place.</p>
         </div>
 
         <div id="inspector" hidden>
