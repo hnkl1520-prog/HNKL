@@ -51,6 +51,16 @@
             --vb-pad-block: clamp(calc(80px * var(--vb-s)), 11vw, calc(180px * var(--vb-s)));
             --vb-pad-inline: clamp(calc(24px * var(--vb-s)), 6vw, calc(100px * var(--vb-s)));
             --vb-maxw: calc(1280px * var(--vb-s));
+
+            /* 그룹 사이 세로 간격 — 이 두 값이 전부다.
+               전에는 기본 규칙 · #qualitative 예외 · 인라인 6곳으로 흩어져 있어
+               어디를 고쳐야 할지 알 수 없었다.
+               lg 는 카드·캐러셀 묶음 바로 뒤에 쓴다(그 앞이 시각적으로 무거워 붙어 보인다).
+
+               값은 반드시 간격 단계(--space-*)에서 가져온다. 72·120 처럼 단계에 없는
+               숫자를 쓰면 인스펙터에서 '토큰 아님'으로 뜨고, 고를 수도 없다. */
+            --gap-group: clamp(var(--space-9), 9vw, var(--space-10));
+            --gap-group-lg: clamp(var(--space-10), 12vw, var(--space-11));
             --vb-gap: var(--space-md);        /* 그리드 기본 간격 = 32px */
             --vb-eyebrow-gap: calc(16px * var(--vb-s));  /* 작은 라벨(eyebrow) ↔ 큰 제목(title) 간격 */
             --vb-cap-gap: calc(20px * var(--vb-s));      /* 미디어(이미지·영상) ↔ 그 아래 캡션 간격 (전역 통일) */
@@ -792,8 +802,10 @@
         .sec-centered .vb-body { max-width: calc(760px * var(--vb-s)); margin-inline: auto; }
         .sec-centered .vb-group__head { justify-content: center; }
 
-        .vb-group { margin-top: var(--space-lg); }
+        .vb-group { margin-top: var(--gap-group); }
         .vb-group:first-of-type { margin-top: 0; }
+        /* 카드·캐러셀 뒤에 오는 그룹은 한 단계 더 띄운다 */
+        .vb-group--lg { margin-top: var(--gap-group-lg); }
         .vb-group__head {
             display: flex; align-items: baseline; gap: 14px; margin-bottom: var(--space-sm);
         }
@@ -828,7 +840,6 @@
         .ql-head .ql-intro { margin: clamp(calc(16px * var(--vb-s)), 2vw, calc(22px * var(--vb-s))) auto 0; max-width: calc(620px * var(--vb-s)); }
 
         /* Qualitative 섹션 전체 가운데 정렬 + 그룹 간 간격 확대 */
-        #qualitative .vb-group { margin-top: clamp(calc(72px * var(--vb-s)), 9vw, calc(120px * var(--vb-s))); }
         #qualitative .vb-group__head { justify-content: center; text-align: center; margin-bottom: 40px; }
         .ql-group-intro { text-align: center; max-width: calc(640px * var(--vb-s)); margin: 0 auto var(--space-md); }
 
@@ -2115,7 +2126,7 @@
                 </div>
             </div>
                 <!-- C. UX Direction — 전체화면 어피니티 다이어그램 -->
-                <div class="vb-group" style="margin-top: clamp(calc(60px * var(--vb-s)), 8vw, calc(100px * var(--vb-s)));">
+                <div class="vb-group">
                     <div class="vb-affinity">
                         <div class="vb-affinity__bg">
                             <img src="media/qualitative/affinity-diagram.jpg" alt="어피니티 다이어그램">
@@ -2158,7 +2169,7 @@
                 </div>
 
                 <!-- Service Flow: Pre / In / Post-Match -->
-                <div class="vb-group" style="margin-top: clamp(calc(80px * var(--vb-s)), 10vw, calc(140px * var(--vb-s)));">
+                <div class="vb-group vb-group--lg">
                     <div class="vb-group__head reveal">
                         <span class="vb-group__num">D</span>
                         <span class="vb-group__name">Service Flow</span>
@@ -2269,7 +2280,7 @@
                 </div>
 
                 <!-- 3D Asset: 좌 공간 렌더 + 우 에셋 6종 -->
-                <div class="vb-group" style="margin-top: clamp(calc(96px * var(--vb-s)), 12vw, calc(160px * var(--vb-s)));">
+                <div class="vb-group vb-group--lg">
                     <div class="vb-group__head reveal">
                         <span class="vb-group__num">B</span>
                         <span class="vb-group__name">3D Asset</span>
@@ -2312,7 +2323,7 @@
                 </div>
 
                 <!-- 인터랙션: 좌 와이어프레임 스케치 + 우 플레이 영상(자동재생) -->
-                <div class="vb-group" style="margin-top: clamp(calc(96px * var(--vb-s)), 12vw, calc(160px * var(--vb-s)));">
+                <div class="vb-group vb-group--lg">
                     <div class="vb-group__head vb-group__head--lead reveal">
                         <span class="vb-group__num">C</span>
                         <span class="vb-group__name">인터랙션</span>
@@ -2357,7 +2368,7 @@
                      세로 스택: eyebrow → 캐러셀(전체 폭) → 화살표(가운데)
                      카드 순서: 경기장 다른 뷰(이미지) → 퀵메뉴바(이미지) → 핵심 기능 영상 3개
                      위 360 캡션과 너무 붙지 않게 여백 추가 -->
-                <div class="vb-group" style="margin-top: clamp(calc(64px * var(--vb-s)), 8vw, calc(100px * var(--vb-s)));">
+                <div class="vb-group">
                     <div class="vb-carousel-block reveal">
                         <div class="vb-group__head vb-group__head--lead vb-carousel-block__eyebrow" style="margin-top:0;">
                             <span class="vb-group__num">A</span>
@@ -2540,7 +2551,7 @@
                 </div>
 
                 <!-- 인터랙션 가이드 하위 섹션 : 튜토리얼 영상 4장 -->
-                <div class="vb-group" style="margin-top: clamp(calc(110px * var(--vb-s)), 14vw, calc(180px * var(--vb-s)));">
+                <div class="vb-group vb-group--lg">
                     <div class="vb-group__head reveal">
                         <span class="vb-group__num">B</span>
                         <span class="vb-group__name">인터랙션 가이드</span>

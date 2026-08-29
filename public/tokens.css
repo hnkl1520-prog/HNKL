@@ -107,7 +107,7 @@
     --fw-heavy:    800;
     --fw-black:    900;
 
-    /* 간격 (전부 × var(--s)) : 4·8·12·16·24·32·48·64·96·128 */
+    /* 간격 (전부 × var(--s)) : 4·8·12·16·24·32·48·64·96·128·160·192 */
     --space-1:  calc(4px   * var(--s));
     --space-2:  calc(8px   * var(--s));
     --space-3:  calc(12px  * var(--s));
@@ -118,6 +118,9 @@
     --space-8:  calc(64px  * var(--s));
     --space-9:  calc(96px  * var(--s));
     --space-10: calc(128px * var(--s));
+    /* 섹션과 섹션 사이처럼 큰 간격 — 128 위가 없어 고를 수 없었다 */
+    --space-11: calc(160px * var(--s));
+    --space-12: calc(192px * var(--s));
 
     /* 하위호환 */
     --space-xs: var(--space-2);
