@@ -573,13 +573,6 @@ body { font-weight: 400; }
 .field-wrap { padding: 1px 0; }
 
 /* 위·아래 이웃과의 간격 */
-.nb-row { grid-template-columns: 62px minmax(0, 1fr) auto; }
-.nb-who {
-    font-size: 11px; color: var(--accent); cursor: pointer;
-    max-width: 96px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-    padding: 2px 4px; border-radius: 4px;
-}
-.nb-who:hover { background: var(--hover-tint); text-decoration: underline; }
 .nb-note { font-size: 11px; color: var(--dim); line-height: 1.5; margin: 4px 0 0; }
 
 /* 그룹 — 접을 수 있게 */

@@ -170,7 +170,7 @@
         probe.style.cssText = 'position:absolute;visibility:hidden;height:0';
         document.body.appendChild(probe);
         const out = [];
-        for (let i = 1; i <= 10; i++) {
+        for (let i = 1; i <= 12; i++) {
             const name = `--space-${i}`;
             probe.style.marginTop = `var(${name})`;
             const px = Math.round(parseFloat(getComputedStyle(probe).marginTop)) || 0;
@@ -207,6 +207,12 @@
             text: (el.textContent || '').trim().slice(0, 60),
             // 자식 태그 없이 글자만 들어 있으면 인스펙터에서 직접 고칠 수 있다
             textOnly: !el.children.length,
+            // 위아래 이웃이 가진 여백 — 내 여백과 겹쳐(margin collapse) 큰 쪽만 보인다
+            collapse: (() => {
+                const p = el.previousElementSibling, n = el.nextElementSibling;
+                const px = (e, prop) => e ? Math.round(parseFloat(getComputedStyle(e)[prop])) || 0 : 0;
+                return { above: px(p, 'marginBottom'), below: px(n, 'marginTop') };
+            })(),
             fullText: el.children.length ? '' : (el.textContent || ''),
             computed, inline, rules,
             elementRules: rulesForElement(el).slice(0, 8),
@@ -226,6 +232,8 @@
     style.textContent = `
         .__ed-hover { outline: 2px solid rgba(59,130,246,.55) !important; outline-offset: -2px !important; }
         .__ed-selected { outline: 2px solid #3B82F6 !important; outline-offset: -2px !important; }
+        /* Shift 로 함께 고른 것 — 고른 것과 같은 급임을 보이려 같은 색, 조금 옅게 */
+        .__ed-picked { outline: 2px solid rgba(59,130,246,.6) !important; outline-offset: -2px !important; }
         .__ed-picking, .__ed-picking * { cursor: crosshair !important; }
         /* 섹션 이동 모드 — 덩어리째 고르는 중이라 커서도 '집는' 모양으로 */
         .__ed-moving, .__ed-moving * { cursor: grab !important; }
@@ -301,16 +309,68 @@
         // 캐러셀 화살표는 눌러서 넘겨봐야 하므로 선택보다 우선한다
         if (e.target.closest && e.target.closest('[data-carousel-prev],[data-carousel-next]')) return;
         e.preventDefault(); e.stopPropagation();
-        select(e.target);
+        if (e.shiftKey && selected) addPick(e.target);
+        else select(e.target);
     }, true);
+
+    let picked = [];      // Shift 로 함께 고른 것들 (selected 포함)
+
+    function clearPicked() {
+        picked.forEach(n => n.classList.remove('__ed-picked'));
+        picked = [];
+    }
 
     function select(el) {
         clearBoxHint();
+        clearPicked();
         selected?.classList.remove('__ed-selected');
         clearHover();
         selected = el;
         selected.classList.add('__ed-selected');
         post('selected', describe(el));
+    }
+
+    /**
+     * Shift 로 하나 더 고른다. 같은 부모의 형제만 받는다 —
+     * 급이 다른 것을 섞으면 '사이 간격'이라는 말이 뜻을 잃기 때문이다.
+     */
+    function addPick(el) {
+        if (!selected || el === selected) return;
+        if (el.parentElement !== selected.parentElement) {
+            post('pickRejected', { reason: 'not-sibling' });
+            return;
+        }
+        const i = picked.indexOf(el);
+        if (i >= 0) { picked.splice(i, 1); el.classList.remove('__ed-picked'); }
+        else { picked.push(el); el.classList.add('__ed-picked'); }
+        sendPicks();
+    }
+
+    /** 고른 것들과 그 사이 간격을 알려 준다 */
+    function sendPicks() {
+        const all = [selected, ...picked].filter(Boolean);
+        // 화면에 놓인 순서대로 (부모의 자식 순서)
+        const kids = [...selected.parentElement.children];
+        all.sort((a, b) => kids.indexOf(a) - kids.indexOf(b));
+
+        const gaps = [];
+        for (let i = 0; i < all.length - 1; i++) {
+            const a = all[i].getBoundingClientRect(), b = all[i + 1].getBoundingClientRect();
+            gaps.push({
+                px: Math.round(b.top - a.bottom),                    // 눈에 보이는 거리
+                path: pathOf(all[i + 1]),
+                marginTop: getComputedStyle(all[i + 1]).marginTop,
+            });
+        }
+        post('picked', {
+            count: all.length,
+            items: all.map(el => ({
+                path: pathOf(el),
+                tag: el.tagName.toLowerCase(),
+                classes: [...el.classList].filter(c => !c.startsWith('__ed')),
+            })),
+            gaps,
+        });
     }
 
     /**

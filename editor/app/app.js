@@ -79,7 +79,15 @@ window.addEventListener('message', e => {
         updateDirty();
         toast('Section moved — save to write it to the file', 'ok');
     }
+    else if (msg.type === 'picked') {
+        picks = msg.payload;
+        renderInspector();
+    }
+    else if (msg.type === 'pickRejected') {
+        toast('Shift-click picks siblings — items that sit side by side.', 'warn');
+    }
     else if (msg.type === 'selected' || msg.type === 'previewApplied') {
+        picks = null;
         selection = msg.payload;
         renderInspector();
     }
@@ -733,8 +741,12 @@ function edgeField(prop, label) {
         toFrame('boxHint', { path: selection.path, part, side });
     });
 
+    // 규칙에 var(--space-9) 처럼 적혀 있으면 숫자로 읽을 수 없다.
+    // 그럴 땐 실제로 계산된 값(computed)을 쓴다.
     const raw = currentValue(prop) || '0px';
-    const startPx = Math.round(parseFloat(raw)) || 0;
+    const startPx = /var\(/.test(raw)
+        ? Math.round(parseFloat(selection.computed?.[prop])) || 0
+        : Math.round(parseFloat(raw)) || 0;
     const hit = nearestStep(startPx);
     const onToken = hit && Math.abs(hit.px - startPx) < 1;
 
@@ -775,8 +787,12 @@ function edgeField(prop, label) {
         document.removeEventListener('mousemove', onMove);
         document.removeEventListener('mouseup', onUp);
         document.body.classList.remove('is-dragging-num');
-        stageEdit(prop, valEl.textContent + 'px');
-        renderInspector();                            // 끌기가 끝났으니 이제 다시 그린다
+        // 단계에 딱 붙었으면 숫자 대신 그 이름으로 남긴다 —
+        // 화면 크기가 바뀌어도 같은 단계를 따라가고, 나중에 단계 값을 고치면 함께 움직인다
+        const px = parseFloat(valEl.textContent) || 0;
+        const st = nearestStep(px);
+        stageEdit(prop, (st && Math.abs(st.px - px) < 1) ? `var(${st.name})` : px + 'px');
+        renderInspector();
     };
     valEl.addEventListener('mousedown', ev => {
         ev.preventDefault();
@@ -843,6 +859,11 @@ function spacingBoard() {
     }
     wrap.addEventListener('mouseleave', () => toFrame('boxHint', { path: null }));
 
+    for (const p of ['margin-top', 'margin-bottom']) {
+        const warn = blockedNote(p);
+        if (warn) wrap.appendChild(warn);
+    }
+
     const hint = document.createElement('p');
     hint.className = 'sp-hint';
     hint.textContent = 'Drag a number to change it — it snaps to the system steps. Alt to go off-system, double-click to type.';
@@ -859,6 +880,16 @@ function blockedNote(prop) {
     const px = v => parseFloat(v) || 0;
     let msg = '';
 
+    // 위아래 여백은 이웃 것과 겹쳐 큰 쪽만 보인다(margin collapse).
+    // 이걸 모르면 "0 으로 줄였는데 왜 안 좁아지지?" 가 된다.
+    const col = selection.collapse || {};
+    if (prop === 'margin-top' && col.above > px(c['margin-top'])) {
+        return note(`The element above already has ${col.above}px below it. This gap won't go under that.`);
+    }
+    if (prop === 'margin-bottom' && col.below > px(c['margin-bottom'])) {
+        return note(`The element below already has ${col.below}px above it. This gap won't go under that.`);
+    }
+
     if (prop === 'width' && c['max-width'] && c['max-width'] !== 'none' && px(c['max-width']) <= px(c.width)) {
         msg = `Capped by max-width (${c['max-width']}). Raise that first.`;
     } else if (prop === 'height' && /auto/.test(c.height || '')) {
@@ -867,7 +898,10 @@ function blockedNote(prop) {
         msg = 'Children that set their own alignment will keep it.';
     }
     if (!msg) return null;
+    return note(msg);
+}
 
+function note(msg) {
     const n = document.createElement('p');
     n.className = 'blocked-note';
     n.textContent = msg;
@@ -970,6 +1004,57 @@ function contentGuideRow() {
     span.append(box, document.createTextNode(' Show the content band'));
     label.appendChild(span);
     return label;
+}
+
+/**
+ * 고른 것들 사이의 간격.
+ * 각 간격은 '아래쪽 요소의 margin-top' 으로 만들어지므로 그 값을 고친다.
+ * (여백이 겹쳐 실제로 보이는 거리는 다를 수 있어, 눈에 보이는 값을 함께 보여 준다)
+ */
+function gapsBetweenRow() {
+    const wrap = document.createElement('div');
+    wrap.className = 'group';
+    wrap.innerHTML = '<h3>Space between</h3>';
+
+    picks.gaps.forEach((g, i) => {
+        const row = document.createElement('div');
+        row.className = 'field';
+        row.innerHTML = `<label>${i + 1} → ${i + 2}</label>`;
+
+        const steps = spaceSteps();
+        const hit = steps.length ? steps.reduce((a, b) =>
+            Math.abs(b.px - g.px) < Math.abs(a.px - g.px) ? b : a) : null;
+        const onToken = hit && Math.abs(hit.px - g.px) < 1;
+
+        const sel = document.createElement('select');
+        sel.className = 'tokenSel';
+        const cur = document.createElement('option');
+        cur.value = ''; cur.textContent = `${g.px}px${onToken ? ` · ${hit.label}` : ''}`;
+        sel.appendChild(cur);
+        for (const st of steps) {
+            const o = document.createElement('option');
+            o.value = st.name; o.textContent = `${st.label} · ${st.px}px`;
+            if (onToken && st.name === hit.name) o.selected = true;
+            sel.appendChild(o);
+        }
+        sel.addEventListener('change', () => {
+            if (!sel.value) return;
+            // 아래쪽 요소의 위 여백을 바꾸면 그 사이가 벌어진다
+            pending.push({ kind: 'inline', path: g.path, changes: { 'margin-top': `var(${sel.value})` } });
+            updateDirty();
+            toFrame('preview', { path: g.path, changes: { 'margin-top': `var(${sel.value})` } });
+        });
+        row.appendChild(sel);
+        wrap.appendChild(row);
+    });
+
+    const note = document.createElement('p');
+    note.className = 'fold-note';
+    note.textContent = picks.gaps.length
+        ? 'Changes the top margin of the lower item.'
+        : 'Pick two or more items that sit side by side.';
+    wrap.appendChild(note);
+    return wrap;
 }
 
 /** 페이지 뒷배경 색 — :root 의 --bg-color 를 고친다 */
@@ -1130,6 +1215,16 @@ function renderInspector() {
     const box = $('#fields');
     box.innerHTML = '';
 
+    // 여러 개를 골랐다면 궁금한 건 각자의 속성이 아니라 '사이 간격'이다
+    if (picks && picks.count > 1) {
+        $('#selTag').textContent = `${picks.count} items`;
+        $('#selMeta').textContent = picks.items.map(i => i.classes[0] || i.tag).join(' · ');
+        box.appendChild(gapsBetweenRow());
+        const moreBtn = $('#inspMore');
+        if (moreBtn) moreBtn.hidden = true;
+        return;
+    }
+
     // 무엇을 골랐느냐에 따라 보여줄 것이 다르다.
     // 특히 '글자 속성'은 자식 태그가 없을 때만 뜻이 있다 — 제목과 설명이 묶인
     // 덩어리를 고르고 글자 크기를 하나로 정할 수는 없기 때문이다.
@@ -1147,9 +1242,9 @@ function renderInspector() {
     // ② 주인공 — 이 덩어리가 만드는 공간
     box.appendChild(spacingBoard());
 
-    // ③ 이웃과의 실제 간격 (내 여백 + 이웃 여백이 겹쳐 만든 값)
-    const nb = neighborRow();
-    if (nb) box.appendChild(nb);
+    // 이웃과의 간격을 따로 두었다가 뺐다 — 간격 판과 같은 margin 을 만지는데
+    // 두 곳에서 조절하니 한쪽을 바꾸면 다른 쪽이 0 으로 보여 헷갈렸다.
+    // 겹침(margin collapse) 안내는 간격 판 아래에 남아 있다.
 
     // ④ 나머지는 고른 것에 맞는 것만, 그것도 접어서
     if (ctx.isLeafText) {
@@ -1255,9 +1350,7 @@ function renderInspectorLegacy() {
     // 이미지·영상이면 링크(src)부터 — 제일 자주 바꾸는 값
     if (ctx.isMedia) box.appendChild(mediaRow());
 
-    // 위/아래 이웃과의 간격 — 가장 자주 만지는 값이라 맨 앞에 둔다
-    const nb = neighborRow();
-    if (nb) box.appendChild(nb);
+    // (이웃 간격 줄은 새 인스펙터에서 빼면서 함께 없앴다 — 간격 판과 겹쳤다)
 
     // 박스 모델 시각화
     box.appendChild(boxModelWidget());
@@ -1298,59 +1391,6 @@ $('#inspMore')?.addEventListener('click', () => {
  * 예전엔 두 요소를 각각 선택해 서로 다른 항목을 찾아야 했다.
  * 여기서는 지금 보이는 간격을 그대로 보여주고, 조절하면 '이 요소 쪽' 값만 바꾼다.
  */
-function neighborRow() {
-    const nb = selection.neighbors;
-    if (!nb || (!nb.up && !nb.down)) return null;
-    const SPACE_TOKENS = selection.spaceTokens || [];
-
-    const g = el('div', 'group');
-    const h = el('h3', null, 'Vertical spacing');
-    h.addEventListener('click', () => g.classList.toggle('is-collapsed'));
-    g.appendChild(h);
-
-    const mk = (side, info) => {
-        if (!info) return;
-        const row = el('div', 'field nb-row');
-        row.appendChild(el('label', null, side === 'up' ? 'Above' : 'Below'));
-
-        // 간격도 디자인 시스템 안에서 고른다 (다른 여백 항목과 같은 규칙).
-        // 이 요소가 가진 몫(margin)만 바꾸고, 상대 요소는 건드리지 않는다.
-        const prop = side === 'up' ? 'margin-top' : 'margin-bottom';
-        const mine = side === 'up' ? info.myTop : info.myBottom;
-        const sel = el('select', 'tokenSel');
-        // 지금 값이 토큰과 맞는지 표시
-        const hit = SPACE_TOKENS.find(t => Math.abs(t.px - info.gap) <= 1);
-        sel.appendChild(Object.assign(el('option'), {
-            value: '', textContent: hit ? `now: ${info.gap}px (${hit.label})` : `now: ${info.gap}px (not a token)`,
-        }));
-        for (const t of SPACE_TOKENS) {
-            sel.appendChild(Object.assign(el('option'), {
-                value: t.name, textContent: `${t.label} · ${t.px}px`,
-            }));
-        }
-        sel.addEventListener('change', () => {
-            const t = SPACE_TOKENS.find(x => x.name === sel.value);
-            if (!t) return;
-            // 목표 간격(t.px)이 되도록 내 margin 을 맞춘다
-            stageEdit(prop, Math.max(0, Math.round(mine + (t.px - info.gap))) + 'px');
-        });
-        row.appendChild(sel);
-
-        const who = el('span', 'nb-who', info.name);
-        who.title = 'Select this element';
-        who.addEventListener('click', () => toFrame('reselect', { path: info.path }));
-        row.appendChild(who);
-        g.appendChild(row);
-    };
-    mk('up', nb.up);
-    mk('down', nb.down);
-
-    const note = el('p', 'nb-note', 'The spacing you actually see. Pick from the design system steps.');
-    g.appendChild(note);
-    return g;
-}
-
-/** 이미지·영상 링크 편집 줄 (src 를 직접 고친다) */
 function mediaRow() {
     const g = el('div', 'group');
     g.innerHTML = '<h3>Media</h3>';
@@ -1592,7 +1632,7 @@ function tokenFieldRow(prop, choices) {
     // 토큰이 아닌 값이면 맨 위에 '지금 값'을 보여준다 (고르면 토큰으로 바뀜)
     if (!curVar) {
         const o = document.createElement('option');
-        o.value = ''; o.textContent = `now: ${cur || 'none'} (not a token)`;
+        o.value = ''; o.textContent = cur || 'none';
         sel.appendChild(o);
     }
     for (const c of choices) {
@@ -2319,6 +2359,7 @@ function loadSimpleList(hostId, items, dragType) {
 
 // 유저가 등록한 컴포넌트 — 서버(components.json)에 쌓이고 페이지끼리 함께 쓴다
 let savedComps = [];
+let picks = null;               // Shift 로 여러 개 골랐을 때 { count, items, gaps }
 let editingText = false;        // 미리보기에서 글자를 고치는 중인지
 let emptyShown = false;         // '페이지 설정'이 이미 떠 있는지 (예외 목록을 한 번만 부르려고)
 let pageTokens = null;          // 페이지 전체를 정하는 토큰들 { raw, now }
