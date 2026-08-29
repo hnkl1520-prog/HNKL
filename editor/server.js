@@ -34,6 +34,7 @@ const MIME = {
     '.mp4': 'video/mp4', '.webm': 'video/webm',
     '.woff': 'font/woff', '.woff2': 'font/woff2', '.ttf': 'font/ttf',
     '.ico': 'image/x-icon',
+    '.webmanifest': 'application/manifest+json',
 };
 
 const send = (res, code, body, type = 'text/plain; charset=utf-8') => {

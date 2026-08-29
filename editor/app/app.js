@@ -28,6 +28,8 @@ window.addEventListener('message', e => {
         pageClassSet = new Set(msg.payload?.classes || []);
         pageVarSet = new Set(msg.payload?.vars || []);
         mainPath = msg.payload?.mainPath || null;
+        pageTokens = msg.payload?.pageTokens || null;
+        if (!selection) renderInspector();
         toFrame('setPicking', pickOn);
         toFrame('setMoving', tool === 'move');
         applyPendingPreview();
@@ -872,6 +874,168 @@ function blockedNote(prop) {
     return n;
 }
 
+/**
+ * 페이지 전체를 정하는 값 하나 — 끌어서 조절한다.
+ * calc(1280px * var(--vb-s)) 처럼 식으로 적힌 값은 기준 숫자만 갈아끼운다.
+ */
+function pageTokenRow(name, label, hint, opt = {}) {
+    const raw = pageTokens?.now?.[name] || '';
+    // 식 안의 첫 px 숫자가 기준값이다 (calc(1280px * clamp(…)) → 1280)
+    const m = raw.match(/(-?[\d.]+)px/);
+    if (!m) return null;
+    const basePx = parseFloat(m[1]);
+
+    const row = document.createElement('div');
+    row.className = 'pt-row';
+    row.innerHTML =
+        `<span class="pt-label">${label}</span>` +
+        `<span class="pt-val">${basePx}</span><span class="pt-unit">px</span>`;
+
+    const valEl = row.querySelector('.pt-val');
+    // 말로 설명하는 것보다 페이지에서 짚어 주는 편이 빠르다
+    if (opt.hint) {
+        row.addEventListener('mouseenter', () => toFrame('pageHint', { what: opt.hint }));
+        row.addEventListener('mouseleave', () => toFrame('pageHint', { what: null }));
+    }
+    const apply = px => {
+        const next = raw.replace(/(-?[\d.]+)px/, px + 'px');
+        // :root 규칙을 고친다 — 페이지 전체 규칙이라 요소 하나에 붙이지 않는다
+        const i = pending.findIndex(p => p.kind === 'css' && p.selector === ':root' && p.prop === name);
+        const edit = { kind: 'css', selector: ':root', prop: name, value: next };
+        if (i >= 0) pending[i] = edit; else pending.push(edit);
+        toFrame('pageTokenPreview', { vars: Object.fromEntries(
+            pending.filter(p => p.kind === 'css' && p.selector === ':root').map(p => [p.prop, p.value])) });
+        updateDirty();
+    };
+
+    let dragging = false, from = 0, base = 0;
+    const onMove = ev => {
+        if (!dragging) return;
+        ev.preventDefault();
+        const next = Math.max(0, Math.round(base + (from - ev.clientY) * 4));   // 폭은 큰 값이라 4배로
+        if (String(next) === valEl.textContent) return;
+        valEl.textContent = next;
+        apply(next);
+    };
+    const onUp = () => {
+        dragging = false;
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+        document.body.classList.remove('is-dragging-num');
+    };
+    valEl.addEventListener('mousedown', ev => {
+        ev.preventDefault();
+        dragging = true; from = ev.clientY; base = parseFloat(valEl.textContent) || 0;
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', onUp);
+        document.body.classList.add('is-dragging-num');
+    });
+    valEl.addEventListener('dblclick', () => {
+        const inp = document.createElement('input');
+        inp.className = 'pt-input'; inp.value = valEl.textContent;
+        valEl.replaceWith(inp); inp.focus(); inp.select();
+        const done = () => { const v = parseFloat(inp.value) || basePx; inp.replaceWith(valEl); valEl.textContent = v; apply(v); };
+        inp.addEventListener('blur', done);
+        inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); done(); } if (e.key === 'Escape') inp.replaceWith(valEl); });
+    });
+
+    if (hint) {
+        const h = document.createElement('p');
+        h.className = 'pt-hint';
+        h.textContent = hint;
+        const wrap = document.createElement('div');
+        wrap.append(row, h);
+        return wrap;
+    }
+    return row;
+}
+
+/**
+ * 본문 띠를 켜 두고 보는 토글.
+ * 값을 숫자로만 보면 어디까지가 본문인지 알 수 없다. 켜 두면 계속 보인다.
+ */
+let contentGuideOn = false;
+function contentGuideRow() {
+    const label = document.createElement('label');
+    label.className = 'sp-row';
+    const box = document.createElement('input');
+    box.type = 'checkbox';
+    box.checked = contentGuideOn;
+    box.addEventListener('change', () => {
+        contentGuideOn = box.checked;
+        toFrame('contentGuide', { on: contentGuideOn });
+    });
+    const span = document.createElement('span');
+    span.className = 'sp-check';
+    span.append(box, document.createTextNode(' Show the content band'));
+    label.appendChild(span);
+    return label;
+}
+
+/** 페이지 뒷배경 색 — :root 의 --bg-color 를 고친다 */
+function pageColorRow() {
+    const choices = (insTokens && insTokens.colors) || [];
+    if (!choices.length) return null;
+
+    const cur = pageTokens?.now?.['--bg-color'] || '';
+    const curVar = (cur.match(/var\(\s*(--[\w-]+)\s*\)/) || [])[1] || null;
+    const hit = curVar ? choices.find(c => c.name === curVar) : null;
+    const hex = /^#/.test(cur) ? cur.toUpperCase() : (hit?.hex || '');
+
+    const wrap = document.createElement('div');
+    const row = document.createElement('div');
+    row.className = 'field';
+    row.innerHTML = '<label>Behind the page</label>';
+
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'color-btn';
+    btn.innerHTML =
+        `<span class="color-chip" style="background:${hex || 'transparent'}"></span>` +
+        `<span class="color-name">${hit ? hit.label : (hex || cur || '—')}</span>`;
+    row.appendChild(btn);
+    wrap.appendChild(row);
+
+    const pop = document.createElement('div');
+    pop.className = 'color-pop';
+    pop.hidden = true;
+    const grid = document.createElement('div');
+    grid.className = 'color-grid';
+    const setColor = value => {
+        const i = pending.findIndex(p => p.kind === 'css' && p.selector === ':root' && p.prop === '--bg-color');
+        const edit = { kind: 'css', selector: ':root', prop: '--bg-color', value };
+        if (i >= 0) pending[i] = edit; else pending.push(edit);
+        toFrame('pageTokenPreview', { vars: Object.fromEntries(
+            pending.filter(p => p.kind === 'css' && p.selector === ':root').map(p => [p.prop, p.value])) });
+        updateDirty();
+        renderInspector();
+    };
+    for (const c of choices) {
+        const sw = document.createElement('button');
+        sw.type = 'button';
+        sw.className = 'color-sw' + (hit && hit.name === c.name ? ' is-on' : '');
+        sw.title = `${c.label}  ${c.hex || ''}`.trim();
+        sw.style.background = c.hex || `var(${c.name})`;
+        sw.addEventListener('click', () => setColor(`var(${c.name})`));
+        grid.appendChild(sw);
+    }
+    pop.appendChild(grid);
+
+    const free = document.createElement('div');
+    free.className = 'color-free';
+    free.innerHTML = '<span>Custom</span>';
+    const inp = document.createElement('input');
+    inp.type = 'text'; inp.className = 'color-hex'; inp.placeholder = '#000000';
+    inp.value = hex || '';
+    inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); setColor(inp.value.trim()); } });
+    free.appendChild(inp);
+    pop.appendChild(free);
+    wrap.appendChild(pop);
+
+    btn.addEventListener('click', () => { pop.hidden = !pop.hidden; });
+    return wrap;
+}
+
 /** 접히는 묶음 — 자주 안 쓰는 것은 닫아 둔다 */
 function foldGroup(title, build, open = false) {
     const d = document.createElement('details');
@@ -923,9 +1087,30 @@ function renderInspector() {
     syncSelectionButtons();
     const empty = $('#emptyState'), insp = $('#inspector');
     if (!selection) {
-        // 고른 게 없으면 이 패널은 '페이지 전체'를 다룬다
-        const meta = $('#pageMeta');
-        if (meta) meta.textContent = currentPage || '';
+        // 고른 게 없으면 이 패널은 '페이지 전체'를 다룬다.
+        // (아무것도 안 고른 상태 = 페이지를 고른 상태 — 여느 에디터와 같은 규칙)
+        const lay = $('#pageLayout');
+        if (lay) {
+            lay.innerHTML = '';     // 다시 그릴 때마다 쌓이지 않게 통째로 비운다
+            // 카드 사이 간격은 여기 두지 않는다 — 카드 줄을 고르면 Layout > Gap 에서 정한다.
+            // 페이지 전체에 걸리는 값만 남긴다.
+            const rows = [
+                pageTokenRow('--vb-maxw', 'Content width',
+                    'The band your text and cards sit in. Wider = less empty space on the sides.',
+                    { hint: 'maxw' }),
+            ].filter(Boolean);
+            rows.forEach(r => lay.appendChild(r));
+            lay.appendChild(contentGuideRow());
+            lay.hidden = !rows.length;
+
+            // 페이지 배경색
+            const bgBody = $('#pageBgBody');
+            if (bgBody) {
+                bgBody.innerHTML = '';
+                const row = pageColorRow();
+                if (row) bgBody.appendChild(row); else $('#pageBg').hidden = true;
+            }
+        }
         empty.hidden = false; insp.hidden = true; syncSelectionButtons();
         // 토큰을 안 따르는 섹션이 몇인지 — 슬라이더가 일부에만 먹히는 이유가 된다
         if (!emptyShown) { emptyShown = true; setTimeout(refreshGapExceptions, 200); }
@@ -1014,9 +1199,30 @@ function renderInspector() {
 function renderInspectorLegacy() {
     const empty = $('#emptyState'), insp = $('#inspector');
     if (!selection) {
-        // 고른 게 없으면 이 패널은 '페이지 전체'를 다룬다
-        const meta = $('#pageMeta');
-        if (meta) meta.textContent = currentPage || '';
+        // 고른 게 없으면 이 패널은 '페이지 전체'를 다룬다.
+        // (아무것도 안 고른 상태 = 페이지를 고른 상태 — 여느 에디터와 같은 규칙)
+        const lay = $('#pageLayout');
+        if (lay) {
+            lay.innerHTML = '';     // 다시 그릴 때마다 쌓이지 않게 통째로 비운다
+            // 카드 사이 간격은 여기 두지 않는다 — 카드 줄을 고르면 Layout > Gap 에서 정한다.
+            // 페이지 전체에 걸리는 값만 남긴다.
+            const rows = [
+                pageTokenRow('--vb-maxw', 'Content width',
+                    'The band your text and cards sit in. Wider = less empty space on the sides.',
+                    { hint: 'maxw' }),
+            ].filter(Boolean);
+            rows.forEach(r => lay.appendChild(r));
+            lay.appendChild(contentGuideRow());
+            lay.hidden = !rows.length;
+
+            // 페이지 배경색
+            const bgBody = $('#pageBgBody');
+            if (bgBody) {
+                bgBody.innerHTML = '';
+                const row = pageColorRow();
+                if (row) bgBody.appendChild(row); else $('#pageBg').hidden = true;
+            }
+        }
         empty.hidden = false; insp.hidden = true; syncSelectionButtons();
         // 토큰을 안 따르는 섹션이 몇인지 — 슬라이더가 일부에만 먹히는 이유가 된다
         if (!emptyShown) { emptyShown = true; setTimeout(refreshGapExceptions, 200); }
@@ -2115,6 +2321,7 @@ function loadSimpleList(hostId, items, dragType) {
 let savedComps = [];
 let editingText = false;        // 미리보기에서 글자를 고치는 중인지
 let emptyShown = false;         // '페이지 설정'이 이미 떠 있는지 (예외 목록을 한 번만 부르려고)
+let pageTokens = null;          // 페이지 전체를 정하는 토큰들 { raw, now }
 let pageClassSet = new Set();   // 지금 열린 페이지의 CSS 가 아는 클래스
 let pageVarSet = new Set();     // 지금 열린 페이지가 정의한 CSS 변수(디자인 토큰)
 let mainPath = null;            // 미리보기에서 최상위 블록을 담는 그릇(<main>)의 경로

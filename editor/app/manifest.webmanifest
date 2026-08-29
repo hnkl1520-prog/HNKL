@@ -1,0 +1,14 @@
+{
+  "name": "HNKL Editor",
+  "short_name": "HNKL",
+  "description": "사이트를 눈으로 보며 고치는 로컬 편집 도구",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#F1F1F3",
+  "theme_color": "#F1F1F3",
+  "icons": [
+    { "src": "/__app/icons/app/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/__app/icons/app/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}

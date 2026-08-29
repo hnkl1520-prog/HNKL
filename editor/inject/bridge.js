@@ -318,21 +318,37 @@
      * 다른 페이지에서 만든 컴포넌트를 넣을 때, 기대는 클래스가 여기 없으면 모양이 깨진다.
      */
     /** 이 페이지가 정의한 CSS 변수(디자인 토큰) 이름 — 컴포넌트가 기대는 토큰이 있는지 확인용 */
+    /**
+     * 페이지 전체를 정하는 토큰들의 원문과 지금 값.
+     * calc(1280px * var(--vb-s)) 같은 식이라 계산 결과만으로는 기준값을 알 수 없어
+     * :root 규칙에 적힌 문자열을 그대로 읽는다.
+     */
+    /**
+     * 페이지 전체를 정하는 토큰들.
+     * 커스텀 속성의 computed value 는 계산 결과가 아니라 적힌 글자 그대로다
+     * (calc(1280px * clamp(...)) 처럼). 그래서 이것만 읽으면 기준값을 알 수 있다.
+     */
+    function pageTokens() {
+        const want = ['--vb-maxw', '--vb-gap', '--vb-pad-block', '--vb-s', '--bg-color'];
+        const cs = getComputedStyle(document.documentElement);
+        const now = {};
+        for (const n of want) {
+            const v = cs.getPropertyValue(n).trim();
+            if (v) now[n] = v;
+        }
+        return { now };
+    }
+
     function pageVars() {
         const out = new Set();
+        // 커스텀 속성은 CSSOM 목록에 안 나오므로 글자에서 뽑는다
         for (const sheet of document.styleSheets) {
-            let rules;
-            try { rules = sheet.cssRules; } catch { continue; }
+            let rules; try { rules = sheet.cssRules; } catch { continue; }
             if (!rules) continue;
             const scan = list => {
                 for (const r of list) {
-                    if (r.style) {
-                        for (let i = 0; i < r.style.length; i++) {
-                            const p = r.style[i];
-                            if (p && p.startsWith('--')) out.add(p);
-                        }
-                    }
-                    if (r.cssRules) scan(r.cssRules);
+                    if (r.cssRules) { scan(r.cssRules); continue; }
+                    for (const m of (r.cssText || '').matchAll(/(--[\w-]+)\s*:/g)) out.add(m[1]);
                 }
             };
             scan(rules);
@@ -1355,6 +1371,63 @@
             clearInterval(window.__edGapTimer);
             if (gapOn) window.__edGapTimer = setInterval(syncGapBars, 120);
         }
+        else if (type === 'contentGuide') {
+            // 본문이 놓이는 띠를 켜 둔 채로 보여 준다 (호버 힌트와 달리 지워지지 않는다)
+            let tag = document.getElementById('__ed-guide-css');
+            if (!tag) {
+                tag = document.createElement('style');
+                tag.id = '__ed-guide-css';
+                (document.head || document.documentElement).appendChild(tag);
+            }
+            tag.textContent = payload.on
+                ? `.vb-wrap{outline:1px dashed rgba(59,130,246,.55) !important;outline-offset:-1px;` +
+                  `background-image:linear-gradient(rgba(59,130,246,.05),rgba(59,130,246,.05)) !important}`
+                : '';
+        }
+        else if (type === 'pageHint') {
+            // '이 값이 페이지의 어디인지' 를 짚어 준다 (말보다 빠르다)
+            clearBoxHint();
+            if (!payload || !payload.what) return;
+            const paint = (el, cls) => {
+                const r = el.getBoundingClientRect();
+                const d = document.createElement('div');
+                d.className = `__ed-boxhint __ed-boxhint--${cls}`;
+                d.style.cssText = `left:${window.scrollX + r.left}px;top:${window.scrollY + r.top}px;width:${r.width}px;height:${r.height}px`;
+                document.body.appendChild(d);
+                boxHints.push(d);
+            };
+            if (payload.what === 'maxw') {
+                // 본문이 놓이는 띠
+                document.querySelectorAll('.vb-wrap').forEach(el => {
+                    const r = el.getBoundingClientRect();
+                    if (r.bottom > 0 && r.top < window.innerHeight) paint(el, 'padding');
+                });
+            } else if (payload.what === 'gap') {
+                // 카드가 늘어선 줄 (그 사이 간격이 이 값이다)
+                document.querySelectorAll('.sky-features, .ig-grid, .ql-method-grid').forEach(el => {
+                    const r = el.getBoundingClientRect();
+                    if (r.bottom > 0 && r.top < window.innerHeight) paint(el, 'margin');
+                });
+            }
+            if (!boxHints.length) {
+                // 화면에 없으면 첫 번째로 데려간다
+                const sel = payload.what === 'maxw' ? '.vb-wrap' : '.sky-features, .ig-grid';
+                document.querySelector(sel)?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+            }
+        }
+        else if (type === 'pageTokenPreview') {
+            // 페이지 토큰을 조절하는 동안 화면에 바로 보여 준다
+            let tag = document.getElementById('__ed-pagetoken-css');
+            if (!tag) {
+                tag = document.createElement('style');
+                tag.id = '__ed-pagetoken-css';
+                (document.head || document.documentElement).appendChild(tag);
+            }
+            const body = Object.entries(payload.vars || {})
+                .map(([k, v]) => `${k}:${v} !important`).join(';');
+            tag.textContent = body ? `:root{${body}}` : '';
+            setTimeout(reportHeight, 80);
+        }
         else if (type === 'gapPreview') {
             // 조절 중 실시간 반영 — 전체는 토큰, 개별은 그 섹션에만
             let tag = document.getElementById('__ed-gap-css');
@@ -1426,7 +1499,7 @@
         else if (type === 'highlight') showHighlight(payload.area);
         else if (type === 'clearHighlight') clearHighlight();
         else if (type === 'getDesignSystem') post('designSystem', collectDesignSystem());
-        else if (type === 'ping') post('ready', { page: PAGE, title: document.title, classes: pageClasses(), vars: pageVars(), mainPath: pathOf(document.querySelector('main') || document.body) });
+        else if (type === 'ping') post('ready', { page: PAGE, title: document.title, classes: pageClasses(), vars: pageVars(), mainPath: pathOf(document.querySelector('main') || document.body), pageTokens: pageTokens() });
     });
 
     // ---------- 박스 모델 하이라이트 ----------
@@ -1717,5 +1790,5 @@
         post('panEnd', {});
     }, true);
 
-    post('ready', { page: PAGE, title: document.title, classes: pageClasses(), vars: pageVars(), mainPath: pathOf(document.querySelector('main') || document.body) });
+    post('ready', { page: PAGE, title: document.title, classes: pageClasses(), vars: pageVars(), mainPath: pathOf(document.querySelector('main') || document.body), pageTokens: pageTokens() });
 })();

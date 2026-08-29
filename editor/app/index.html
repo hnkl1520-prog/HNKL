@@ -3,6 +3,11 @@
 <head>
 <meta charset="utf-8">
 <title>HNKL Editor</title>
+    <!-- 앱으로 설치하면 독에 자체 아이콘이 생기고, 브라우저 창이 아닌 것처럼 열린다.
+         (Chrome 주소창 오른쪽 설치 아이콘 → '설치') -->
+    <link rel="manifest" href="/__app/manifest.webmanifest">
+    <link rel="icon" href="/__app/icons/app/icon-192.png">
+    <meta name="theme-color" content="#F1F1F3">
 <link rel="stylesheet" href="/__app/app.css">
 </head>
 <body>
@@ -147,21 +152,29 @@
         <!-- 아무것도 고르지 않았을 때 — 이 패널은 '페이지 전체'를 다룬다.
              요소를 고르면 그 요소로 바뀐다. (접어 두면 못 찾는다는 걸 겪었다) -->
         <div id="emptyState">
-            <div class="selTag">Page</div>
-            <div class="selMeta" id="pageMeta"></div>
+            <!-- 파일 경로는 좌상단에 이미 있으므로 다시 쓰지 않는다 -->
+            <details class="fold" id="pageBg" open>
+                <summary>Page background</summary>
+                <div class="fold__body" id="pageBgBody"></div>
+            </details>
 
-            <div class="group">
-                <h3>Section rhythm</h3>
-<div class="sp-pane">
+            <details class="fold" id="pageLayoutFold" open>
+                <summary>Layout</summary>
+                <div class="fold__body" id="pageLayout"></div>
+            </details>
+
+            <details class="fold" open>
+                <summary>Space between sections</summary>
+                <div class="fold__body">
                 <label class="sp-row sp-slider">
-                    <span>All sections <em id="gapApplyCount"></em></span>
+                    <span>Every section <em id="gapApplyCount"></em></span>
                     <input type="range" id="gapRange" min="0" max="320" step="4" value="144">
                     <output id="gapRangeVal">144px</output>
                 </label>
 
                 <!-- 토큰을 따르지 않는 섹션 -->
                 <div class="sp-exc" id="gapExc" hidden>
-                    <div class="sp-exc__head">Overridden sections <b id="gapExcCount">0</b></div>
+                    <div class="sp-exc__head">Sections that ignore this <b id="gapExcCount">0</b></div>
                     <div class="sp-exc__list" id="gapExcList"></div>
                 </div>
                 <label class="sp-row">
@@ -176,8 +189,8 @@
                         <button data-scope="one">This edge</button>
                     </div>
                 </div>
-            </div>
-            </div>
+                </div>
+            </details>
 
             <p class="empty-hint">Pick anything in the preview to change just that part.<br>Double-click text to edit it in place.</p>
         </div>
