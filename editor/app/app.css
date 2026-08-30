@@ -41,6 +41,8 @@
     --r-group-lg: 18px;   /* 큰 버튼 묶음 */
     --r-card: 14px;       /* 패널·카드 */
     --r-input: 10px;      /* 입력·드롭다운 */
+    --hairline: rgba(0,0,0,.07);   /* 아주 연한 테두리 */
+    --ctl-h: 32px;        /* 모든 입력·설정 칸의 키 — 하나로 맞춘다 */
     font-family: 'Pretendard', -apple-system, 'Segoe UI', system-ui, sans-serif;
 }
 
@@ -66,7 +68,7 @@ body { font-weight: 400; }
 .brand { font-weight: 400; }
 /* 작은 구분 라벨 — 사이트 .vb-eyebrow 와 같은 규칙 (회색 · 대문자 · 넓은 자간).
    사이트는 여기에 포인트색을 쓰지 않는다. 파란색은 번호 강조에만. */
-.lp-group-label, .lp-group-sub, .group > h3, .sp-label, .ds3-sub, .sp-exc__head {
+.lp-group-label, .lp-group-sub, .group > h3, .sp-label, .ds3-sub {
     letter-spacing: 0.12em;
     text-transform: uppercase;
     font-weight: 600;
@@ -219,12 +221,6 @@ body { font-weight: 400; }
 .ct-tool.on { background: var(--text); color: #fff; }
 /* 덩어리 안에 여러 크기가 섞여 있을 때의 안내 */
 .fold-note { margin: 2px 2px 6px; font-size: 11px; line-height: 1.5; color: var(--dim); }
-/* 값은 들어갔는데 화면이 그대로일 때의 이유 */
-.blocked-note {
-    margin: -2px 2px 10px; padding: 6px 9px;
-    font-size: 11px; line-height: 1.5; color: #8a6508;
-    background: rgba(245,158,11,.10); border-radius: 6px;
-}
 /* 고른 것의 이름 — 코드 이름이 아니라 사람이 부르는 이름 */
 .selTag { font-weight: 600; font-size: 15px; color: var(--text); }
 .selMeta { color: var(--dim); font-size: 11px; margin: 3px 0 12px; font-variant-numeric: tabular-nums; }
@@ -399,56 +395,86 @@ body { font-weight: 400; }
 .sp-pane { padding: 2px 11px 12px; display: flex; flex-direction: column; gap: 12px; }
 .sp-row > span em { font-style: normal; color: var(--warn); font-weight: 600; }
 /* 토큰을 따르지 않는 섹션 목록 */
-.sp-exc {
-    border: 1px solid rgba(245,158,11,.45); border-radius: 8px;
-    background: rgba(245,158,11,.08); padding: 8px 12px;
-}
+/* 예외 목록 — 경고가 아니라 '알아 둘 것' 이라 다른 묶음과 같은 결로 둔다 */
+.sp-exc { margin: 13px 0 0 2px; }
 .sp-exc[hidden] { display: none; }
-.sp-exc__head { font-size: 11px; font-weight: 700; color: #B45309; margin-bottom: 8px; }
-.sp-exc__list { display: flex; flex-direction: column; gap: 4px; }
-.sp-exc__item {
-    display: flex; align-items: center; justify-content: space-between; gap: 8px;
-    width: 100%; text-align: left; cursor: pointer;
-    background: var(--surface-1); border: 1px solid var(--line); border-radius: var(--r-input);
-    padding: 4px 8px; font: inherit; font-size: 11px; color: var(--text);
-    transition: background .12s, border-color .12s;
+/* 값에 딸린 각주다 — 설정만큼 무겁게 보이면 안 된다 */
+.sp-exc__sum {
+    display: block; padding: 2px 0; border: 0; background: none; cursor: pointer;
+    font: inherit; font-size: 11px; color: var(--dim); text-align: left;
 }
-.sp-exc__item:hover { background: var(--surface-2); border-color: #c9c9d0; }
+.sp-exc__sum:hover, .sp-exc__sum.is-open { color: var(--text); }
+.sp-exc__sum b { font-weight: 600; }
+.sp-exc__list { display: flex; flex-direction: column; margin-top: 4px; }
+.sp-exc__list[hidden] { display: none; }
+.sp-exc__item {
+    display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
+    padding: 4px 6px; border: 0; border-radius: 5px; background: none; cursor: pointer;
+    font: inherit; font-size: 11px; color: var(--text); text-align: left;
+}
+.sp-exc__item:hover { background: var(--surface-2); }
 .sp-exc__name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.sp-exc__val { flex: 0 0 auto; color: #B45309; font-weight: 700; font-variant-numeric: tabular-nums; }
+.sp-exc__val { flex: 0 0 auto; color: var(--dim); font-variant-numeric: tabular-nums; }
 
-.sp-check { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--dim); cursor: pointer; }
+.sp-check { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--dim); cursor: pointer; font-weight: 400; }
 .sp-check input { accent-color: var(--accent); margin: 0; }
 .sp-row { display: flex; flex-direction: column; gap: 8px; }
 /* display 를 정해 두면 hidden 속성이 먹지 않는다 — 숨김이 이기게 한다 */
 .sp-row[hidden], .sp-exc[hidden] { display: none; }
 .sp-row > span { font-size: 11px; color: var(--dim); font-weight: 600; }
+
+/* 페이지 설정의 세로 리듬.
+   값과 그에 딸린 보기 토글은 한 덩어리로 붙이고, 덩어리끼리는 넉넉히 떼어 놓는다. */
+.sp-toggle, #pageLayout > label.sp-row { margin: 9px 0 0 2px; }
+#pageLayout > label.sp-row + .pt-row { margin-top: 20px; }
 .sp-label { font-size: 11px; color: var(--dim); font-weight: 600; }
 .sp-presets { display: flex; flex-direction: column; gap: 8px; }
 .sp-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .sp-btns button {
     background: var(--surface-1); border: 1px solid var(--line); color: var(--text);
-    border-radius: var(--r-btn); padding: 7px 8px; font: inherit; font-size: 12px; cursor: pointer;
+    border-radius: var(--r-input); padding: 0 9px; font: inherit; font-size: 13px; cursor: pointer;
+    height: var(--ctl-h); box-sizing: border-box;
     transition: background .15s, border-color .15s;
 }
 .sp-btns button:hover { background: var(--surface-2); border-color: #c9c9d0; }
-.sp-slider input { width: 100%; accent-color: var(--accent); margin: 0; }
+.sp-slider input[type=range] {
+    -webkit-appearance: none; appearance: none;
+    width: 100%; height: 4px; margin: 6px 0; padding: 0;
+    background: var(--gray-10); border-radius: 999px; cursor: pointer;
+}
+.sp-slider input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 14px; height: 14px; border-radius: 50%;
+    background: var(--accent); border: 2px solid #fff;
+    box-shadow: 0 1px 3px rgba(0,0,0,.22); cursor: grab;
+}
+.sp-slider input[type=range]::-moz-range-thumb {
+    width: 14px; height: 14px; border-radius: 50%;
+    background: var(--accent); border: 2px solid #fff; box-shadow: 0 1px 3px rgba(0,0,0,.22);
+}
+.sp-slider input[type=range]::-moz-range-track { height: 4px; background: var(--gray-10); border-radius: 999px; }
 .sp-slider output {
     font-size: 12px; color: var(--accent); font-weight: 700;
     font-variant-numeric: tabular-nums;
+    display: block; margin-bottom: 10px;   /* 아래 항목과 붙어 있었다 */
 }
 
+/* 배율·해상도 안내 — 바뀔 때만 잠깐 떴다 사라진다.
+   계속 떠 있으면 캔버스 아래쪽을 가리고, 이미 아는 정보라 눈에 걸리기만 한다. */
 .stageInfo {
     position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);
     color: var(--dim); font-size: 11px; white-space: nowrap;
     background: rgba(23,24,27,.85); padding: 3px 10px; border-radius: 5px;
     pointer-events: none; z-index: 100;
+    opacity: 0; transition: opacity .35s ease;
 }
+.stageInfo.is-on { opacity: 1; transition-duration: .12s; }
 
 /* ---------- 오른쪽 패널 (플로팅) ---------- */
 .panel {
     position: absolute; right: 12px; top: 12px; bottom: 12px;
-    width: 296px; z-index: 10;
+    /* 왼쪽 라이브러리와 같은 폭 — 나란히 두면 2px 차이도 눈에 띈다 */
+    width: 294px; box-sizing: border-box; z-index: 10;
     background: var(--float-bg);
     backdrop-filter: var(--float-blur); -webkit-backdrop-filter: var(--float-blur);
     border: 1px solid var(--float-line);
@@ -470,8 +496,9 @@ body { font-weight: 400; }
 .modeRow > span { color: var(--dim); font-size: 13px; }
 .seg { display: flex; border: 1px solid var(--line); border-radius: var(--r-group); overflow: hidden; }
 .seg button {
-    background: transparent; color: var(--dim); border: 0; padding: 5px 9px;
+    background: transparent; color: var(--dim); border: 0; padding: 0 10px;
     font: inherit; font-size: 12px; cursor: pointer;
+    height: calc(var(--ctl-h) - 2px);   /* 묶음 테두리 1px 씩을 빼면 바깥이 32px */
 }
 .seg button.on { background: var(--accent); color: #fff; }
 .modeHelp { color: var(--dim); font-size: 11px; line-height: 1.6; margin: 0 0 14px; }
@@ -529,48 +556,40 @@ body { font-weight: 400; }
 
 /* 값 칸이 좁으면 "지금: 0px (5..." 처럼 잘려서 못 읽는다.
    라벨을 위로 올리고 입력에 한 줄을 통째로 준다. */
+/* 이름은 왼쪽, 값 칸은 오른쪽에 고정 폭으로 — 페이지 설정(.pt-row)과 같은 규칙 */
 .field {
-    display: grid; grid-template-columns: 62px minmax(0, 1fr) auto;
+    display: grid; grid-template-columns: minmax(0, 1fr) 150px;
     align-items: center; gap: 8px; margin-bottom: 8px;
 }
+/* 버튼 묶음은 글자 길이만큼만 (150px 에 가두면 줄이 접힌다) */
+.field:has(> .segRow) { grid-template-columns: minmax(0, 1fr) auto; }
+.field:has(> .freeBtn) { grid-template-columns: minmax(0, 1fr) 1fr auto; }
 .field label { color: var(--dim); font-size: 12px; line-height: 1.3; }
+/* 이름이 필요 없는 줄(묶음 제목이 이미 말해 준다)은 칸을 나누지 않는다 */
+.field--wide { display: block; }
+.field--wide > .color-btn { width: 100%; }
 .field input[type=text] {
     width: 100%; min-width: 0; background: var(--surface-1); color: var(--text);
-    border: 1px solid var(--line); border-radius: var(--r-input); padding: 5px 7px; font: inherit;
+    border: 1px solid var(--line); border-radius: var(--r-input); padding: 0 9px; font: inherit;
+    font-size: 13px; height: var(--ctl-h); box-sizing: border-box;
     font-variant-numeric: tabular-nums;
 }
+/* 끌어서 조절할 수 있는 칸 — 손을 올리면 그렇게 보여야 한다 */
+.field input.is-scrub:not(:focus) { cursor: ns-resize; }
 .field input[type=text]:focus { outline: 1px solid var(--accent); border-color: var(--accent); }
 .field input.changed { border-color: var(--warn); color: var(--warn); }
-.field .stepper { display: flex; flex-direction: column; gap: 1px; }
-.field .stepper button {
-    background: var(--surface-1); color: var(--dim); border: 1px solid var(--line);
-    width: 20px; height: 12px; padding: 0; font-size: 8px; line-height: 1; cursor: pointer; border-radius: 3px;
-}
-.field .stepper button:hover { background: var(--surface-2); color: var(--text); }
 
 /* 인스펙터: 토큰 선택 드롭다운 (기본) + '직접' 잠금 해제 버튼 */
 .tokenSel {
     width: 100%; min-width: 0;
     background: var(--surface-1); color: var(--text); border: 1px solid var(--line);
-    border-radius: var(--r-input); padding: 8px 12px; font: inherit; font-size: 13px; cursor: pointer;
-    text-overflow: ellipsis;
+    border-radius: var(--r-input); padding: 0 9px; font: inherit; font-size: 13px; cursor: pointer;
+    height: var(--ctl-h); box-sizing: border-box; text-overflow: ellipsis;
 }
 .tokenSel:focus { outline: 1px solid var(--accent); border-color: var(--accent); }
 .tokenSel.changed { border-color: var(--warn); color: var(--warn); }
-.freeBtn { flex: 0 0 auto; padding: 4px 8px; font-size: 12px; }
+.freeBtn { flex: 0 0 auto; padding: 0 10px; font-size: 12px; height: var(--ctl-h); box-sizing: border-box; }
 
-/* 이 값이 '어느 규칙에서 오는지' — 평소엔 숨기고 그 줄에 마우스를 올렸을 때만 보여준다.
-   (모든 항목에 항상 띄우면 화면이 글자로 뒤덮여 정작 값이 안 보인다) */
-.origin {
-    font-size: 10px; color: var(--dim); margin: -3px 0 6px 100px;
-    word-break: break-all; line-height: 1.4;
-    max-height: 0; opacity: 0; overflow: hidden;
-    transition: max-height .15s, opacity .15s;
-}
-.field-wrap:hover .origin,
-.field-wrap:focus-within .origin { max-height: 40px; opacity: .85; }
-.origin b { color: var(--accent); font-weight: 600; }
-.field-wrap { padding: 1px 0; }
 
 /* 위·아래 이웃과의 간격 */
 .nb-note { font-size: 11px; color: var(--dim); line-height: 1.5; margin: 4px 0 0; }
@@ -581,23 +600,15 @@ body { font-weight: 400; }
     content: '▾'; font-size: 9px; color: var(--dim); transition: transform .15s;
 }
 .group.is-collapsed > h3::before { transform: rotate(-90deg); }
-.group.is-collapsed > .field-wrap,
 .group.is-collapsed > .field,
 .group.is-collapsed > .segRow { display: none; }
 
-/* 고급 속성 토글 버튼 */
-.insp-more {
-    width: 100%; margin-top: 10px; padding: 8px;
-    background: transparent; border: 1px dashed var(--line); border-radius: var(--r-btn);
-    color: var(--dim); font: inherit; font-size: 12px; cursor: pointer;
-    transition: background .15s, color .15s;
-}
-.insp-more:hover { background: var(--hover-tint); color: var(--text); }
 
-.segRow { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 8px; }
+.segRow { display: flex; gap: 4px; flex-wrap: wrap; }
 .segRow button {
     background: var(--surface-1); color: var(--dim); border: 1px solid var(--line);
-    border-radius: var(--r-btn); padding: 4px 9px; font: inherit; font-size: 12px; cursor: pointer;
+    border-radius: var(--r-input); padding: 0 10px; font: inherit; font-size: 12px; cursor: pointer;
+    height: var(--ctl-h); box-sizing: border-box;
 }
 .segRow button.on { background: var(--accent); border-color: var(--accent); color: #fff; }
 
@@ -862,7 +873,8 @@ body { font-weight: 400; }
 .sp-ring {
     position: relative; border-radius: var(--r-btn);
     display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-columns: 46px minmax(0, 1fr) 46px;   /* 값이 길어져도 칸이 안 늘어나게 */
+    overflow: hidden;
     grid-template-rows: auto auto auto;
     align-items: center; justify-items: center;
     gap: 4px 2px; padding: 18px 5px 6px;
@@ -871,7 +883,7 @@ body { font-weight: 400; }
 .sp-ring--padding { background: rgba(59,130,246,.10); border: 1px dashed rgba(59,130,246,.45); width: 100%; box-sizing: border-box; }
 .sp-ring__name {
     position: absolute; top: 4px; left: 7px;
-    font-size: 8px; letter-spacing: .07em; font-weight: 700;
+    font-size: 9px; font-weight: 600;
 }
 .sp-ring--margin  > .sp-ring__name { color: #b45309; }
 .sp-ring--padding > .sp-ring__name { color: #1d4ed8; }
@@ -882,12 +894,12 @@ body { font-weight: 400; }
 .sp-ring > .sp-edge:nth-of-type(4) { grid-area: 2 / 1; }
 .sp-ring--padding, .sp-core { grid-area: 2 / 2; }
 .sp-core {
-    width: 100%; box-sizing: border-box; padding: 10px 4px; text-align: center;
+    width: 100%; min-width: 0; box-sizing: border-box; height: 30px; text-align: center;
     background: var(--surface-1); border: 1px solid var(--line); border-radius: 6px;
-    font-size: 10px; color: var(--dim); font-variant-numeric: tabular-nums; white-space: nowrap;
+    overflow: hidden;
 }
 
-.sp-edge { display: flex; align-items: baseline; gap: 1px; font-variant-numeric: tabular-nums; }
+.sp-edge { display: flex; align-items: baseline; justify-content: center; gap: 2px; min-width: 0; font-variant-numeric: tabular-nums; }
 .sp-edge__label { font-size: 9px; color: var(--dim); }
 .sp-edge__val {
     font-size: 12px; font-weight: 600; color: var(--text);
@@ -896,10 +908,7 @@ body { font-weight: 400; }
 }
 .sp-edge__val:hover { border-color: var(--line); }
 .sp-edge__val.is-changed { color: var(--accent); }
-.sp-edge__unit { font-size: 8px; color: var(--dim); }
-/* 시스템 단계에 맞으면 이름(S10)을, 벗어났으면 점을 */
-.sp-edge__tok { font-size: 8px; color: #1d4ed8; font-weight: 700; }
-.sp-edge__tok.is-off { color: var(--dim); font-weight: 400; }
+/* 디자인 시스템 단계에서 벗어난 값 */
 .sp-edge.is-free .sp-edge__val { color: #b45309; }
 .sp-edge__input {
     width: 40px; font: inherit; font-size: 12px; text-align: center;
@@ -911,14 +920,20 @@ body.is-dragging-num, body.is-dragging-num * { cursor: ns-resize !important; use
 /* 접히는 묶음 — 자주 안 쓰는 속성은 닫아 둔다 */
 .fold { border-top: 1px solid var(--line); }
 .fold > summary {
-    list-style: none; cursor: pointer; padding: 11px 2px;
-    font-size: 12px; font-weight: 600; color: var(--dim); user-select: none;
+    list-style: none; cursor: pointer; padding: 12px 2px 10px;
+    font-size: 12.5px; font-weight: 700; color: var(--text); user-select: none;
+    letter-spacing: -0.01em;
 }
 .fold > summary::-webkit-details-marker { display: none; }
-.fold > summary::before { content: '▸ '; font-size: 9px; }
-.fold[open] > summary::before { content: '▾ '; }
-.fold > summary:hover { color: var(--text); }
-.fold__body { padding-bottom: 10px; }
+.fold > summary:hover { color: var(--accent); }
+/* 묶음 제목은 맨 왼쪽, 안쪽 항목은 한 단 들여쓴다 — 무엇이 무엇에 속하는지 눈으로 갈린다 */
+.fold__body { padding: 0 0 12px 10px; }
+/* 묶음 안에서 갈래를 나누는 작은 제목 (묶음 제목보다 한 단 낮게) */
+.sub-label {
+    margin: 14px 0 6px; font-size: 11px; font-weight: 600; color: var(--dim);
+}
+.group > *:not(h3) { padding-left: 10px; }
+.group > h3 { padding-left: 0; }
 
 
 /* ── 색 고르기 ─────────────────────────────────────────────────
@@ -926,8 +941,9 @@ body.is-dragging-num, body.is-dragging-num * { cursor: ns-resize !important; use
    디자인 시스템에 있는 색이면 이름을, 없으면 헥스코드를 보여준다. */
 .color-btn {
     display: flex; align-items: center; gap: 7px; min-width: 0;
-    background: var(--surface-1); border: 1px solid var(--line); border-radius: var(--r-btn);
-    padding: 5px 9px; font: inherit; font-size: 12px; color: var(--text); cursor: pointer;
+    background: var(--surface-1); border: 1px solid var(--line); border-radius: var(--r-input);
+    padding: 0 9px; font: inherit; font-size: 13px; color: var(--text); cursor: pointer;
+    height: var(--ctl-h); box-sizing: border-box;
 }
 .color-btn:hover { border-color: #c9c9d0; }
 .color-btn.changed { border-color: var(--accent); color: var(--accent); }
@@ -941,44 +957,98 @@ body.is-dragging-num, body.is-dragging-num * { cursor: ns-resize !important; use
 }
 .color-name { font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
+/* 패널 안에서 아래로 밀어내지 않고, 피그마처럼 옆으로 열린다.
+   패널이 오른쪽 끝에 붙어 있으므로 왼쪽으로 편다. */
 .color-pop {
-    margin: 6px 0 10px; padding: 10px;
+    position: fixed; z-index: 300; width: 258px; padding: 12px;
     background: var(--surface-1); border: 1px solid var(--line); border-radius: var(--r-group);
+    box-shadow: 0 12px 36px rgba(0,0,0,.16);
+    max-height: 78vh; overflow-y: auto;
 }
+.color-pop[hidden] { display: none; }
+
+/* 색 고르개 — 정방형 판, 그 아래 스포이드와 색상 띠 한 줄 */
+.cp { margin-bottom: 10px; }
+.cp-sv {
+    position: relative; aspect-ratio: 1; border-radius: 8px; cursor: crosshair;
+    border: 1px solid var(--hairline);
+}
+.cp-bar { display: flex; align-items: center; gap: 10px; margin-top: 11px; }
+.cp-pipette {
+    flex: 0 0 auto; width: 26px; height: 26px; padding: 0;
+    display: grid; place-items: center;
+    background: none; border: 0; border-radius: 6px; cursor: pointer; color: var(--dim);
+}
+.cp-pipette:hover { background: var(--surface-2); color: var(--text); }
+.cp-pipette svg { width: 17px; height: 17px; fill: currentColor; }
+.cp-hue {
+    position: relative; flex: 1; height: 14px; border-radius: 999px; cursor: ew-resize;
+    background: linear-gradient(to right, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00);
+    border: 1px solid var(--hairline);
+}
+.cp-dot {
+    position: absolute; width: 13px; height: 13px; border-radius: 50%;
+    border: 2px solid #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.18);
+    transform: translate(-50%, -50%); pointer-events: none;
+}
+.cp-hue > .cp-dot { top: 50%; background: transparent; }
 .color-grid { display: grid; grid-template-columns: repeat(9, 1fr); gap: 5px; }
+/* 색 갈래 이름 — 그 아래 견본 한 줄이 딸린다 */
+.color-cat {
+    margin: 12px 0 6px; font-size: 10px; font-weight: 600; color: var(--dim);
+}
+.color-cat:first-child { margin-top: 0; }
+/* 갈래 사이를 선으로 가른다 (두 번째부터) */
+.color-grid + .color-cat {
+    padding-top: 11px; border-top: 1px solid var(--line);
+}
 .color-sw {
-    aspect-ratio: 1; border-radius: 5px; border: 1px solid rgba(0,0,0,.14);
+    aspect-ratio: 1; border-radius: 5px; border: 1px solid var(--hairline);
     cursor: pointer; padding: 0;
 }
 .color-sw:hover { transform: scale(1.12); }
 .color-sw.is-on { outline: 2px solid var(--accent); outline-offset: 1px; }
-.color-free { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
-.color-free > span { font-size: 11px; color: var(--dim); }
+.color-free { margin-top: 12px; padding-top: 11px; border-top: 1px solid var(--line); }
+.color-free .color-hex { width: 100%; }
 .color-hex {
-    flex: 1; min-width: 0; font: inherit; font-size: 12px; text-transform: uppercase;
-    background: var(--bg); border: 1px solid var(--line); border-radius: var(--r-btn); padding: 5px 8px;
+    flex: 1; min-width: 0; font: inherit; font-size: 13px; text-transform: uppercase;
+    background: var(--bg); border: 1px solid var(--line); border-radius: var(--r-input);
+    padding: 0 9px; height: var(--ctl-h); box-sizing: border-box;
 }
 .color-hex:focus { outline: none; border-color: var(--accent); }
 
 
 /* 아무것도 고르지 않았을 때 — 페이지 전체 설정 */
 /* 페이지 전체를 정하는 값 한 줄 */
-.pt-row { display: flex; align-items: baseline; gap: 6px; padding: 5px 0; }
-.pt-label { flex: 1; font-size: 12px; color: var(--text); }
-.pt-val {
-    font-size: 13px; font-weight: 600; color: var(--text);
-    cursor: ns-resize; padding: 2px 6px; border-radius: 5px; min-width: 30px; text-align: center;
-    background: var(--surface-1); border: 1px solid transparent; font-variant-numeric: tabular-nums;
+/* 라벨과 값 두 칸 — 값 칸이 남는 폭을 채우므로 사이가 휑하지 않다 */
+.pt-row { display: grid; grid-template-columns: minmax(0, 1fr) 108px; align-items: center; gap: 8px; }
+.pt-label { font-size: 12px; color: var(--text); }
+/* 단위는 칸 안 오른쪽에 — 프레이머처럼 한 덩어리로 읽힌다 */
+.pt-field {
+    display: flex; align-items: center; gap: 4px;
+    padding: 0 9px; border-radius: var(--r-input);
+    height: var(--ctl-h); box-sizing: border-box;
+    background: var(--surface-1); border: 1px solid var(--line);
+    cursor: ns-resize;
 }
-.pt-val:hover { border-color: var(--line); }
-.pt-unit { font-size: 9px; color: var(--dim); }
+.pt-field:hover { border-color: #c9c9d0; }
+.pt-val { flex: 1; font-size: 13px; font-weight: 600; color: var(--text); font-variant-numeric: tabular-nums; }
+.pt-unit { font-size: 10px; color: var(--dim); }
 .pt-now { font-size: 10px; color: var(--dim); font-variant-numeric: tabular-nums; }
 .pt-input {
-    width: 56px; font: inherit; font-size: 13px; text-align: center;
-    border: 1px solid var(--accent); border-radius: 5px; padding: 1px 3px; background: var(--surface-1);
+    flex: 1; min-width: 0; font: inherit; font-size: 13px; font-weight: 600;
+    border: 0; padding: 0; background: transparent; color: var(--text); outline: none;
 }
 .pt-hint { margin: 0 2px 8px; font-size: 11px; line-height: 1.5; color: var(--dim); }
 .empty-hint {
     margin: 16px 2px 0; font-size: 11px; line-height: 1.7; color: var(--dim);
     padding-top: 14px; border-top: 1px solid var(--line);
 }
+
+/* 저장 중 — 아이콘 버튼이라 글자로 바꾸지 않고 흐리게만 */
+.btn.is-saving { opacity: .55; }
+
+/* 아직 쓸 수 없는 버튼. 투명도로 흐리면 '덜 그려진 것'처럼 보여서
+   글자색만 옅게 두고 모양은 온전히 남긴다. */
+.btn.ghost:disabled { opacity: 1; color: var(--dim); background: none; cursor: default; }
+.btn.ghost:disabled:hover { background: none; }

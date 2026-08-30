@@ -388,6 +388,21 @@
      * 커스텀 속성의 computed value 는 계산 결과가 아니라 적힌 글자 그대로다
      * (calc(1280px * clamp(...)) 처럼). 그래서 이것만 읽으면 기준값을 알 수 있다.
      */
+    // 페이지 배경을 '실제로' 칠하는 게 누구인지 찾는다.
+    // --bg-color 토큰만 보면, 이 페이지처럼 html 에 색을 직접 박아 둔 경우
+    // 토큰을 바꿔도 화면이 그대로라 "왜 안 되지?" 가 된다.
+    function pageBg() {
+        const clear = v => !v || v === 'transparent' || v === 'rgba(0, 0, 0, 0)';
+        for (const [sel, el] of [['html', document.documentElement], ['body', document.body]]) {
+            if (!el) continue;
+            const cs = getComputedStyle(el);
+            const img = cs.backgroundImage && cs.backgroundImage !== 'none' ? cs.backgroundImage : '';
+            if (clear(cs.backgroundColor) && !img) continue;
+            return { selector: sel, color: cs.backgroundColor, hasImage: !!img };
+        }
+        return { selector: 'body', color: '', hasImage: false };
+    }
+
     function pageTokens() {
         const want = ['--vb-maxw', '--vb-gap', '--vb-pad-block', '--vb-s', '--bg-color'];
         const cs = getComputedStyle(document.documentElement);
@@ -869,6 +884,29 @@
     //   개별 모드: 그 섹션에만 padding 을 덮어씌운다
     let gapOn = false, gapBars = [], gapScopeLocal = 'all';
     const GAP_SEL = '.vb-section';
+// 섹션을 눈에 보이는 이름으로 부른다. 클래스 이름(sec-dark)은 디자이너가 알아볼 수 없다.
+function sectionLabel(s, n) {
+    // 제목을 하나씩 순서대로 찾는다. 한 번에 찾으면 라벨과 제목을 함께 담은
+    // 껍데기가 걸려 "Interaction사용자의 행동을…" 처럼 붙어 나온다.
+    // 제목은 "Interaction<br><span>부제</span>" 처럼 줄바꿈 뒤에 부제가 붙어 있다.
+    // 첫 줄까지만 읽어야 이름이 된다.
+    const firstLine = h => {
+        let t = '';
+        for (const n of h.childNodes) {
+            if (n.nodeName === 'BR') break;
+            t += n.textContent || '';
+        }
+        return t.replace(/\s+/g, ' ').trim() || (h.textContent || '').replace(/\s+/g, ' ').trim();
+    };
+    let t = '';
+    for (const sel of ['h2', 'h1', 'h3', '.vb-label']) {
+        const h = s.querySelector(sel);
+        if (h) t = firstLine(h);
+        if (t) break;
+    }
+    if (!t) return 'Section ' + n;
+    return t.length > 24 ? t.slice(0, 23) + '…' : t;
+}
 
     function basePadPx() {
         const s = document.querySelector(GAP_SEL);
@@ -1398,11 +1436,30 @@
                 if (Math.abs(t - base) > 2 || Math.abs(b - base) > 2) {
                     out.push({
                         index: i + 1, path: pathOf(s), top: t, bottom: b,
-                        name: s.className.toString().replace('vb-section', '').trim().split(/\s+/)[0] || 'Default',
+                        name: sectionLabel(s, i + 1),
                     });
                 }
             });
             post('gapExceptions', { base, list: out });
+        }
+        else if (type === 'hintSections') {
+            // 여러 섹션을 한꺼번에 짚어 준다 — 목록에 손을 올렸을 때
+            document.querySelectorAll('.__hnkl-secmark').forEach(n => n.remove());
+            for (const p of (payload.paths || [])) {
+                const el = elementAtPath(p);
+                if (!el) continue;
+                const r = el.getBoundingClientRect();
+                const m = document.createElement('div');
+                m.className = '__hnkl-secmark';
+                m.style.cssText =
+                    'position:absolute;z-index:2147483645;pointer-events:none;border-radius:8px;' +
+                    'background:rgba(59,130,246,.14);outline:1.5px solid rgba(59,130,246,.65);';
+                m.style.top = (r.top + window.scrollY) + 'px';
+                m.style.left = (r.left + window.scrollX) + 'px';
+                m.style.width = r.width + 'px';
+                m.style.height = r.height + 'px';
+                document.body.appendChild(m);
+            }
         }
         else if (type === 'focusSection') {
             // 예외 목록에서 고른 섹션으로 이동하고 잠깐 강조한다
@@ -1463,6 +1520,22 @@
                     if (r.bottom > 0 && r.top < window.innerHeight) paint(el, 'padding');
                 });
             } else if (payload.what === 'gap') {
+                // 섹션의 위아래 여백
+                for (const sec of document.querySelectorAll('.vb-section')) {
+                    const r = sec.getBoundingClientRect();
+                    if (r.bottom < 0 || r.top > window.innerHeight) continue;
+                    const cs = getComputedStyle(sec);
+                    const top = parseFloat(cs.paddingTop) || 0, bot = parseFloat(cs.paddingBottom) || 0;
+                    const band = (y, h) => {
+                        if (h <= 0) return;
+                        const d = document.createElement('div');
+                        d.className = '__ed-boxhint __ed-boxhint--padding';
+                        d.style.cssText = `left:${window.scrollX + r.left}px;top:${window.scrollY + y}px;width:${r.width}px;height:${h}px`;
+                        document.body.appendChild(d); boxHints.push(d);
+                    };
+                    band(r.top, top); band(r.bottom - bot, bot);
+                }
+            } else if (payload.what === 'cardgap') {
                 // 카드가 늘어선 줄 (그 사이 간격이 이 값이다)
                 document.querySelectorAll('.sky-features, .ig-grid, .ql-method-grid').forEach(el => {
                     const r = el.getBoundingClientRect();
@@ -1559,7 +1632,7 @@
         else if (type === 'highlight') showHighlight(payload.area);
         else if (type === 'clearHighlight') clearHighlight();
         else if (type === 'getDesignSystem') post('designSystem', collectDesignSystem());
-        else if (type === 'ping') post('ready', { page: PAGE, title: document.title, classes: pageClasses(), vars: pageVars(), mainPath: pathOf(document.querySelector('main') || document.body), pageTokens: pageTokens() });
+        else if (type === 'ping') post('ready', { page: PAGE, title: document.title, classes: pageClasses(), vars: pageVars(), mainPath: pathOf(document.querySelector('main') || document.body), pageTokens: pageTokens(), pageBg: pageBg() });
     });
 
     // ---------- 박스 모델 하이라이트 ----------
@@ -1850,5 +1923,5 @@
         post('panEnd', {});
     }, true);
 
-    post('ready', { page: PAGE, title: document.title, classes: pageClasses(), vars: pageVars(), mainPath: pathOf(document.querySelector('main') || document.body), pageTokens: pageTokens() });
+    post('ready', { page: PAGE, title: document.title, classes: pageClasses(), vars: pageVars(), mainPath: pathOf(document.querySelector('main') || document.body), pageTokens: pageTokens(), pageBg: pageBg() });
 })();

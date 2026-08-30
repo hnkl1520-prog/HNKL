@@ -61,7 +61,7 @@
             <button id="redoBtn" class="ct-tool ct-tool--bar" disabled title="Redo (Ctrl+Shift+Z)" aria-label="Redo"><svg class="ico" viewBox="0 -960 960 960" aria-hidden="true"><path d="M373.69-240q-78.54 0-134.19-54.54-55.65-54.54-55.65-132.38 0-77.85 55.65-132 55.65-54.16 134.19-54.16h309.69L564.77-731.69 593.08-760 760-593.08 593.08-426.15l-28.31-28.31 118.61-118.62H373.69q-62.23 0-106.04 42.31-43.8 42.31-43.8 103.85 0 61.54 43.8 104.23Q311.46-280 373.69-280h290.16v40H373.69Z"/></svg></button>
             <button id="reloadBtn" class="ct-tool ct-tool--bar" title="Reload preview" aria-label="Reload"><svg class="ico" viewBox="0 -960 960 960" aria-hidden="true"><path d="M483.08-200q-117.25 0-198.63-81.34-81.37-81.34-81.37-198.54 0-117.2 81.37-198.66Q365.83-760 483.08-760q71.3 0 133.54 33.88 62.23 33.89 100.3 94.58V-760h40v209.23H547.69v-40h148q-31.23-59.85-87.88-94.54Q551.15-720 483.08-720q-100 0-170 70t-70 170q0 100 70 170t170 70q77 0 139-44t87-116h42.46Q725.08-310.15 651-255.08 576.92-200 483.08-200Z"/></svg></button>
             <span class="sep"></span>
-            <button id="saveBtn" class="btn primary" disabled title="Save to file" aria-label="Save"><svg class="ico" viewBox="0 -960 960 960" aria-hidden="true"><path d="M800-663.08v438.46q0 27.62-18.5 46.12Q763-160 735.38-160H224.62q-27.62 0-46.12-18.5Q160-197 160-224.62v-510.76q0-27.62 18.5-46.12Q197-800 224.62-800h438.46L800-663.08ZM760-646 646-760H224.62q-10.77 0-17.7 6.92-6.92 6.93-6.92 17.7v510.76q0 10.77 6.92 17.7 6.93 6.92 17.7 6.92h510.76q10.77 0 17.7-6.92 6.92-6.93 6.92-17.7V-646ZM536.54-321.92Q560-345.38 560-378.46T536.54-435q-23.46-23.46-56.54-23.46T423.46-435Q400-411.54 400-378.46t23.46 56.54q23.46 23.46 56.54 23.46t56.54-23.46ZM270.77-569.23h296.92v-120H270.77v120ZM200-646v446-560 114Z"/></svg></button>
+            <button id="saveBtn" class="btn primary" disabled title="Save" aria-label="Save"><svg class="ico" viewBox="0 -960 960 960" aria-hidden="true"><path d="M800-663.08v438.46q0 27.62-18.5 46.12Q763-160 735.38-160H224.62q-27.62 0-46.12-18.5Q160-197 160-224.62v-510.76q0-27.62 18.5-46.12Q197-800 224.62-800h438.46L800-663.08ZM760-646 646-760H224.62q-10.77 0-17.7 6.92-6.92 6.93-6.92 17.7v510.76q0 10.77 6.92 17.7 6.93 6.92 17.7 6.92h510.76q10.77 0 17.7-6.92 6.92-6.93 6.92-17.7V-646ZM536.54-321.92Q560-345.38 560-378.46T536.54-435q-23.46-23.46-56.54-23.46T423.46-435Q400-411.54 400-378.46t23.46 56.54q23.46 23.46 56.54 23.46t56.54-23.46ZM270.77-569.23h296.92v-120H270.77v120ZM200-646v446-560 114Z"/></svg></button>
         </div>
     </div>
 </header>
@@ -160,28 +160,20 @@
 
             <details class="fold" id="pageLayoutFold" open>
                 <summary>Layout</summary>
-                <div class="fold__body" id="pageLayout"></div>
-            </details>
-
-            <details class="fold" open>
-                <summary>Space between sections</summary>
                 <div class="fold__body">
-                <label class="sp-row sp-slider">
-                    <span>Every section <em id="gapApplyCount"></em></span>
-                    <input type="range" id="gapRange" min="0" max="320" step="4" value="144">
-                    <output id="gapRangeVal">144px</output>
-                </label>
-
-                <!-- 토큰을 따르지 않는 섹션 -->
-                <div class="sp-exc" id="gapExc" hidden>
-                    <div class="sp-exc__head">Sections that ignore this <b id="gapExcCount">0</b></div>
-                    <div class="sp-exc__list" id="gapExcList"></div>
-                </div>
-                <label class="sp-row">
-                    <span class="sp-check">
-                        <input type="checkbox" id="gapShow"> Show spacing in preview and drag to adjust
-                    </span>
-                </label>
+                    <div id="pageLayout"></div>
+                    <!-- 섹션 사이 간격도 '페이지가 놓이는 틀'이라 같은 묶음에 둔다 -->
+                    <label class="sp-row sp-toggle">
+                        <span class="sp-check">
+                            <input type="checkbox" id="gapShow"> Show spacing in preview
+                        </span>
+                    </label>
+                    <div class="sp-exc" id="gapExc" hidden>
+                        <button class="sp-exc__sum" id="gapExcSum" type="button">
+                            <b>0</b> sections set their own
+                        </button>
+                        <div class="sp-exc__list" id="gapExcList" hidden></div>
+                    </div>
                 <div class="sp-row" id="gapScopeRow" hidden>
                     <span>Drag applies to</span>
                     <div class="seg" id="gapScope">
@@ -192,7 +184,7 @@
                 </div>
             </details>
 
-            <p class="empty-hint">Pick anything in the preview to change just that part.<br>Double-click text to edit it in place.</p>
+
         </div>
 
         <div id="inspector" hidden>
@@ -205,17 +197,15 @@
             <div class="selMeta" id="selMeta"></div>
 
             <div class="modeRow">
-                <span>Scope</span>
+                <span>Change</span>
                 <div class="seg" id="modeSeg">
-                    <button data-mode="css" class="on">Whole rule</button>
-                    <button data-mode="inline">This element</button>
+                    <button data-mode="css" class="on">All like this</button>
+                    <button data-mode="inline">Only this</button>
                 </div>
             </div>
-            <p class="modeHelp" id="modeHelp"></p>
 
             <div id="fields"></div>
 
-            <button class="insp-more" id="inspMore" type="button" aria-expanded="false">Show advanced</button>
         </div>
     </aside>
 </main>

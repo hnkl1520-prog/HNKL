@@ -29,7 +29,11 @@ window.addEventListener('message', e => {
         pageVarSet = new Set(msg.payload?.vars || []);
         mainPath = msg.payload?.mainPath || null;
         pageTokens = msg.payload?.pageTokens || null;
+        pageBg = msg.payload?.pageBg || null;
         if (!selection) renderInspector();
+        // 토큰을 안 따르는 섹션이 몇인지 — 슬라이더가 일부에만 먹히는 이유가 된다.
+        // 미리보기가 준비된 지금 물어야 답이 온다.
+        refreshGapExceptions();
         toFrame('setPicking', pickOn);
         toFrame('setMoving', tool === 'move');
         applyPendingPreview();
@@ -42,7 +46,7 @@ window.addEventListener('message', e => {
         if (last && last.kind === 'text' && String(last.path) === String(path)) last.value = value;
         else pending.push({ kind: 'text', path, value });
         updateDirty();
-        toast('Text changed — save to write it to the file', 'ok');
+        toast('Text changed — not saved yet', 'ok');
     }
     else if (msg.type === 'textEditing') {
         // 글자를 고치는 동안에는 Delete 로 덩어리가 지워지지 않게 막는다
@@ -54,8 +58,8 @@ window.addEventListener('message', e => {
         pending.push({ kind: p.act === 'remove' ? 'remove' : 'duplicate', path: p.path });
         updateDirty();
         if (p.act === 'remove') { selection = null; renderInspector(); }
-        toast(p.act === 'remove' ? 'Deleted — save to write it to the file'
-                                 : 'Duplicated — save to write it to the file', 'ok');
+        toast(p.act === 'remove' ? 'Deleted — not saved yet'
+                                 : 'Duplicated — not saved yet', 'ok');
     }
     else if (msg.type === 'grabbed') {
         onGrabbed(msg.payload);
@@ -70,14 +74,14 @@ window.addEventListener('message', e => {
             pending.push({ kind: 'move', path: [...mainPath, idx], dir });
         }
         updateDirty();
-        toast(`Moved ${steps} step(s) — save to write it to the file`, 'ok');
+        toast(`Moved ${steps} step(s) — not saved yet`, 'ok');
     }
     else if (msg.type === 'moved') {
         // 미리보기에서는 이미 옮겨졌다. 파일에 반영할 내용만 쌓아 둔다.
         // 경로는 '옮기기 전' 기준이고 서버가 순서대로 적용하므로, 여러 번 눌러도 어긋나지 않는다.
         pending.push({ kind: 'move', path: msg.payload.path, dir: msg.payload.dir });
         updateDirty();
-        toast('Section moved — save to write it to the file', 'ok');
+        toast('Section moved — not saved yet', 'ok');
     }
     else if (msg.type === 'picked') {
         picks = msg.payload;
@@ -213,7 +217,7 @@ function onComponentDropped({ key, kind, path, position }) {
         } else if (missing.length) {
             toast(`${it.name} — ${missing.length} class(es) missing and no styles were saved (re-save it to include them)`, 'warn');
         } else {
-            toast(`${it.name} inserted — save to write it to the file`, 'ok');
+            toast(`${it.name} inserted — not saved yet`, 'ok');
         }
         return;
     }
@@ -238,7 +242,7 @@ function onComponentDropped({ key, kind, path, position }) {
     pending.push({ kind: 'insert', path, html, position });
     toFrame('insertPreview', { path, html, position });
     updateDirty();
-    toast(kind === 'media' ? 'Media added — set the link in the inspector' : 'Inserted — save to write it to the file', 'ok');
+    toast(kind === 'media' ? 'Image added — set its link on the right' : 'Inserted — not saved yet', 'ok');
 }
 
 /** 현재 파일 위치를 경로로 보여준다 (works/projects/vibra/vibra.html → Works / Projects / Vibra / vibra.html) */
@@ -309,8 +313,18 @@ function applyStage() {
     // (긴 페이지에서 리로드 직후 화면이 엉뚱한 곳에 가 있는 원인)
     const stageEl = document.getElementById('stage');
     if (stageEl && (stageEl.scrollTop || stageEl.scrollLeft)) { stageEl.scrollTop = 0; stageEl.scrollLeft = 0; }
-    $('#stageInfo').textContent =
-        `Rendering at ${bp.w}px · ${Math.round(zoom * 100)}% · Ctrl+wheel to zoom`;
+    showStageInfo(`${bp.w}px wide · ${Math.round(zoom * 100)}%`);
+}
+
+let stageInfoTimer = null;
+/** 배율이 바뀐 순간에만 잠깐 알려 준다 */
+function showStageInfo(text) {
+    const el = $('#stageInfo');
+    if (!el) return;
+    el.textContent = text;
+    el.classList.add('is-on');
+    clearTimeout(stageInfoTimer);
+    stageInfoTimer = setTimeout(() => el.classList.remove('is-on'), 1400);
 }
 
 /**
@@ -338,7 +352,16 @@ function centerFrame() {
     const sh = stageEl.clientHeight;
     const scaledW = bp.w * zoom;
     const scaledH = pageH * zoom;
-    canvasX = Math.max(40, (sw - scaledW) / 2);
+
+    // 좌우 패널은 캔버스 위에 떠 있다. 무대 전체를 기준으로 가운데를 잡으면
+    // 미리보기가 왼쪽 패널 밑에 깔리고 오른쪽에 빈 바닥만 남는다.
+    const shown = el => el && !el.hidden && !el.classList.contains('is-closed')
+        ? el.getBoundingClientRect().width : 0;
+    const padL = shown(document.querySelector('.left-panel')) + 24;
+    const padR = shown(document.querySelector('aside.panel')) + 24;
+    const room = sw - padL - padR;
+
+    canvasX = room > scaledW ? padL + (room - scaledW) / 2 : Math.max(24, (sw - scaledW) / 2);
     canvasY = scaledH < sh ? (sh - scaledH) / 2 : 40;
     applyStage();
 }
@@ -528,26 +551,33 @@ $('#gapShow')?.addEventListener('change', e => {
  * 이게 있으면 슬라이더가 일부에만 먹혀 '왜 얘만 안 움직이지?' 가 된다 → 눈에 보이게 알린다.
  */
 function renderGapExceptions({ base, list }) {
-    const box = $('#gapExc'), host = $('#gapExcList'), cnt = $('#gapExcCount');
-    const applied = $('#gapApplyCount');
-    const total = (dsData && 0) || null;   // 총 개수는 아래에서 목록으로 계산
-    if (applied) applied.textContent = list.length ? `(${list.length} hidden)` : '';
-    if (!box || !host) return;
+    const box = $('#gapExc'), host = $('#gapExcList'), sum = $('#gapExcSum');
+    if (!box || !host || !sum) return;
     if (!list.length) { box.hidden = true; return; }
     box.hidden = false;
-    cnt.textContent = list.length;
+    // "1 sections" 는 어색하다
+    const many = list.length > 1;
+    sum.innerHTML = `<b>${list.length}</b> section${many ? 's' : ''} set${many ? '' : 's'} ${many ? 'their' : 'its'} own`;
+
+    // 줄에 손을 올리면 그 섹션들이 미리보기에서 한꺼번에 밝아진다 — 글로 설명할 필요가 없다
+    const paths = list.map(it => it.path);
+    sum.onmouseenter = () => toFrame('hintSections', { paths });
+    sum.onmouseleave = () => toFrame('hintSections', { paths: [] });
+    sum.onclick = () => { host.hidden = !host.hidden; sum.classList.toggle('is-open', !host.hidden); };
+
     host.innerHTML = '';
     for (const it of list) {
         const row = el('button', 'sp-exc__item');
         row.type = 'button';
-        const 값 = it.top === it.bottom ? `${it.top}px` : `↑${it.top} ↓${it.bottom}`;
+        const 값 = it.top === it.bottom ? `${it.top}` : `${it.top} / ${it.bottom}`;
         row.innerHTML =
-            `<span class="sp-exc__name">섹션 ${it.index} · ${it.name}</span>` +
+            `<span class="sp-exc__name">${it.name}</span>` +
             `<span class="sp-exc__val">${값}</span>`;
-        row.title = `Differs from the ${base}px default — click to locate`;
+        row.onmouseenter = () => toFrame('hintSections', { paths: [it.path] });
+        row.onmouseleave = () => toFrame('hintSections', { paths: [] });
         row.addEventListener('click', () => {
+            toFrame('hintSections', { paths: [] });
             toFrame('focusSection', { path: it.path });
-            toast(`Go to section ${it.index}`, 'ok');
         });
         host.appendChild(row);
     }
@@ -565,7 +595,7 @@ function onGapEnd({ path, px, side }) {
         const i = pending.findIndex(p => p.kind === 'css' && p.selector === ':root' && p.prop === '--vb-pad-block');
         const edit = { kind: 'css', selector: ':root', prop: '--vb-pad-block', value: px + 'px' };
         if (i >= 0) pending[i] = edit; else pending.push(edit);
-        toast(`All sections ${px}px — save to write it to the file`, 'ok');
+        toast(`All sections ${px}px — not saved yet`, 'ok');
     } else {
         // 눈에 보이는 간격 = 맞닿은 두 여백의 합. 짝이 되는 섹션도 같이 저장한다.
         const put = (p, prop) => {
@@ -588,112 +618,16 @@ function onGapEnd({ path, px, side }) {
 //   when : 어떤 요소일 때 보여줄지 (없으면 항상)
 //   adv  : 고급 — 기본은 접어 두고 'Show advanced'로 펼친다
 // 선택한 게 무엇이든 24개를 다 쏟아내면 정작 필요한 값을 못 찾는다.
-const GROUPS = [
-    { key: 'typo',    title: 'Text',  props: ['font-size', 'line-height', 'font-weight', 'color'], when: s => s.hasText },
-    { key: 'margin',  title: 'Margin',  props: ['margin-top', 'margin-bottom'] },
-    { key: 'padding', title: 'Padding',  props: ['padding-top', 'padding-bottom'] },
-    { key: 'margin2', title: 'Margin (left/right)', props: ['margin-left', 'margin-right'], adv: true },
-    { key: 'padding2',title: 'Padding (left/right)', props: ['padding-left', 'padding-right'], adv: true },
-    { key: 'layout',  title: 'Layout',    props: ['gap', 'justify-content', 'align-items'], when: s => s.isFlexOrGrid },
-    { key: 'size',    title: 'Size',    props: ['width', 'height', 'max-width', 'min-width'], adv: true },
-    { key: 'look',    title: 'Appearance',    props: ['background-color', 'border-radius', 'opacity'] },
-];
 const LABEL = {
     'font-size': 'Font size', 'line-height': 'Line height', 'font-weight': 'Weight', 'color': 'Color',
     'margin-top': 'Top', 'margin-right': 'Right', 'margin-bottom': 'Bottom', 'margin-left': 'Left',
     'padding-top': 'Top', 'padding-right': 'Right', 'padding-bottom': 'Bottom', 'padding-left': 'Left',
-    'width': 'Width', 'max-width': 'Max width', 'min-width': 'Min width', 'height': 'Height',
-    'gap': 'Gap', 'justify-content': 'Justify', 'align-items': 'Align',
+    'width': 'Width', 'height': 'Height',
+    'gap': 'Gap',
     'border-radius': 'Radius', 'background-color': 'Background', 'opacity': 'Opacity',
 };
-const ALIGN_OPTIONS = ['left', 'center', 'right'];
 
 // ---------------------------------------------------------------- 박스 모델 위젯
-function boxModelWidget() {
-    const wrap = document.createElement('div');
-    wrap.className = 'bm-wrap';
-
-    function fmt(v) {
-        const n = parseFloat(v);
-        if (isNaN(n)) return v || '-';
-        return n % 1 === 0 ? String(n) : String(+n.toFixed(1));
-    }
-
-    function makeBmVal(prop) {
-        const raw = currentValue(prop);
-        const span = document.createElement('span');
-        span.className = 'bm-v' + (pendingFor(prop) ? ' changed' : '');
-        span.textContent = fmt(raw);
-        span.title = prop + ': ' + raw;
-        span.addEventListener('click', () => {
-            const inp = document.createElement('input');
-            inp.type = 'text';
-            inp.value = raw;
-            inp.className = 'bm-input';
-            span.replaceWith(inp);
-            inp.focus(); inp.select();
-            const commit = () => stageEdit(prop, inp.value.trim());
-            inp.addEventListener('blur', commit);
-            inp.addEventListener('keydown', e => {
-                if (e.key === 'Enter') { e.preventDefault(); commit(); }
-                if (e.key === 'Escape') inp.replaceWith(span);
-                if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
-                    e.preventDefault();
-                    const m = inp.value.match(/^(-?[\d.]+)(px|rem|em|%)?$/);
-                    if (!m) return;
-                    const d = e.key === 'ArrowUp' ? 1 : -1;
-                    inp.value = +(parseFloat(m[1]) + d * (e.shiftKey ? 10 : 1)).toFixed(3) + (m[2] || '');
-                    stageEdit(prop, inp.value);
-                }
-            });
-        });
-        return span;
-    }
-
-    function makeLayer(cls, label, tProp, rProp, bProp, lProp, inner) {
-        const d = document.createElement('div');
-        d.className = 'bm-layer ' + cls;
-        const lbl = document.createElement('span');
-        lbl.className = 'bm-lbl'; lbl.textContent = label;
-        d.appendChild(lbl);
-        const tRow = document.createElement('div'); tRow.className = 'bm-t';
-        tRow.appendChild(makeBmVal(tProp)); d.appendChild(tRow);
-        const mid = document.createElement('div'); mid.className = 'bm-lr';
-        mid.appendChild(makeBmVal(lProp)); mid.appendChild(inner); mid.appendChild(makeBmVal(rProp));
-        d.appendChild(mid);
-        const bRow = document.createElement('div'); bRow.className = 'bm-b';
-        bRow.appendChild(makeBmVal(bProp)); d.appendChild(bRow);
-        return d;
-    }
-
-    const w = selection.rect?.w ?? Math.round(parseFloat(selection.computed['width'] || 0));
-    const h = selection.rect?.h ?? Math.round(parseFloat(selection.computed['height'] || 0));
-    const contentEl = document.createElement('div');
-    contentEl.className = 'bm-content';
-    contentEl.textContent = `${w} × ${h}`;
-
-    const pLayer = makeLayer('bm-padding', 'padding',
-        'padding-top', 'padding-right', 'padding-bottom', 'padding-left', contentEl);
-    const mLayer = makeLayer('bm-margin', 'margin',
-        'margin-top', 'margin-right', 'margin-bottom', 'margin-left', pLayer);
-
-    function postHl(area) {
-        const f = document.getElementById('frame');
-        if (!f?.contentWindow) return;
-        const type = area ? 'highlight' : 'clearHighlight';
-        f.contentWindow.postMessage({ source: '__hnkl_editor_host', type, payload: { area } }, '*');
-    }
-
-    contentEl.addEventListener('mouseenter', () => postHl('content'));
-    contentEl.addEventListener('mouseleave', () => postHl('padding'));
-    pLayer.addEventListener('mouseenter', () => postHl('padding'));
-    pLayer.addEventListener('mouseleave', () => postHl('margin'));
-    mLayer.addEventListener('mouseenter', () => postHl('margin'));
-    mLayer.addEventListener('mouseleave', () => postHl(null));
-
-    wrap.appendChild(mLayer);
-    return wrap;
-}
 
 // ---------------------------------------------------------------- 속성별 스텝
 const FONT_WEIGHTS = [100, 200, 300, 400, 500, 600, 700, 800, 900];
@@ -752,12 +686,10 @@ function edgeField(prop, label) {
 
     el.innerHTML =
         `<span class="sp-edge__label">${label}</span>` +
-        `<span class="sp-edge__val${pendingFor(prop) ? ' is-changed' : ''}">${startPx}</span>` +
-        `<span class="sp-edge__unit">px</span>` +
-        // 0 은 '값이 없음'이지 '시스템 밖'이 아니다 — 굳이 경고처럼 보이지 않게 비운다
-        (startPx === 0 ? `<span class="sp-edge__tok"></span>`
-            : onToken ? `<span class="sp-edge__tok">${hit.name.replace('--space-', 'S')}</span>`
-                : `<span class="sp-edge__tok is-off" title="Not one of the system steps">·</span>`);
+        `<span class="sp-edge__val${pendingFor(prop) ? ' is-changed' : ''}">${startPx}</span>`;
+    // S9 · 같은 꼬리표 대신 숫자 색으로 알린다. 여기 숫자는 전부 px 이라 단위도 뺀다.
+    // 0 은 '값이 없음'이지 '시스템 밖'이 아니다.
+    el.classList.toggle('is-free', startPx !== 0 && !onToken);
 
     const valEl = el.querySelector('.sp-edge__val');
 
@@ -840,14 +772,14 @@ function spacingBoard() {
         return el;
     };
 
-    const outer = ring('margin', 'MARGIN',
+    const outer = ring('margin', 'Outside',
         ['margin-top', 'margin-right', 'margin-bottom', 'margin-left']);
-    const inner = ring('padding', 'PADDING',
+    const inner = ring('padding', 'Inside',
         ['padding-top', 'padding-right', 'padding-bottom', 'padding-left']);
 
+    // 가운데는 '이 요소'를 뜻하는 빈 칸. 크기는 맨 위에 이미 적혀 있다.
     const core = document.createElement('div');
     core.className = 'sp-core';
-    core.textContent = `${selection.rect.w} × ${selection.rect.h}`;
 
     inner.appendChild(core);
     outer.appendChild(inner);
@@ -859,80 +791,45 @@ function spacingBoard() {
     }
     wrap.addEventListener('mouseleave', () => toFrame('boxHint', { path: null }));
 
-    for (const p of ['margin-top', 'margin-bottom']) {
-        const warn = blockedNote(p);
-        if (warn) wrap.appendChild(warn);
-    }
-
-    const hint = document.createElement('p');
-    hint.className = 'sp-hint';
-    hint.textContent = 'Drag a number to change it — it snaps to the system steps. Alt to go off-system, double-click to type.';
-    wrap.appendChild(hint);
     return wrap;
 }
 
-/**
- * "값은 바꿨는데 왜 화면이 그대로지?" 를 미리 알려 준다.
- * 도구가 조용히 있으면 사용자는 도구가 고장 난 줄 안다.
- */
-function blockedNote(prop) {
-    const c = selection.computed || {};
-    const px = v => parseFloat(v) || 0;
-    let msg = '';
-
-    // 위아래 여백은 이웃 것과 겹쳐 큰 쪽만 보인다(margin collapse).
-    // 이걸 모르면 "0 으로 줄였는데 왜 안 좁아지지?" 가 된다.
-    const col = selection.collapse || {};
-    if (prop === 'margin-top' && col.above > px(c['margin-top'])) {
-        return note(`The element above already has ${col.above}px below it. This gap won't go under that.`);
-    }
-    if (prop === 'margin-bottom' && col.below > px(c['margin-bottom'])) {
-        return note(`The element below already has ${col.below}px above it. This gap won't go under that.`);
-    }
-
-    if (prop === 'width' && c['max-width'] && c['max-width'] !== 'none' && px(c['max-width']) <= px(c.width)) {
-        msg = `Capped by max-width (${c['max-width']}). Raise that first.`;
-    } else if (prop === 'height' && /auto/.test(c.height || '')) {
-        msg = 'Height follows the content right now.';
-    } else if (prop === 'text-align' && selection.childCount > 0) {
-        msg = 'Children that set their own alignment will keep it.';
-    }
-    if (!msg) return null;
-    return note(msg);
-}
-
-function note(msg) {
-    const n = document.createElement('p');
-    n.className = 'blocked-note';
-    n.textContent = msg;
-    return n;
-}
 
 /**
  * 페이지 전체를 정하는 값 하나 — 끌어서 조절한다.
  * calc(1280px * var(--vb-s)) 처럼 식으로 적힌 값은 기준 숫자만 갈아끼운다.
  */
 function pageTokenRow(name, label, hint, opt = {}) {
-    const raw = pageTokens?.now?.[name] || '';
-    // 식 안의 첫 px 숫자가 기준값이다 (calc(1280px * clamp(…)) → 1280)
-    const m = raw.match(/(-?[\d.]+)px/);
-    if (!m) return null;
-    const basePx = parseFloat(m[1]);
+    // 저장 대기 중인 값이 있으면 그것을 먼저 본다 (되돌린 뒤 옛 값이 남지 않게)
+    const pend = pending.find(p => p.kind === 'css' && p.selector === ':root' && p.prop === name);
+    const raw = pend ? pend.value : (pageTokens?.now?.[name] || '');
+    // calc(NNNpx * 배율) 형태의 숫자만 고른다.
+    // 그냥 px 를 다 잡으면 배율 식 안의 5120px(100vw / 5120px) 까지 걸린다.
+    const RE = /calc\(\s*(-?[\d.]+)px/g;
+    const all = [...raw.matchAll(RE)].map(x => x[1]);
+    if (!all.length) return null;
+    // clamp(min, 유동, max) 처럼 여러 개면 실제를 정하는 쪽 — 넓은 화면에선 상한(마지막)이다
+    const at = opt.which === 'last' ? all.length - 1 : 0;
+    const basePx = parseFloat(all[at]);
 
     const row = document.createElement('div');
     row.className = 'pt-row';
     row.innerHTML =
         `<span class="pt-label">${label}</span>` +
-        `<span class="pt-val">${basePx}</span><span class="pt-unit">px</span>`;
+        `<span class="pt-field"><span class="pt-val">${basePx}</span>` +
+        `<span class="pt-unit">px</span></span>`;
 
     const valEl = row.querySelector('.pt-val');
+    const fieldEl = row.querySelector('.pt-field');   // 칸 전체가 손잡이다 (여백·단위를 잡아도 끌린다)
     // 말로 설명하는 것보다 페이지에서 짚어 주는 편이 빠르다
     if (opt.hint) {
         row.addEventListener('mouseenter', () => toFrame('pageHint', { what: opt.hint }));
         row.addEventListener('mouseleave', () => toFrame('pageHint', { what: null }));
     }
     const apply = px => {
-        const next = raw.replace(/(-?[\d.]+)px/, px + 'px');
+        let seen = -1;
+        const next = raw.replace(/calc\(\s*(-?[\d.]+)px/g,
+            (m, n) => (++seen === at ? m.replace(n + 'px', px + 'px') : m));
         // :root 규칙을 고친다 — 페이지 전체 규칙이라 요소 하나에 붙이지 않는다
         const i = pending.findIndex(p => p.kind === 'css' && p.selector === ':root' && p.prop === name);
         const edit = { kind: 'css', selector: ':root', prop: name, value: next };
@@ -957,14 +854,14 @@ function pageTokenRow(name, label, hint, opt = {}) {
         document.removeEventListener('mouseup', onUp);
         document.body.classList.remove('is-dragging-num');
     };
-    valEl.addEventListener('mousedown', ev => {
+    fieldEl.addEventListener('mousedown', ev => {
         ev.preventDefault();
         dragging = true; from = ev.clientY; base = parseFloat(valEl.textContent) || 0;
         document.addEventListener('mousemove', onMove);
         document.addEventListener('mouseup', onUp);
         document.body.classList.add('is-dragging-num');
     });
-    valEl.addEventListener('dblclick', () => {
+    fieldEl.addEventListener('dblclick', () => {
         const inp = document.createElement('input');
         inp.className = 'pt-input'; inp.value = valEl.textContent;
         valEl.replaceWith(inp); inp.focus(); inp.select();
@@ -1058,67 +955,265 @@ function gapsBetweenRow() {
 }
 
 /** 페이지 뒷배경 색 — :root 의 --bg-color 를 고친다 */
-function pageColorRow() {
-    const choices = (insTokens && insTokens.colors) || [];
-    if (!choices.length) return null;
+/**
+ * 팔레트를 여는 버튼 옆에 붙여 띄운다 (패널이 오른쪽이라 왼쪽으로).
+ *
+ * body 로 옮겨 붙인다: 패널에 backdrop-filter 가 걸려 있어서, 그 안에 두면
+ * position:fixed 가 화면이 아니라 패널을 기준으로 잡힌다.
+ */
+function openPopBeside(btn, pop) {
+    const opening = pop.hidden;
+    closeColorPops();
+    if (!opening) return;
 
-    const cur = pageTokens?.now?.['--bg-color'] || '';
+    document.body.appendChild(pop);
+    pop.hidden = false;
+    const r = btn.getBoundingClientRect();
+    pop.style.left = Math.max(8, r.left - pop.offsetWidth - 10) + 'px';
+    pop.style.top = Math.max(8, Math.min(r.top, window.innerHeight - pop.offsetHeight - 8)) + 'px';
+
+    // 딴 데를 누르면 닫는다
+    setTimeout(() => {
+        const away = ev => {
+            if (pop.contains(ev.target) || btn.contains(ev.target)) return;
+            document.removeEventListener('mousedown', away);
+            closeColorPops();
+        };
+        document.addEventListener('mousedown', away);
+    }, 0);
+}
+
+/** 떠 있는 팔레트를 모두 치운다 (패널을 다시 그릴 때 body 에 남지 않게) */
+function closeColorPops() {
+    document.querySelectorAll('body > .color-pop').forEach(n => n.remove());
+}
+
+/** 시스템 밖 색 — 눈으로 고르고, 헥스로도 칠 수 있게 */
+function pickerBlock(startHex, commit) {
+    const box = document.createElement('div');
+    box.className = 'color-free';
+
+    const title = document.createElement('div');
+    title.className = 'color-cat';
+    title.textContent = 'Other';
+    box.appendChild(title);
+
+    const inp = document.createElement('input');
+    inp.type = 'text'; inp.className = 'color-hex'; inp.placeholder = '#000000';
+    inp.value = startHex || '';
+
+    // 끄는 동안에는 화면에만 보여 주고, 손을 떼면 확정한다
+    let live = null;
+    const pick = colorPicker(startHex, v => { live = v; inp.value = v; commit(v); });
+    box.appendChild(pick);
+    box.appendChild(inp);
+
+    inp.addEventListener('keydown', e => {
+        if (e.key !== 'Enter') return;
+        e.preventDefault();
+        const v = inp.value.trim();
+        if (/^#?[0-9a-f]{3,8}$/i.test(v)) { pick.setHex(v.startsWith('#') ? v : '#' + v); commit(v.startsWith('#') ? v : '#' + v); }
+    });
+    return box;
+}
+
+// ---------------------------------------------------------------- 색 고르개
+const hex2rgb = h => {
+    const v = String(h || '').replace('#', '');
+    const f = v.length === 3 ? v.split('').map(c => c + c).join('') : v.padEnd(6, '0');
+    return [0, 2, 4].map(i => parseInt(f.slice(i, i + 2), 16) || 0);
+};
+const rgb2hex = ([r, g, b]) =>
+    '#' + [r, g, b].map(x => Math.round(Math.min(255, Math.max(0, x))).toString(16).padStart(2, '0')).join('').toUpperCase();
+
+function rgb2hsv([r, g, b]) {
+    r /= 255; g /= 255; b /= 255;
+    const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn;
+    let h = 0;
+    if (d) {
+        if (mx === r) h = ((g - b) / d + (g < b ? 6 : 0));
+        else if (mx === g) h = (b - r) / d + 2;
+        else h = (r - g) / d + 4;
+        h *= 60;
+    }
+    return [h, mx ? d / mx : 0, mx];
+}
+function hsv2rgb([h, s, v]) {
+    const c = v * s, x = c * (1 - Math.abs((h / 60) % 2 - 1)), m = v - c;
+    const t = h < 60 ? [c, x, 0] : h < 120 ? [x, c, 0] : h < 180 ? [0, c, x]
+        : h < 240 ? [0, x, c] : h < 300 ? [x, 0, c] : [c, 0, x];
+    return t.map(n => (n + m) * 255);
+}
+
+/**
+ * 색을 직접 고르는 판 — 채도·밝기 사각형 + 색상 띠.
+ * 시스템 밖 색이 필요할 때 헥스코드를 외워 치게 하지 않는다.
+ */
+function colorPicker(startHex, onChange) {
+    let hsv = rgb2hsv(hex2rgb(startHex || '#808080'));
+
+    const box = document.createElement('div');
+    box.className = 'cp';
+    box.innerHTML =
+        '<div class="cp-sv"><i class="cp-dot"></i></div>' +
+        '<div class="cp-bar">' +
+            '<button type="button" class="cp-pipette" title="Pick a color from the screen">' +
+                '<svg viewBox="0 -960 960 960" aria-hidden="true"><path d="M172-172h40l402-403-40-40-402 402v41Zm-52 52v-114l454-453q7-7 15.5-10.5T607-701q9 0 17.5 3.5T640-687l52 53q7 7 10 15.5t3 17.5q0 9-3.5 17.5T691-568L238-120H120Zm646-499-92-92 62-62q8-8 16.5-11.5T769-840q9 0 17.5 3.5T802-825l52 53q7 7 10.5 15.5T868-739q0 9-3.5 17.5T854-706l-88 87Z"/></svg>' +
+            '</button>' +
+            '<div class="cp-hue"><i class="cp-dot"></i></div>' +
+        '</div>';
+    const sv = box.querySelector('.cp-sv'), hue = box.querySelector('.cp-hue');
+    const svDot = sv.querySelector('.cp-dot'), hueDot = hue.querySelector('.cp-dot');
+
+    // 화면 어디서든 색을 집어 온다 (크롬의 EyeDropper)
+    const pipette = box.querySelector('.cp-pipette');
+    if (window.EyeDropper) {
+        pipette.addEventListener('click', async () => {
+            try {
+                const { sRGBHex } = await new window.EyeDropper().open();
+                hsv = rgb2hsv(hex2rgb(sRGBHex));
+                paint();
+                onChange(sRGBHex.toUpperCase());
+            } catch { /* 사용자가 취소함 */ }
+        });
+    } else {
+        pipette.hidden = true;   // 이 브라우저는 못 집는다
+    }
+
+    const paint = () => {
+        const [h, s, v] = hsv;
+        sv.style.background =
+            `linear-gradient(to top, #000, transparent), ` +
+            `linear-gradient(to right, #fff, ${rgb2hex(hsv2rgb([h, 1, 1]))})`;
+        svDot.style.left = s * 100 + '%';
+        svDot.style.top = (1 - v) * 100 + '%';
+        svDot.style.background = rgb2hex(hsv2rgb(hsv));
+        hueDot.style.left = (h / 360) * 100 + '%';
+    };
+    paint();
+
+    // 사각형·띠를 누르거나 끄는 동안 계속 따라온다
+    const track = (el, onPos) => {
+        const move = ev => {
+            const r = el.getBoundingClientRect();
+            onPos(
+                Math.min(1, Math.max(0, (ev.clientX - r.left) / r.width)),
+                Math.min(1, Math.max(0, (ev.clientY - r.top) / r.height)),
+            );
+            paint();
+            onChange(rgb2hex(hsv2rgb(hsv)));
+        };
+        el.addEventListener('mousedown', ev => {
+            ev.preventDefault();
+            move(ev);
+            const up = () => { document.removeEventListener('mousemove', move); document.removeEventListener('mouseup', up); };
+            document.addEventListener('mousemove', move);
+            document.addEventListener('mouseup', up);
+        });
+    };
+    track(sv, (x, y) => { hsv[1] = x; hsv[2] = 1 - y; });
+    track(hue, x => { hsv[0] = x * 360; });
+
+    box.setHex = h => { hsv = rgb2hsv(hex2rgb(h)); paint(); };
+    return box;
+}
+
+/**
+ * 색 견본 — 디자인 시스템의 갈래를 그대로 살려 이름을 얹고 줄줄이 늘어놓는다.
+ * 갈래를 뭉개면 60개 중에서 무엇을 고르는지 알 수 없다.
+ */
+function swatchGroups(onPick, isOn) {
+    const box = document.createElement('div');
+    const groups = insTokens?.colorGroups || [];
+    for (const g of groups) {
+        const title = document.createElement('div');
+        title.className = 'color-cat';
+        title.textContent = g.title;
+        box.appendChild(title);
+
+        const grid = document.createElement('div');
+        grid.className = 'color-grid';
+        for (const c of g.items) {
+            const sw = document.createElement('button');
+            sw.type = 'button';
+            sw.className = 'color-sw' + (isOn(c) ? ' is-on' : '');
+            sw.title = `${c.label}  ${c.hex || ''}`.trim();
+            sw.style.background = c.hex || `var(${c.name})`;
+            sw.addEventListener('click', () => onPick(c));
+            grid.appendChild(sw);
+        }
+        box.appendChild(grid);
+    }
+    return box;
+}
+
+function pageColorRow() {
+    if (!insTokens?.colorGroups?.length) return null;
+
+    // --bg-color 토큰이 아니라 '실제로 배경을 칠하는 쪽'을 고친다.
+    // 이 사이트처럼 html 에 색을 직접 박아 둔 페이지에서는 토큰만 바꿔 봐야 화면이 그대로다.
+    const sel = pageBg?.selector || 'body';
+    const staged = pending.find(p => p.kind === 'css' && p.selector === sel && p.prop === 'background-color');
+    const cur = staged ? staged.value : (pageBg?.color || '');
     const curVar = (cur.match(/var\(\s*(--[\w-]+)\s*\)/) || [])[1] || null;
-    const hit = curVar ? choices.find(c => c.name === curVar) : null;
-    const hex = /^#/.test(cur) ? cur.toUpperCase() : (hit?.hex || '');
+    const all = insTokens.colors;
+    const hit = curVar ? all.find(c => c.name === curVar)
+        : all.find(c => c.hex && sameColor(c.hex, cur));
+    const hex = /^#/.test(cur) ? cur.toUpperCase() : (hit?.hex || toHex(cur) || '');
 
     const wrap = document.createElement('div');
     const row = document.createElement('div');
-    row.className = 'field';
-    row.innerHTML = '<label>Behind the page</label>';
+    row.className = 'field field--wide';   // 제목(Page background)이 이미 무엇인지 말한다
 
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'color-btn';
     btn.innerHTML =
         `<span class="color-chip" style="background:${hex || 'transparent'}"></span>` +
-        `<span class="color-name">${hit ? hit.label : (hex || cur || '—')}</span>`;
+        `<span class="color-name">${hit ? hit.label : (hex || '—')}</span>`;
     row.appendChild(btn);
     wrap.appendChild(row);
+
 
     const pop = document.createElement('div');
     pop.className = 'color-pop';
     pop.hidden = true;
-    const grid = document.createElement('div');
-    grid.className = 'color-grid';
-    const setColor = value => {
-        const i = pending.findIndex(p => p.kind === 'css' && p.selector === ':root' && p.prop === '--bg-color');
-        const edit = { kind: 'css', selector: ':root', prop: '--bg-color', value };
-        if (i >= 0) pending[i] = edit; else pending.push(edit);
-        toFrame('pageTokenPreview', { vars: Object.fromEntries(
-            pending.filter(p => p.kind === 'css' && p.selector === ':root').map(p => [p.prop, p.value])) });
-        updateDirty();
-        renderInspector();
-    };
-    for (const c of choices) {
-        const sw = document.createElement('button');
-        sw.type = 'button';
-        sw.className = 'color-sw' + (hit && hit.name === c.name ? ' is-on' : '');
-        sw.title = `${c.label}  ${c.hex || ''}`.trim();
-        sw.style.background = c.hex || `var(${c.name})`;
-        sw.addEventListener('click', () => setColor(`var(${c.name})`));
-        grid.appendChild(sw);
-    }
-    pop.appendChild(grid);
+    pop.appendChild(swatchGroups(
+        c => setColor(`var(${c.name})`),
+        c => !!hit && hit.name === c.name,
+    ));
 
-    const free = document.createElement('div');
-    free.className = 'color-free';
-    free.innerHTML = '<span>Custom</span>';
-    const inp = document.createElement('input');
-    inp.type = 'text'; inp.className = 'color-hex'; inp.placeholder = '#000000';
-    inp.value = hex || '';
-    inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); setColor(inp.value.trim()); } });
-    free.appendChild(inp);
-    pop.appendChild(free);
+    const setColor = value => {
+        const put = (prop, v) => {
+            const i = pending.findIndex(p => p.kind === 'css' && p.selector === sel && p.prop === prop);
+            const edit = { kind: 'css', selector: sel, prop, value: v };
+            if (i >= 0) pending[i] = edit; else pending.push(edit);
+        };
+        put('background-color', value);
+        // 그라데이션이 위에 덮여 있으면 색을 바꿔도 안 보인다 — 함께 걷어낸다
+        if (pageBg?.hasImage) put('background-image', 'none');
+        updateDirty();
+        applyPendingPreview();
+        // 패널을 통째로 다시 그리면 열려 있는 팔레트가 사라져 색을 끌 수가 없다.
+        // 바뀐 자리만 손본다.
+        const shown = insTokens.colors.find(c => value === `var(${c.name})`);
+        const swatch = shown?.hex || toHex(value) || value;
+        btn.querySelector('.color-chip').style.background = swatch;
+        btn.querySelector('.color-name').textContent = shown ? shown.label : (toHex(value) || value);
+        pop.querySelectorAll('.color-sw').forEach(el => el.classList.remove('is-on'));
+    };
+
+    pop.appendChild(pickerBlock(hex, v => setColor(v)));
     wrap.appendChild(pop);
 
-    btn.addEventListener('click', () => { pop.hidden = !pop.hidden; });
+    btn.addEventListener('click', () => openPopBeside(btn, pop));
     return wrap;
+}
+
+/** rgb(...) 과 #hex 를 같은 색으로 볼 수 있게 견준다 */
+function sameColor(a, b) {
+    const h = v => (toHex(v) || String(v || '')).toUpperCase();
+    return !!a && !!b && h(a) === h(b);
 }
 
 /** 접히는 묶음 — 자주 안 쓰는 것은 닫아 둔다 */
@@ -1168,6 +1263,7 @@ function friendlyName(sel) {
 }
 
 function renderInspector() {
+    closeColorPops();
     if (draggingEdge) return;          // 값을 끌고 있는 중엔 화면을 갈아엎지 않는다
     syncSelectionButtons();
     const empty = $('#emptyState'), insp = $('#inspector');
@@ -1176,17 +1272,18 @@ function renderInspector() {
         // (아무것도 안 고른 상태 = 페이지를 고른 상태 — 여느 에디터와 같은 규칙)
         const lay = $('#pageLayout');
         if (lay) {
-            lay.innerHTML = '';     // 다시 그릴 때마다 쌓이지 않게 통째로 비운다
+            lay.innerHTML = '';     // 이 안(Content width·띠 보기)만 다시 그린다
             // 카드 사이 간격은 여기 두지 않는다 — 카드 줄을 고르면 Layout > Gap 에서 정한다.
             // 페이지 전체에 걸리는 값만 남긴다.
-            const rows = [
-                pageTokenRow('--vb-maxw', 'Content width',
-                    'The band your text and cards sit in. Wider = less empty space on the sides.',
-                    { hint: 'maxw' }),
-            ].filter(Boolean);
-            rows.forEach(r => lay.appendChild(r));
-            lay.appendChild(contentGuideRow());
-            lay.hidden = !rows.length;
+            // 이름과 값만 — 손을 올리면 페이지에서 어디인지 짚어 주므로 설명이 필요 없다.
+            // 보기 토글은 그 값 바로 아래에 둔다 (무엇을 보여 주는 토글인지 붙어 있어야 안다)
+            const width = pageTokenRow('--vb-maxw', 'Content width', null, { hint: 'maxw' });
+            if (width) { lay.appendChild(width); lay.appendChild(contentGuideRow()); }
+
+            const gap = pageTokenRow('--vb-pad-block', 'Section spacing', null,
+                { which: 'last', hint: 'gap' });
+            if (gap) lay.appendChild(gap);
+            lay.hidden = !(width || gap);
 
             // 페이지 배경색
             const bgBody = $('#pageBgBody');
@@ -1197,20 +1294,16 @@ function renderInspector() {
             }
         }
         empty.hidden = false; insp.hidden = true; syncSelectionButtons();
-        // 토큰을 안 따르는 섹션이 몇인지 — 슬라이더가 일부에만 먹히는 이유가 된다
-        if (!emptyShown) { emptyShown = true; setTimeout(refreshGapExceptions, 200); }
+        // 예외 목록은 ready 를 받은 뒤에 물어본다 (아래 'ready' 처리 참고)
         return;
     }
     empty.hidden = true; insp.hidden = false; emptyShown = false;
 
     $('#selTag').textContent = friendlyName(selection);
     // 코드 이름은 필요할 때만 (마우스를 올리면 보인다)
-    $('#selTag').title = selection.tag.toLowerCase() +
-        (selection.classes.length ? '.' + selection.classes.filter(c => !c.startsWith('__ed')).join('.') : '');
+
     $('#selMeta').textContent = `${selection.rect.w} × ${selection.rect.h}`;
-    $('#modeHelp').textContent = mode === 'css'
-        ? 'Every element using this selector changes. Edits the CSS rule itself.'
-        : 'Adds style="…" to this element only. Use it for a one-off exception.';
+
 
     const box = $('#fields');
     box.innerHTML = '';
@@ -1220,8 +1313,6 @@ function renderInspector() {
         $('#selTag').textContent = `${picks.count} items`;
         $('#selMeta').textContent = picks.items.map(i => i.classes[0] || i.tag).join(' · ');
         box.appendChild(gapsBetweenRow());
-        const moreBtn = $('#inspMore');
-        if (moreBtn) moreBtn.hidden = true;
         return;
     }
 
@@ -1257,13 +1348,18 @@ function renderInspector() {
         // 덩어리 — 안에 여러 크기가 섞여 있어 '글자 크기' 하나를 정할 수 없다.
         box.appendChild(foldGroup('Text', b => {
             b.appendChild(alignRow());   // 정렬은 덩어리 단위로도 뜻이 있다
-            const warn = blockedNote('text-align');
-            if (warn) b.appendChild(warn);
         }));
     }
     if (ctx.isFlexOrGrid) {
         box.appendChild(foldGroup('Layout', b => {
-            for (const prop of ['gap', 'justify-content', 'align-items']) b.appendChild(fieldRow(prop));
+            b.appendChild(fieldRow('gap'));
+            // 이름은 무엇이 일어나는지로 부른다 (flex-start / space-between 은 CSS 말이다)
+            b.appendChild(choiceRow('justify-content', 'Across',
+                [['flex-start', 'Start'], ['center', 'Middle'],
+                 ['flex-end', 'End'], ['space-between', 'Spread']]));
+            b.appendChild(choiceRow('align-items', 'Down',
+                [['flex-start', 'Top'], ['center', 'Middle'],
+                 ['flex-end', 'Bottom'], ['stretch', 'Fill']]));
         }));
     }
     // 배경·모서리는 면이 있는 것에만
@@ -1275,114 +1371,10 @@ function renderInspector() {
     // 크기는 미디어와 덩어리에만 (인라인 글자에 폭을 주는 일은 거의 없다)
     if (ctx.isMedia || ctx.isContainer) {
         box.appendChild(foldGroup('Size', b => {
-            for (const prop of ['width', 'height', 'max-width', 'min-width']) {
-                b.appendChild(fieldRow(prop));
-                const warn = blockedNote(prop);
-                if (warn) b.appendChild(warn);
-            }
+            for (const prop of ['width', 'height']) b.appendChild(fieldRow(prop));
         }));
     }
-
-    const moreBtn = $('#inspMore');
-    if (moreBtn) moreBtn.hidden = true;    // 접기로 갈음한다
 }
-
-// ── 이전 인스펙터 ────────────────────────────────────────────────
-// 속성을 종류별로 전부 늘어놓던 방식. 무엇을 고르든 컨트롤이 38개쯤 떠서
-// 정작 제일 자주 쓰는 '간격'이 그 안에 파묻혔다.
-// 새 인스펙터(renderInspector)로 대체했고, 되돌릴 일이 있을까 봐 남겨 둔다.
-function renderInspectorLegacy() {
-    const empty = $('#emptyState'), insp = $('#inspector');
-    if (!selection) {
-        // 고른 게 없으면 이 패널은 '페이지 전체'를 다룬다.
-        // (아무것도 안 고른 상태 = 페이지를 고른 상태 — 여느 에디터와 같은 규칙)
-        const lay = $('#pageLayout');
-        if (lay) {
-            lay.innerHTML = '';     // 다시 그릴 때마다 쌓이지 않게 통째로 비운다
-            // 카드 사이 간격은 여기 두지 않는다 — 카드 줄을 고르면 Layout > Gap 에서 정한다.
-            // 페이지 전체에 걸리는 값만 남긴다.
-            const rows = [
-                pageTokenRow('--vb-maxw', 'Content width',
-                    'The band your text and cards sit in. Wider = less empty space on the sides.',
-                    { hint: 'maxw' }),
-            ].filter(Boolean);
-            rows.forEach(r => lay.appendChild(r));
-            lay.appendChild(contentGuideRow());
-            lay.hidden = !rows.length;
-
-            // 페이지 배경색
-            const bgBody = $('#pageBgBody');
-            if (bgBody) {
-                bgBody.innerHTML = '';
-                const row = pageColorRow();
-                if (row) bgBody.appendChild(row); else $('#pageBg').hidden = true;
-            }
-        }
-        empty.hidden = false; insp.hidden = true; syncSelectionButtons();
-        // 토큰을 안 따르는 섹션이 몇인지 — 슬라이더가 일부에만 먹히는 이유가 된다
-        if (!emptyShown) { emptyShown = true; setTimeout(refreshGapExceptions, 200); }
-        return;
-    }
-    empty.hidden = true; insp.hidden = false; emptyShown = false;
-
-    $('#selTag').textContent = friendlyName(selection);
-    // 코드 이름은 필요할 때만 (마우스를 올리면 보인다)
-    $('#selTag').title = selection.tag.toLowerCase() +
-        (selection.classes.length ? '.' + selection.classes.filter(c => !c.startsWith('__ed')).join('.') : '');
-    $('#selMeta').textContent = `${selection.rect.w} × ${selection.rect.h}`;
-
-    $('#modeHelp').textContent = mode === 'css'
-        ? 'Every element using this selector changes. Edits the CSS rule itself.'
-        : 'Adds style="…" to this element only. Use it for a one-off exception.';
-
-    const box = $('#fields');
-    box.innerHTML = '';
-
-    // 선택한 요소가 어떤 성격인지 — 이걸로 보여줄 항목을 고른다
-    const ctx = {
-        hasText: !!(selection.text && selection.text.trim()) || /^(H1|H2|H3|H4|H5|H6|P|SPAN|A|LI|BUTTON|EM|STRONG)$/i.test(selection.tag),
-        isFlexOrGrid: /flex|grid/.test(selection.computed?.display || ''),
-        isMedia: /^(IMG|VIDEO|IFRAME|SOURCE)$/i.test(selection.tag),
-    };
-
-    // 글자만 든 요소라면 내용부터 — 값을 채우는 게 먼저다
-    if (selection.textOnly) box.appendChild(textRow());
-    // 이미지·영상이면 링크(src)부터 — 제일 자주 바꾸는 값
-    if (ctx.isMedia) box.appendChild(mediaRow());
-
-    // (이웃 간격 줄은 새 인스펙터에서 빼면서 함께 없앴다 — 간격 판과 겹쳤다)
-
-    // 박스 모델 시각화
-    box.appendChild(boxModelWidget());
-
-    // 텍스트 요소일 때만 정렬 버튼
-    if (ctx.hasText) box.appendChild(alignRow());
-
-    for (const g of GROUPS) {
-        if (g.when && !g.when(ctx)) continue;
-        if (g.adv && !inspShowAdvanced) continue;
-        const wrap = document.createElement('div');
-        wrap.className = 'group';
-        const h = document.createElement('h3');
-        h.textContent = g.title;
-        h.addEventListener('click', () => wrap.classList.toggle('is-collapsed'));
-        wrap.appendChild(h);
-        for (const prop of g.props) wrap.appendChild(fieldRow(prop));
-        box.appendChild(wrap);
-    }
-
-    const moreBtn = $('#inspMore');
-    if (moreBtn) {
-        moreBtn.textContent = inspShowAdvanced ? 'Hide advanced' : 'Show advanced';
-        moreBtn.setAttribute('aria-expanded', inspShowAdvanced ? 'true' : 'false');
-    }
-}
-
-let inspShowAdvanced = false;
-$('#inspMore')?.addEventListener('click', () => {
-    inspShowAdvanced = !inspShowAdvanced;
-    renderInspector();
-});
 
 /**
  * 위·아래 이웃과의 간격을 한 줄로 조절한다.
@@ -1395,7 +1387,7 @@ function mediaRow() {
     const g = el('div', 'group');
     g.innerHTML = '<h3>Media</h3>';
     const row = el('div', 'field');
-    const label = el('label', null, 'Link (src)');
+    const label = el('label', null, 'Link');
     const inp = el('input');
     inp.type = 'text';
     inp.value = selection.attrs?.src || '';
@@ -1405,11 +1397,16 @@ function mediaRow() {
         pending.push({ kind: 'attr', path: selection.path, name: 'src', value: v });
         toFrame('setAttr', { path: selection.path, name: 'src', value: v });
         updateDirty();
-        toast('Link changed — save to write it to the file', 'ok');
+        toast('Link changed — not saved yet', 'ok');
     });
     row.append(label, inp);
     g.appendChild(row);
     return g;
+}
+
+// 화면에 보여 줄 값. 186.234px 같은 계산 결과는 디자이너가 읽을 숫자가 아니다.
+function prettyValue(v) {
+    return String(v ?? '').replace(/(-?\d+\.\d+)px/g, (m, n) => Math.round(parseFloat(n)) + 'px');
 }
 
 function currentValue(prop) {
@@ -1470,35 +1467,34 @@ function textRow() {
     area.addEventListener('blur', () => { clearTimeout(timer); push(); });
 
     g.appendChild(area);
-    const note = document.createElement('p');
-    note.className = 'modeHelp';
-    note.textContent = 'Edits the text in place. Save to write it to the file.';
-    g.appendChild(note);
     return g;
 }
 
-function alignRow() {
-    const g = document.createElement('div');
-    g.className = 'group';
-    g.innerHTML = '<h3>Text align</h3>';
+/**
+ * 글자 정렬 — 다른 속성들과 같은 '라벨 + 컨트롤' 한 줄로 둔다.
+ * 묶음(Text) 안에서 또 제목을 세우면 층이 하나 더 생겨 읽기 어렵다.
+ */
+function choiceRow(prop, label, options) {
     const row = document.createElement('div');
-    row.className = 'segRow';
-    const cur = currentValue('text-align');
-    for (const v of ALIGN_OPTIONS) {
+    row.className = 'field';
+    row.appendChild(Object.assign(document.createElement('label'), { textContent: label }));
+
+    const seg = document.createElement('div');
+    seg.className = 'segRow';
+    const cur = currentValue(prop);
+    for (const [value, text] of options) {
         const b = document.createElement('button');
-        b.textContent = { left: 'Left', center: 'Center', right: 'Right' }[v];
-        b.className = cur === v ? 'on' : '';
-        b.onclick = () => stageEdit('text-align', v);
-        row.appendChild(b);
+        b.textContent = text;
+        b.className = cur === value ? 'on' : '';
+        b.onclick = () => stageEdit(prop, value);
+        seg.appendChild(b);
     }
-    g.appendChild(row);
-    const o = document.createElement('div');
-    o.className = 'origin';
-    o.innerHTML = `Current <b>${cur || '-'}</b> · ${originOf('text-align').label}`;
-    o.style.marginLeft = '0';
-    g.appendChild(o);
-    return g;
+    row.appendChild(seg);
+    return row;
 }
+
+const alignRow = () => choiceRow('text-align', 'Align',
+    [['left', 'Left'], ['center', 'Center'], ['right', 'Right']]);
 
 // ---------------------------------------------------------------- 토큰 목록 (인스펙터용)
 // 기본은 '디자인 시스템 안에서만' 고르게 한다. 임의 값이 필요하면 'Custom' 버튼으로 잠금을 푼다.
@@ -1508,17 +1504,23 @@ const freeMode = new Set();           // 직접 입력 잠금을 푼 속성들
 async function loadInsTokens() {
     try {
         const d = await (await fetch('/__api/designsystem')).json();
-        const colors = [
-            ...d.roles.map(r => ({ label: r.label, name: r.name, hex: r.hex || r.lightHex })),
-            ...d.ramp.map(g => ({ label: 'Gray ' + g.step, name: g.name, hex: g.hex })),
-            ...d.primary.map(g => ({ label: 'Primary ' + g.step, name: g.name, hex: g.hex })),
-            ...d.purpleRamp.map(g => ({ label: 'Purple ' + g.step, name: g.name, hex: g.hex })),
-            ...d.tealRamp.map(g => ({ label: 'Teal ' + g.step, name: g.name, hex: g.hex })),
-            ...d.surfaces.map(s => ({ label: s.label, name: s.name, hex: s.hex })),
-            ...d.primitives.map(p => ({ label: p.label, name: p.name, hex: p.hex })),
-        ];
+        // 갈래를 살려 둔다 — 60개를 한 덩어리로 늘어놓으면 아무것도 못 고른다
+        const colorGroups = [
+            { title: 'Gray',          items: d.ramp.map(g => ({ label: 'Gray ' + g.step, name: g.name, hex: g.hex })) },
+            { title: 'Primary',       items: d.primary.map(g => ({ label: 'Primary ' + g.step, name: g.name, hex: g.hex })) },
+            { title: 'Secondary 1',   items: d.purpleRamp.map(g => ({ label: 'Secondary 1 · ' + g.step, name: g.name, hex: g.hex })) },
+            { title: 'Secondary 2',   items: d.tealRamp.map(g => ({ label: 'Secondary 2 · ' + g.step, name: g.name, hex: g.hex })) },
+            { title: 'Black & white', items: d.primitives.map(x => ({ label: x.label, name: x.name, hex: x.hex })) },
+        ].filter(g => g.items.length);
         insTokens = {
-            colors,
+            colorGroups,
+            // 이름 찾기용 전체 목록 — 역할 토큰(--bg-color 등)은 고르는 목록에선 뺐지만
+            // 지금 값이 그 토큰이면 이름으로 보여 줘야 한다
+            colors: [
+                ...colorGroups.flatMap(g => g.items),
+                ...d.roles.map(r => ({ label: r.label, name: r.name, hex: r.hex || r.lightHex })),
+                ...d.surfaces.map(x => ({ label: x.label, name: x.name, hex: x.hex })),
+            ],
             fs: d.typo.map(t => ({ label: `${t.label} (${t.basePx}px)`, name: t.name })),
             space: d.spacing.map(s => ({ label: `Step ${s.step} (${s.basePx}px)`, name: s.name })),
         };
@@ -1583,39 +1585,20 @@ function colorRow(prop) {
     const pop = document.createElement('div');
     pop.className = 'color-pop';
     pop.hidden = true;
-    const grid = document.createElement('div');
-    grid.className = 'color-grid';
-    for (const c of choices) {
-        const sw = document.createElement('button');
-        sw.type = 'button';
-        sw.className = 'color-sw' + (hit && hit.name === c.name ? ' is-on' : '');
-        sw.title = `${c.label}  ${c.hex || ''}`.trim();
-        sw.style.background = c.hex || `var(${c.name})`;
-        sw.addEventListener('click', () => { stageEdit(prop, `var(${c.name})`); });
-        grid.appendChild(sw);
-    }
-    pop.appendChild(grid);
+    pop.appendChild(swatchGroups(
+        c => stageEdit(prop, `var(${c.name})`),
+        c => !!hit && hit.name === c.name,
+    ));
 
-    // 시스템 밖 색이 필요할 때 — 헥스로 직접
-    const free = document.createElement('div');
-    free.className = 'color-free';
-    free.innerHTML = '<span>Custom</span>';
-    const inp = document.createElement('input');
-    inp.type = 'text'; inp.className = 'color-hex'; inp.placeholder = '#000000';
-    inp.value = hex || '';
-    inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); stageEdit(prop, inp.value.trim()); } });
-    inp.addEventListener('blur', () => { if (inp.value.trim() && inp.value.trim() !== hex) stageEdit(prop, inp.value.trim()); });
-    free.appendChild(inp);
-    pop.appendChild(free);
+    pop.appendChild(pickerBlock(hex, v => stageEdit(prop, v)));
     wrap.appendChild(pop);
 
-    btn.addEventListener('click', () => { pop.hidden = !pop.hidden; });
+    btn.addEventListener('click', () => openPopBeside(btn, pop));
     return wrap;
 }
 
 /** 토큰 중에서만 고르는 줄 */
 function tokenFieldRow(prop, choices) {
-    const wrap = document.createElement('div');
     const row = document.createElement('div');
     row.className = 'field';
 
@@ -1632,7 +1615,7 @@ function tokenFieldRow(prop, choices) {
     // 토큰이 아닌 값이면 맨 위에 '지금 값'을 보여준다 (고르면 토큰으로 바뀜)
     if (!curVar) {
         const o = document.createElement('option');
-        o.value = ''; o.textContent = cur || 'none';
+        o.value = ''; o.textContent = prettyValue(cur) || '—';
         sel.appendChild(o);
     }
     for (const c of choices) {
@@ -1649,21 +1632,78 @@ function tokenFieldRow(prop, choices) {
 
     const free = document.createElement('button');
     free.className = 'btn ghost tiny freeBtn';
-    free.textContent = 'Custom';
-    free.title = 'Type a value outside the design system (not recommended)';
+    free.textContent = 'Other…';
+    free.title = 'Use a value that is not in your design system';
     free.addEventListener('click', () => {
-        if (!confirm('디자인 시스템 밖의 값을 직접 넣습니다.\n이 값은 토큰과 연결되지 않아 나중에 한꺼번에 못 바꿉니다.\n계속할까요?')) return;
+        if (!confirm('This value is outside your design system.\nIt will not follow when you change the system later.\nContinue?')) return;
         freeMode.add(prop);
         renderInspector();
     });
     row.appendChild(free);
 
-    wrap.appendChild(row);
-    const o = document.createElement('div');
-    o.className = 'origin';
-    o.innerHTML = `<b>${originOf(prop).label}</b>`;
-    wrap.appendChild(o);
-    return wrap;
+    return row;
+}
+
+/**
+ * 값 한 걸음의 크기. 무엇을 다루는 값인지에 따라 다르다 —
+ * 투명도를 1씩 움직이면 0 아니면 1, 두 가지밖에 안 나온다.
+ */
+function scrubStep(prop, unit) {
+    if (prop === 'opacity') return 0.01;
+    if (!unit && (prop === 'line-height' || prop === 'flex-grow' || prop === 'flex-shrink')) return 0.01;
+    if (unit === 'rem' || unit === 'em') return 0.01;
+    if (unit === '%') return 0.5;
+    return 1;
+}
+
+/**
+ * 값 칸을 세로로 끌어 조절할 수 있게 한다.
+ * 움직이지 않고 떼면 평범한 클릭이라 그대로 글자를 고칠 수 있다.
+ */
+function scrubInput(input, prop, commit) {
+    input.classList.add('is-scrub');
+    let armed = false, moved = false, fromY = 0, base = 0, unit = '', acc = 0;
+
+    const onMove = ev => {
+        if (!armed) return;
+        const dy = fromY - ev.clientY;                       // 위로 끌면 커진다
+        if (!moved) {
+            if (Math.abs(dy) < 3) return;                     // 손떨림은 클릭으로 둔다
+            moved = true;
+            input.blur();
+            document.body.classList.add('is-dragging-num');
+        }
+        ev.preventDefault();
+        if (prop === 'font-weight') {
+            // 굵기는 100 단위 사다리라 픽셀을 모아 한 칸씩 옮긴다
+            const want = Math.trunc(dy / 8);
+            while (acc < want) { input.value = stepFontWeight(input.value, 1); acc++; }
+            while (acc > want) { input.value = stepFontWeight(input.value, -1); acc--; }
+        } else {
+            const step = scrubStep(prop, unit) * (ev.shiftKey ? 10 : 1);
+            let next = base + dy * step;
+            if (prop === 'opacity') next = Math.min(1, Math.max(0, next));
+            input.value = +next.toFixed(3) + unit;
+        }
+        commit();
+    };
+    const onUp = () => {
+        armed = false; moved = false;
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+        document.body.classList.remove('is-dragging-num');
+    };
+    input.addEventListener('mousedown', ev => {
+        if (ev.button !== 0) return;
+        const m = String(input.value).match(/^\s*(-?[\d.]+)\s*(px|rem|em|%|vw|vh)?\s*$/);
+        if (!m && prop !== 'font-weight') return;             // calc(...) 같은 건 끌 수 없다
+        armed = true; moved = false; acc = 0;
+        fromY = ev.clientY;
+        base = m ? parseFloat(m[1]) : 0;
+        unit = m ? (m[2] || '') : '';
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', onUp);
+    });
 }
 
 /** 자유 입력 줄 (토큰이 없는 속성, 또는 '직접' 잠금 해제) */
@@ -1677,7 +1717,7 @@ function freeFieldRow(prop) {
 
     const input = document.createElement('input');
     input.type = 'text';
-    input.value = currentValue(prop);
+    input.value = prettyValue(currentValue(prop));
 
     if (prop === 'color' || prop === 'background-color') {
         const comp = selection.computed[prop] || '';
@@ -1715,43 +1755,20 @@ function freeFieldRow(prop) {
     });
     row.appendChild(input);
 
-    const stepper = document.createElement('div');
-    stepper.className = 'stepper';
-    for (const [txt, dir] of [['▲', 1], ['▼', -1]]) {
-        const b = document.createElement('button');
-        b.textContent = txt;
-        b.onclick = () => {
-            if (prop === 'font-weight') {
-                input.value = stepFontWeight(input.value, dir);
-            } else {
-                const m = input.value.match(/^(-?[\d.]+)(px|rem|em|%|vw|vh)?$/);
-                if (!m) return;
-                input.value = +(parseFloat(m[1]) + dir).toFixed(3) + (m[2] || '');
-            }
-            stageEdit(prop, input.value);
-        };
-        stepper.appendChild(b);
-    }
-    row.appendChild(stepper);
+    // 화살표 버튼 대신 칸을 그대로 끌어서 조절한다 (프레이머·피그마와 같은 방식)
+    scrubInput(input, prop, () => stageEdit(prop, input.value));
 
     // 'Custom'으로 풀었던 속성은 다시 토큰 선택으로 돌아갈 수 있게
     if (freeMode.has(prop)) {
         const back = document.createElement('button');
         back.className = 'btn ghost tiny freeBtn';
-        back.textContent = 'Token';
-        back.title = 'Go back to picking a design system value';
+        back.textContent = 'System';
+        back.title = 'Go back to your design system values';
         back.addEventListener('click', () => { freeMode.delete(prop); renderInspector(); });
         row.appendChild(back);
     }
 
-    const wrap = document.createElement('div');
-    wrap.appendChild(row);
-    const o = document.createElement('div');
-    o.className = 'origin';
-    const org = originOf(prop);
-    o.innerHTML = `<b>${org.label}</b>`;
-    wrap.appendChild(o);
-    return wrap;
+    return row;
 }
 
 // ---------------------------------------------------------------- 수정 담기
@@ -1768,13 +1785,12 @@ function stageEdit(prop, value) {
     if (mode === 'css') {
         const org = originOf(prop);
         if (!org.selector) {
-            toast('No CSS rule targets this element, so it switches to “This element”.', 'err');
+            toast('This one can only be changed on its own.', 'err');
             setMode('inline');
             return stageEdit(prop, value);
         }
         if (!quietEdits) {
-            if (org.media) toast(`This value comes from @${org.media}. That rule will be edited.`);
-            else if (org.kind === 'insert') toast(`${prop} will be added to the ${org.selector} rule.`);
+            if (org.media) toast('This value only applies at this screen size.');
         }
         const i = pending.findIndex(p => p.kind === 'css' && p.selector === org.selector && p.prop === prop);
         const edit = { kind: 'css', selector: org.selector, prop, value, path: selection.path };
@@ -1882,6 +1898,7 @@ function undoLast() {
     updateDirty();
     updateHistoryButtons();
     applyPendingPreview();       // 남은 변경은 그대로 유지
+    if (!selection) renderInspector();   // 페이지 설정의 값도 되돌린 값으로
     toast(pending.length ? 'Undid one step' : 'Undid everything', 'ok');
 }
 $('#revertBtn').addEventListener('click', undoLast);
@@ -1909,7 +1926,7 @@ document.addEventListener('keydown', e => {
 $('#saveBtn').addEventListener('click', async () => {
     if (!pending.length) return;
     $('#saveBtn').disabled = true;
-    $('#saveBtn').textContent = 'Saving…';
+    $('#saveBtn').classList.add('is-saving');   // 아이콘 버튼이라 글자를 덮어쓰면 안 된다
     try {
         const res = await fetch('/__api/patch', {
             method: 'POST',
@@ -1940,7 +1957,7 @@ $('#saveBtn').addEventListener('click', async () => {
     } catch (err) {
         toast('Save failed: ' + err.message, 'err');
     } finally {
-        $('#saveBtn').textContent = 'Save to file';
+        $('#saveBtn').classList.remove('is-saving');
         updateDirty();
     }
 });
@@ -2363,6 +2380,7 @@ let picks = null;               // Shift 로 여러 개 골랐을 때 { count, i
 let editingText = false;        // 미리보기에서 글자를 고치는 중인지
 let emptyShown = false;         // '페이지 설정'이 이미 떠 있는지 (예외 목록을 한 번만 부르려고)
 let pageTokens = null;          // 페이지 전체를 정하는 토큰들 { raw, now }
+let pageBg = null;              // 배경을 실제로 칠하는 쪽 { selector, color, hasImage }
 let pageClassSet = new Set();   // 지금 열린 페이지의 CSS 가 아는 클래스
 let pageVarSet = new Set();     // 지금 열린 페이지가 정의한 CSS 변수(디자인 토큰)
 let mainPath = null;            // 미리보기에서 최상위 블록을 담는 그릇(<main>)의 경로
