@@ -1204,7 +1204,6 @@ function sectionLabel(s, n) {
         try {
             const dt = e.dataTransfer;
             if (dt.getData('text/x-hnkl-saved')) { key = dt.getData('text/x-hnkl-saved'); kind = 'saved'; }
-            else if (dt.getData('text/x-hnkl-media')) { key = dt.getData('text/x-hnkl-media'); kind = 'media'; }
             else if (dt.getData('text/x-hnkl-motion')) { key = dt.getData('text/x-hnkl-motion'); kind = 'motion'; }
             else key = dt.getData('text/x-hnkl-component') || dt.getData('text/plain') || '';
         } catch (_) {}

@@ -222,7 +222,7 @@ function onComponentDropped({ key, kind, path, position }) {
         return;
     }
     // ③ 미디어 / 기본 컴포넌트 — HTML 조각을 삽입
-    let src = kind === 'media' ? MEDIA_HTML[key] : COMPONENT_HTML[key];
+    let src = COMPONENT_HTML[key] || MEDIA_HTML[key];
     if (!src) return;
     // 개수를 고를 수 있는 컴포넌트는 카드에서 고른 값을 쓴다 (카드 안 −/+ 로 조절)
     const n = (typeof src === 'function')
@@ -242,7 +242,7 @@ function onComponentDropped({ key, kind, path, position }) {
     pending.push({ kind: 'insert', path, html, position });
     toFrame('insertPreview', { path, html, position });
     updateDirty();
-    toast(kind === 'media' ? 'Image added — set its link on the right' : 'Inserted — not saved yet', 'ok');
+    toast(NEEDS_LINK.has(key) ? 'Added — set its link on the right' : 'Inserted — not saved yet', 'ok');
 }
 
 /** 현재 파일 위치를 경로로 보여준다 (works/projects/vibra/vibra.html → Works / Projects / Vibra / vibra.html) */
@@ -1238,7 +1238,8 @@ function foldGroup(title, build, open = false) {
  */
 function syncSelectionButtons() {
     const save = $('#saveCompBtn');
-    if (save) save.disabled = !selection;
+    // 고른 게 없으면 할 수 있는 일이 아니다 — 흐리게 두지 말고 치운다
+    if (save) { save.hidden = !selection; save.disabled = !selection; }
 }
 
 /**
@@ -1383,6 +1384,15 @@ function renderInspector() {
  * 예전엔 두 요소를 각각 선택해 서로 다른 항목을 찾아야 했다.
  * 여기서는 지금 보이는 간격을 그대로 보여주고, 조절하면 '이 요소 쪽' 값만 바꾼다.
  */
+/**
+ * 유튜브 주소를 붙이면 그대로는 안 나온다 — 넣을 수 있는 주소로 바꿔 준다.
+ * (주소창에서 복사한 watch?v=… / youtu.be/… 를 embed 형태로)
+ */
+function embedUrl(v) {
+    const m = String(v).match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([\w-]{6,})/);
+    return m ? `https://www.youtube.com/embed/${m[1]}` : v;
+}
+
 function mediaRow() {
     const g = el('div', 'group');
     g.innerHTML = '<h3>Media</h3>';
@@ -1391,9 +1401,10 @@ function mediaRow() {
     const inp = el('input');
     inp.type = 'text';
     inp.value = selection.attrs?.src || '';
-    inp.placeholder = 'media/…';
+    inp.placeholder = 'media/… or a YouTube link';
     inp.addEventListener('change', () => {
-        const v = inp.value.trim();
+        const v = embedUrl(inp.value.trim());
+        inp.value = v;
         pending.push({ kind: 'attr', path: selection.path, name: 'src', value: v });
         toFrame('setAttr', { path: selection.path, name: 'src', value: v });
         updateDirty();
@@ -2054,7 +2065,7 @@ function setAppMode(ds) {
 
 // ---------------------------------------------------------------- 좌측 컴포넌트 패널
 const leftPanel = $('#leftPanel');
-const TAB_TITLE = { components: 'Components', media: 'Media', motion: 'Interactions' };
+const TAB_TITLE = { components: 'Components', motion: 'Interactions' };
 let activeTab = 'components';
 
 function selectTab(name) {
@@ -2079,12 +2090,33 @@ document.querySelectorAll('.rail-btn').forEach(b =>
 // 컴포넌트 = vibra 에서 실제로 쓰는 구조. 텍스트 블록 + 레이아웃 패턴.
 // 컴포넌트 = vibra 에서 실제로 쓰는 구조 그대로.
 // 쓰지 않는 모양을 만들어 두면 넣어 봐야 사이트와 안 맞아 결국 지우게 된다.
+// 링크가 비어 있어도 '자리'가 보이도록 감싼다 (빈 <img> 는 높이가 0 이라 화면에서 사라진다).
+// .ed-ph 는 링크를 채우면 저절로 티가 안 나는 얇은 점선 자리표시다.
+const MEDIA_HTML = {
+    image:
+`<div class="ed-ph ed-ph--16x9">
+    <img src="" alt="" loading="lazy" style="width:100%;height:100%;object-fit:cover;display:block;border-radius:16px;">
+</div>`,
+    video:
+`<div class="ed-ph ed-ph--16x9">
+    <iframe src="" title="video" allow="autoplay; fullscreen" allowfullscreen style="width:100%;height:100%;border:0;display:block;border-radius:16px;"></iframe>
+</div>`,
+};
+/** 넣고 나서 링크를 채워야 하는 것들 */
+const NEEDS_LINK = new Set(Object.keys(MEDIA_HTML));
+
 const COMPONENT_GROUPS = [
     {
         label: 'TEXT', items: [
             { key: 'sechead',   name: 'Section header',     desc: 'Label · title · text',    thumb: 'sechead' },
             { key: 'titledesc', name: 'Title + text',   desc: 'Subtitle + body',        thumb: 'titledesc' },
             { key: 'grouphead', name: 'Group header',     desc: 'A · Key Features',     thumb: 'grouphead' },
+        ],
+    },
+    {
+        label: 'MEDIA', items: [
+            { key: 'image',   name: 'Image',   desc: 'Photo or GIF',    thumb: 'mImage' },
+            { key: 'video',   name: 'Video',   desc: 'Paste a link',    thumb: 'mVideo' },
         ],
     },
     {
@@ -2290,36 +2322,19 @@ const PATTERN_THUMB = {
     row:         '<rect x="18" y="14" width="42" height="26" rx="4" fill="currentColor" opacity=".35"/><rect x="66" y="14" width="42" height="26" rx="4" fill="currentColor" opacity=".28"/><rect x="114" y="14" width="20" height="26" rx="4" fill="currentColor" opacity=".18"/>',
     cols3:       '<rect x="16" y="14" width="32" height="26" rx="4" fill="currentColor" opacity=".32"/><rect x="54" y="14" width="32" height="26" rx="4" fill="currentColor" opacity=".32"/><rect x="92" y="14" width="32" height="26" rx="4" fill="currentColor" opacity=".32"/>',
     grid:        '<rect x="22" y="10" width="44" height="15" rx="3" fill="currentColor" opacity=".35"/><rect x="74" y="10" width="44" height="15" rx="3" fill="currentColor" opacity=".28"/><rect x="22" y="30" width="44" height="15" rx="3" fill="currentColor" opacity=".28"/><rect x="74" y="30" width="44" height="15" rx="3" fill="currentColor" opacity=".35"/>',
+    // 미디어는 '자리'가 아니라 '무엇'을 고르는 것이라 꽉 찬 아이콘으로 그린다.
+    // 안쪽 모양은 evenodd 로 뚫어 낸다 — 획을 쓰지 않아 크기가 변해도 두께가 안 흔들린다.
+    mImage:
+        '<path fill="currentColor" opacity=".38" fill-rule="evenodd" d="'
+        + 'M56.5 15h27a3.5 3.5 0 0 1 3.5 3.5v17a3.5 3.5 0 0 1-3.5 3.5h-27a3.5 3.5 0 0 1-3.5-3.5v-17a3.5 3.5 0 0 1 3.5-3.5Z'
+        + 'M60 19a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5Z'
+        + 'M55.5 35.5 64 26.5l5.5 5.5 5-4 10 7.5Z" />',
+    mVideo:
+        '<path fill="currentColor" opacity=".38" fill-rule="evenodd" d="'
+        + 'M56.5 15h27a3.5 3.5 0 0 1 3.5 3.5v17a3.5 3.5 0 0 1-3.5 3.5h-27a3.5 3.5 0 0 1-3.5-3.5v-17a3.5 3.5 0 0 1 3.5-3.5Z'
+        + 'M65.5 21v12l10-6Z" />',
 };
 
-const MEDIA_ITEMS = [
-    { key: 'image',   name: 'Image',        desc: 'A single image',        thumb: 'mImage' },
-    { key: 'video',   name: 'Video',        desc: 'Autoplay · loop',     thumb: 'mVideo' },
-    { key: 'youtube', name: 'YouTube',       desc: 'Embedded external video',    thumb: 'mYoutube' },
-];
-// 링크가 비어 있어도 '자리'가 보이도록 감싼다 (빈 <img> 는 높이가 0 이라 화면에서 사라진다).
-// .ed-ph 는 링크를 채우면 저절로 티가 안 나는 얇은 점선 자리표시다.
-const MEDIA_HTML = {
-    image:
-`<div class="ed-ph ed-ph--16x9">
-    <img src="" alt="" loading="lazy" style="width:100%;height:100%;object-fit:cover;display:block;border-radius:16px;">
-</div>`,
-    video:
-`<div class="ed-ph ed-ph--16x9">
-    <video src="" autoplay muted loop playsinline style="width:100%;height:100%;object-fit:cover;display:block;border-radius:16px;"></video>
-</div>`,
-    youtube:
-`<div class="ed-ph ed-ph--16x9">
-    <iframe src="" title="video" allow="autoplay; fullscreen" allowfullscreen style="width:100%;height:100%;border:0;display:block;border-radius:16px;"></iframe>
-</div>`,
-    figure:
-`<div class="reveal">
-    <div class="ed-ph ed-ph--16x9">
-        <img src="" alt="" loading="lazy" style="width:100%;height:100%;object-fit:cover;display:block;border-radius:16px;">
-    </div>
-    <p class="vb-cap">이미지 설명</p>
-</div>`,
-};
 // 자리표시 스타일 — 삽입할 때 페이지에 한 번만 넣는다
 
 // ── 인터랙션: 요소에 끌어다 놓으면 클래스 + CSS 규칙이 붙는다 ──
@@ -2468,7 +2483,6 @@ function loadComponentPatterns() {
 }
 loadComponentPatterns();
 loadSavedComponents();
-loadSimpleList('lpMedia', MEDIA_ITEMS, 'text/x-hnkl-media');
 loadSimpleList('lpMotion', MOTION_ITEMS, 'text/x-hnkl-motion');
 
 // ---------------------------------------------------------------- 디자인 시스템
@@ -2590,13 +2604,6 @@ async function fetchDesignSystem() {
         const res = await fetch('/__api/designsystem');
         if (!res.ok) throw new Error('HTTP ' + res.status);
         dsData = await res.json();
-    // 무엇을 기준으로 무엇을 훑었는지 실제 값으로 보여준다 (설정에 따라 달라진다)
-    const srcEl = document.getElementById('dsSrc');
-    if (srcEl && dsData?.meta) {
-        const list = (dsData.meta.scanned || []);
-        const shown = list.slice(0, 3).join(', ') + (list.length > 3 ? ` +${list.length - 3} more` : '');
-        srcEl.innerHTML = `Source: <b>${dsData.meta.source}</b> · scanned: ${shown}`;
-    }
         dsEdits = {};
         buildDsBase(dsData);
         renderDesignSystem(dsData);
@@ -2610,7 +2617,7 @@ function renderDesignSystem(d) {
     const canvas = document.getElementById('dsCanvas');
     canvas.innerHTML = '';
     const inner = el('div', 'ds-inner');
-    inner.append(sectionPalette(d), sectionRoles(d), sectionTypo(d));
+    inner.append(sectionPalette(d), sectionRoles(d), sectionFont(d), sectionTypo(d));
     canvas.appendChild(inner);
     refresh();
 }
@@ -2666,21 +2673,21 @@ function sectionPalette(d) {
 // ② 역할 — 역할마다 카드. 이름 아래 라이트·다크 버튼을 나란히. 버튼 = 스와치 + 색상 이름.
 function sectionRoles(d) {
     const s = dsSection('Roles');
-    const grid = el('div', 'ds3-roles');
-    for (const r of d.roles) {
-        if (ROLE_SKIP.has(r.name) || !dsBaseLink[r.name]) continue;
-        const card = el('div', 'ds3-role'); card.dataset.role = r.name;
+    // 라이트 한 벌, 다크 한 벌을 좌우로 나란히. 같은 역할이 가로로 마주 보게 둔다.
+    const split = el('div', 'ds3-split');
+    for (const m of ['light', 'dark']) {
+        const isLight = m === 'light';
+        const col = el('div', 'ds3-col');
+        col.appendChild(el('div', 'ds3-sub', isLight ? 'LIGHT' : 'DARK'));
 
-        const nameEl = el('div', 'ds3-role-name', r.label);
-        nameEl.appendChild(varName(r.name));
-        card.appendChild(nameEl);
-
-        const modes = el('div', 'ds3-role-modes');
-        for (const m of ['light', 'dark']) {
-            const isLight = m === 'light';
+        for (const r of d.roles) {
+            if (ROLE_SKIP.has(r.name) || !dsBaseLink[r.name]) continue;
             const key = isLight ? r.name : darkKey(r.name);
-            const col = el('div', 'ds3-mode-col');
-            col.appendChild(el('span', 'ds3-mode-cap', isLight ? 'Light' : 'Dark'));
+
+            // 이름 한 칸, 고르는 칸 한 칸 — 인스펙터의 값 줄과 같은 짜임
+            const row = el('div', 'ds3-role');
+            row.dataset.role = r.name;
+            row.appendChild(el('div', 'ds3-role-name', r.label));
 
             const btn = el('div', 'ds3-mode-btn');
             btn.appendChild(dEl('span', 'ds3-mode-swatch', isLight ? 'rolechip' : 'rolechipdark', r.name));
@@ -2692,21 +2699,86 @@ function sectionRoles(d) {
             sel.value = isLight ? effLink(r.name) : effDarkLink(r.name);
             sel.addEventListener('change', () => applyEdit(key, sel.value));
             btn.appendChild(sel);
-            col.appendChild(btn);
+            row.appendChild(btn);
 
-            const chg = el('span', 'ds3-chg'); chg.dataset.chg = key; col.appendChild(chg);
-            modes.appendChild(col);
+            const chg = el('span', 'ds3-chg'); chg.dataset.chg = key; row.appendChild(chg);
+            col.appendChild(row);
         }
-        card.appendChild(modes);
-        grid.appendChild(card);
+        split.appendChild(col);
     }
-    s.appendChild(grid);
+    s.appendChild(split);
     return s;
 }
 
 // ③ 타이포
 // 큰 묶음 구분선을 넣을 위치 (제목군 → 본문군)
 const TYPO_GROUP_BREAK = new Set(['--fs-body']);
+
+const WEIGHT_NAME = {
+    100: 'Thin', 200: 'ExtraLight', 300: 'Light', 400: 'Regular', 500: 'Medium',
+    600: 'SemiBold', 700: 'Bold', 800: 'ExtraBold', 900: 'Black',
+};
+
+function sectionFont(d) {
+    const s = dsSection('Font');
+    if (!d.fontFamily) return s;
+
+    const name = el('div', 'ds3-fontname', d.fontFamily);
+    name.style.fontFamily = `'${d.fontFamily}', sans-serif`;
+    s.appendChild(name);
+
+    // 실제로 쓰이는 굵기만. 토큰에 있어도 아무 데도 안 쓰면 보여 줄 이유가 없다.
+    const used = (d.weightTokens || []).filter(w => w.inCode > 0)
+        .sort((a, b) => a.value - b.value);
+    if (!used.length) return s;
+
+    const grid = el('div', 'ds3-fontgrid');
+    for (const w of used) {
+        const card = el('div', 'ds3-fontcard');
+        card.style.fontFamily = `'${d.fontFamily}', sans-serif`;
+
+        card.appendChild(el('div', 'ds3-fontcap',
+            `${w.value} ${WEIGHT_NAME[w.value] || ''}`.trim()));
+
+        const aa = el('div', 'ds3-fontaa', 'Aa');
+        aa.style.fontWeight = w.value;
+        card.appendChild(aa);
+
+        const sample = el('div', 'ds3-fontsample');
+        sample.style.fontWeight = w.value;
+        sample.innerHTML = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ<br>abcdefghijklmnopqrstuvwxyz<br>가나다라마바사아자차카타파하<br>1234567890 !@#$%^&*()';
+        card.appendChild(sample);
+
+        grid.appendChild(card);
+    }
+    s.appendChild(grid);
+    return s;
+}
+
+/**
+ * 이 크기가 대략 어디에 쓰이고 있는지 — 붙어 있는 선택자 이름에서 성격을 읽는다.
+ * .vb-closing__title 같은 이름을 그대로 보여 주는 대신 '제목' 이라고 부른다.
+ */
+const USE_KIND = [
+    [/(^|[-_.])(h[1-6]|title|heading|headline|display)([-_]|$)/i, 'Titles'],
+    [/(quote|lead)/i, 'Quotes'],
+    [/(num|val|count|stat)/i, 'Numbers'],
+    [/(label|eyebrow|chip|pill|tag|badge|cap$|caption)/i, 'Labels'],
+    [/(sub|desc|note|hint|meta)/i, 'Sub text'],
+    [/(body|text|para|^p$)/i, 'Body text'],
+    [/(btn|button|link|nav|menu)/i, 'Buttons'],
+];
+function usageOf(selectors) {
+    const hits = new Map();
+    for (const sel of selectors) {
+        for (const [re, name] of USE_KIND) {
+            if (re.test(sel)) { hits.set(name, (hits.get(name) || 0) + 1); break; }
+        }
+    }
+    const top = [...hits.entries()].sort((a, b) => b[1] - a[1]).slice(0, 2).map(x => x[0]);
+    if (!top.length) return `${selectors.length} place${selectors.length > 1 ? 's' : ''}`;
+    return top.join(' · ');
+}
 
 function sectionTypo(d) {
     const s = dsSection('Type');
@@ -2715,6 +2787,14 @@ function sectionTypo(d) {
     const head = el('div', 'ds3-typo-row is-head');
     for (const h of ['Category', 'Size', 'Weight', 'Usage']) head.appendChild(el('div', 'ds3-th', h));
     table.appendChild(head);
+
+    // 아직 아무 데도 안 쓰는 크기는, 눈금 안에서의 자리로 쓸 곳을 짐작해 적는다
+    const sizes = d.typo.map(t => t.basePx).sort((a, b) => b - a);
+    const guessUse = px => {
+        const at = sizes.indexOf(px) / Math.max(1, sizes.length - 1);
+        return at < .25 ? 'Titles' : at < .5 ? 'Sub titles'
+            : at < .75 ? 'Body text' : 'Sub text · Labels';
+    };
 
     for (const t of d.typo) {
         const row = el('div', 'ds3-typo-row');
@@ -2741,11 +2821,13 @@ function sectionTypo(d) {
                 const w = el('div', 'ds3-wline', String(r.weight));
                 w.style.fontWeight = r.weight;
                 wCell.appendChild(w);
-                useCell.appendChild(el('div', 'ds3-useline', r.selectors.slice(0, 3).join(', ') || '—'));
+                const line = el('div', 'ds3-useline', r.selectors.length ? usageOf(r.selectors) : '—');
+                if (r.selectors.length) line.title = r.selectors.join(', ');
+                useCell.appendChild(line);
             }
         } else {
-            wCell.appendChild(el('div', 'ds3-wline is-none', '—'));
-            useCell.appendChild(el('div', 'ds3-useline is-none', 'Not used yet'));
+            wCell.appendChild(el('div', 'ds3-wline is-none', '400'));
+            useCell.appendChild(el('div', 'ds3-useline is-none', guessUse(t.basePx)));
         }
 
         row.append(nameCell, sizeCell, wCell, useCell);
@@ -2898,9 +2980,6 @@ $('#dsRevert')?.addEventListener('click', dsRevert);
 $('#dsSave')?.addEventListener('click', dsSaveConfirm);
 $('#dsConfirmCancel')?.addEventListener('click', () => { $('#dsConfirm').hidden = true; });
 $('#dsConfirmOk')?.addEventListener('click', dsSaveCommit);
-$('#dsShowVars')?.addEventListener('change', e => {
-    document.getElementById('dsView').classList.toggle('show-vars', e.target.checked);
-});
 
 // ---------------------------------------------------------------- 칩 모양 조절 인스펙터
 // 칩 크기·색 면적·아래 텍스트 여백을 직접 만져볼 수 있는 작은 창.

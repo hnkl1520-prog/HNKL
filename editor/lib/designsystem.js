@@ -513,9 +513,19 @@ export function buildDesignSystem() {
     annotate(surfaces);
     annotate(spacing);
 
+    // 무슨 글꼴을 쓰는지 — 디자인시스템을 열어 보는 이유의 절반이다.
+    // 가장 많이 적힌 font-family 를 이 사이트의 글꼴로 본다.
+    const famCount = {};
+    for (const m of scanText.matchAll(/font-family\s*:\s*([^;}]+)/gi)) {
+        const first = m[1].split(',')[0].trim().replace(/^['"]|['"]$/g, '');
+        if (!first || /^(inherit|initial|unset|var\()/i.test(first)) continue;
+        famCount[first] = (famCount[first] || 0) + 1;
+    }
+    const fontFamily = Object.entries(famCount).sort((a, b) => b[1] - a[1])[0]?.[0] || null;
+
     return {
         ramp, primary, purpleRamp, tealRamp, primitives, surfaces, roles,
-        typo, fontWeights, weightTokens,
+        typo, fontWeights, weightTokens, fontFamily,
         spacing, scale,
         aliases,
         meta: { source: CONFIG.tokensFile, scanned: [CONFIG.sharedCss, ...pages.map(p => p.name)] },

@@ -338,9 +338,11 @@ body { font-weight: 400; }
 /* 카드 목록 안의 소그룹 (TEXT / LAYOUT) */
 .lp-group-sub {
     font-size: 10px; font-weight: 700; letter-spacing: .08em; color: var(--dim);
-    margin: 6px 0 2px;
+    margin: 18px 0 2px; padding-top: 16px; border-top: 1px solid var(--hairline);
 }
-.lp-group-sub:first-child { margin-top: 0; }
+.lp-group-sub:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
+/* 버튼이 숨으면 제목만 남는다 */
+#saveCompBtn[hidden] { display: none; }
 
 /* 패턴 카드 (썸네일 + 이름 + 사용 횟수) */
 .lp-cards { display: flex; flex-direction: column; gap: 12px; overflow-y: auto; padding: 0 14px 14px; }
@@ -366,8 +368,9 @@ body { font-weight: 400; }
     border: 1px dashed var(--line); border-radius: 8px; color: var(--dim);
 }
 .lp-card__thumb svg { display: block; width: 88%; }
-.lp-card__name { font-size: 14px; font-weight: 600; color: var(--text); }
-.lp-card__use { font-size: 12px; color: var(--dim); margin-top: 3px; }
+/* 이름과 설명은 한 덩어리로 읽혀야 한다 — 기본 줄 간격(1.6)이 둘을 떼어 놓고 있었다 */
+.lp-card__name { font-size: 14px; font-weight: 600; color: var(--text); line-height: 1.35; }
+.lp-card__use { font-size: 12px; color: var(--dim); line-height: 1.35; margin-top: 2px; }
 
 
 
@@ -648,19 +651,32 @@ body { font-weight: 400; }
 .ds-toolbar {
     flex: 0 0 auto;
     display: flex; align-items: center; gap: 8px;
-    padding: 9px 20px;
-    border-bottom: 1px solid var(--line);
+    padding: 10px 24px;
+    border-bottom: 1px solid var(--hairline);
     font-size: 12px; color: var(--dim);
 }
-.ds-toolbar-src b { color: var(--text); font-weight: 600; }
 .ds-toolbar .grow { flex: 1; }
-.ds-toolbar-toggle { display: flex; align-items: center; gap: 4px; cursor: pointer; white-space: nowrap; }
-.ds-toolbar-toggle input { accent-color: var(--accent); }
+/* 편집 쪽 체크박스(.sp-check)와 같은 결 */
+.ds-toolbar-toggle {
+    display: flex; align-items: center; gap: 8px; cursor: pointer; white-space: nowrap;
+    font-size: 11px; color: var(--dim); font-weight: 400; margin-right: 4px;
+}
+.ds-toolbar-toggle input { accent-color: var(--accent); margin: 0; }
+/* 버튼 키도 다른 칸들과 같게 */
+.ds-toolbar .btn { height: var(--ctl-h); box-sizing: border-box; padding: 0 12px; font-size: 12px; }
 
-.ds-canvas { flex: 1; min-height: 0; overflow: auto; padding: 36px 40px 90px; }
+.ds-canvas { flex: 1; min-height: 0; overflow: auto; padding: 24px 24px 90px; background: var(--stage); }
 .ds-loading { color: var(--dim); font-size: 13px; padding: 60px 0; text-align: center; }
 /* 타이포 표의 첫 칸(64px 글자)이 잘리지 않을 만큼 넉넉히 */
 .ds-inner { max-width: 1120px; margin: 0 auto; }
+/* 섹션마다 판 하나 — 하나로 묶어 두면 어디까지가 한 갈래인지 안 보인다 */
+.ds3-section {
+    padding: 24px 26px 28px;
+    background: var(--float-bg);
+    backdrop-filter: var(--float-blur); -webkit-backdrop-filter: var(--float-blur);
+    border: 1px solid var(--float-line);
+    border-radius: var(--r-card); box-shadow: var(--float-shadow);
+}
 
 /* 코드 변수명 — 기본 숨김, 호버/토글로만 (개발자용) */
 .ds-var {
@@ -668,8 +684,7 @@ body { font-weight: 400; }
     font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace;
     font-size: 10px; color: #7ea8f0; opacity: 0; transition: opacity .12s; user-select: text;
 }
-.ds3-chip:hover .ds-var, .ds3-role:hover .ds-var, .ds3-typo-row:hover .ds-var,
-.ds-view.show-vars .ds-var { opacity: .8; }
+.ds3-chip:hover .ds-var, .ds3-typo-row:hover .ds-var { opacity: .8; }
 
 /* 바뀜 표시 */
 .ds3-chg {
@@ -677,20 +692,21 @@ body { font-weight: 400; }
     font-size: 10px; font-weight: 700; color: var(--warn);
 }
 .ds3-chip .ds3-chg { padding: 0 9px 9px; margin-top: 0; }
-.ds3-chip.is-changed, .ds3-role.is-changed { outline: 2px solid rgba(224,163,62,.5); outline-offset: 2px; }
+.ds3-chip.is-changed { outline: 2px solid rgba(224,163,62,.5); outline-offset: 2px; }
+.ds3-role.is-changed .ds3-mode-btn { border-color: var(--warn); }
 
 /* 섹션 */
-.ds3-section { margin-bottom: 64px; }
+.ds3-section { margin-bottom: 18px; }
 .ds3-title {
-    font-size: 22px; font-weight: 800; letter-spacing: -.02em;
-    color: var(--text); margin: 0 0 6px;
+    font-size: 30px; font-weight: 700; letter-spacing: -.02em;
+    color: var(--text); margin: 0 0 28px;
 }
 .ds3-desc { font-size: 12px; color: var(--dim); margin: 0 0 24px; line-height: 1.6; }
 .ds3-sub {
-    font-size: 12px; font-weight: 700; color: var(--dim);
-    margin: 28px 0 12px; letter-spacing: .02em;
+    font-size: 10px; font-weight: 700; color: var(--dim); letter-spacing: .08em;
+    margin: 26px 0 11px; padding-top: 22px; border-top: 1px solid var(--hairline);
 }
-.ds3-section > .ds3-sub:first-of-type { margin-top: 0; }
+.ds3-section > .ds3-sub:first-of-type { margin-top: 0; padding-top: 0; border-top: 0; }
 .ds3-dim { color: var(--dim); font-weight: 400; }
 
 /* ── 칩 카드 (크기 통일 · 색 면적 넓게 · 아래 여백은 칩 모양 창에서 조절) ── */
@@ -700,11 +716,11 @@ body { font-weight: 400; }
     --chip-gap: 0px; --chip-radius: 10px;
 }
 /* ── 팔레트 칩 (원래 카드형) ── */
-.ds3-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.ds3-chips { display: flex; flex-wrap: wrap; gap: 10px; }
 .ds3-chip {
     width: var(--chip-w); flex: 0 0 auto;
-    background: transparent; border-radius: var(--chip-radius);
-    overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,.12);
+    background: var(--surface-1); border: 1px solid var(--hairline);
+    border-radius: var(--chip-radius); overflow: hidden;
 }
 .ds3-chip-color {
     display: block; width: 100%; height: var(--chip-h);
@@ -715,28 +731,34 @@ body { font-weight: 400; }
 .ds3-chip-color::-webkit-color-swatch {
     border: 0; border-radius: var(--chip-radius) var(--chip-radius) 0 0;
 }
-.ds3-chip-meta { padding: var(--chip-pt) var(--chip-px) var(--chip-pb); background: #fff; }
-.ds3-chip-name { font-size: 12px; font-weight: 700; color: #111; line-height: 1.3; }
+.ds3-chip-meta { padding: var(--chip-pt) var(--chip-px) var(--chip-pb); background: var(--surface-1); }
+/* 컴포넌트 카드(.lp-card__name/__use)와 같은 굵기·간격으로 */
+.ds3-chip-name { font-size: 12px; font-weight: 600; color: var(--text); line-height: 1.35; }
 .ds3-chip-hex {
-    font-size: 10px; color: #666; line-height: 1.4; margin-top: var(--chip-gap);
-    font-variant-numeric: tabular-nums; letter-spacing: -.01em;
+    font-size: 10px; color: var(--dim); line-height: 1.35; margin-top: 2px;
+    font-variant-numeric: tabular-nums;
 }
-.ds3-chip .ds3-chg { padding: 0 var(--chip-px) var(--chip-pb); margin-top: 0; background: #fff; }
+.ds3-chip .ds3-chg { padding: 0 var(--chip-px) var(--chip-pb); margin-top: 0; background: var(--surface-1); }
 
 /* ── 역할 (역할마다 카드: 이름 + 라이트/다크 버튼 나란히) ── */
-.ds3-roles { display: flex; flex-wrap: wrap; gap: 8px; }
+/* 라이트 · 다크를 좌우로 나란히 — 같은 역할이 가로로 마주 본다 */
+.ds3-split { display: grid; grid-template-columns: 1fr 1fr; align-items: start; }
+.ds3-col { min-width: 0; }
+/* 두 벌 사이를 선으로 가른다 — 붙어 있으면 어디까지가 라이트인지 안 보인다 */
+.ds3-col + .ds3-col { padding-left: 40px; border-left: 1px solid var(--hairline); }
+.ds3-col:first-child { padding-right: 40px; }
+.ds3-col > .ds3-sub { margin-top: 0; padding-top: 0; border-top: 0; }
+/* 이름 칸을 글자 길이에 맞춰 좁힌다 — 1fr 이면 버튼이 저 끝으로 밀려난다 */
 .ds3-role {
-    display: flex; flex-direction: column; gap: 8px;
-    padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--r-card);
-    background: var(--surface-1);
+    display: grid; grid-template-columns: 76px 158px;
+    align-items: center; gap: 10px; padding: 4px 0;
 }
-.ds3-role-name { font-size: 12px; font-weight: 600; color: var(--text); }
-.ds3-role-modes { display: flex; gap: 8px; }
-.ds3-mode-col { display: flex; flex-direction: column; gap: 3px; }
-.ds3-mode-cap { font-size: 10px; color: var(--dim); letter-spacing: .03em; }
+.ds3-role-name { font-size: 12px; color: var(--text); line-height: 1.35; }
+
 .ds3-mode-btn {
-    display: inline-flex; align-items: center; gap: 8px;
-    padding: 3px 6px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface-1);
+    display: flex; align-items: center; gap: 8px;
+    padding: 0 9px; height: var(--ctl-h); box-sizing: border-box;
+    border: 1px solid var(--hairline); border-radius: var(--r-input); background: var(--surface-1);
 }
 .ds3-mode-swatch {
     width: 14px; height: 14px; flex: 0 0 auto;
@@ -769,15 +791,15 @@ body { font-weight: 400; }
     align-items: start;               /* 세로 중앙정렬 금지 — 위쪽 기준 */
     justify-items: start;             /* 모든 칸 왼쪽 정렬 */
     padding: 18px 0;
-    border-bottom: 1px solid var(--line);
+    border-bottom: 1px solid var(--hairline);
 }
 .ds3-typo-row.is-head {
     padding: 0 0 10px;
-    border-bottom: 1px solid var(--line);
-    position: sticky; top: 0; background: var(--bg); z-index: 1;
+    border-bottom: 1px solid var(--hairline);
+    background: none;
 }
-/* 큰 묶음 사이 굵은 구분선 */
-.ds3-typo-row.is-groupstart { border-top: 2px solid var(--line); margin-top: 6px; padding-top: 22px; }
+/* 큰 묶음 사이 — 앞 줄의 밑선이 이미 있으므로 선을 더 긋지 않고 사이만 벌린다 */
+.ds3-typo-row.is-groupstart { margin-top: 22px; }
 .ds3-th {
     font-size: 10px; font-weight: 600; color: var(--dim);
     letter-spacing: .05em; text-align: left;
@@ -1052,3 +1074,17 @@ body.is-dragging-num, body.is-dragging-num * { cursor: ns-resize !important; use
    글자색만 옅게 두고 모양은 온전히 남긴다. */
 .btn.ghost:disabled { opacity: 1; color: var(--dim); background: none; cursor: default; }
 .btn.ghost:disabled:hover { background: none; }
+
+/* ── 글꼴 ── */
+.ds3-fontname { font-size: 46px; font-weight: 700; letter-spacing: -.02em; color: var(--text); margin: 2px 0 22px; }
+.ds3-fontgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }
+.ds3-fontcard {
+    padding: 15px 16px 17px; border: 1px solid var(--hairline); border-radius: var(--r-card);
+    background: var(--surface-1); min-width: 0;
+}
+.ds3-fontcap { font-size: 12px; color: var(--dim); line-height: 1.35; }
+.ds3-fontaa { font-size: 52px; line-height: 1.15; color: var(--text); margin: 10px 0 12px; }
+.ds3-fontsample { font-size: 11px; line-height: 1.7; color: var(--text); word-break: break-all; }
+
+/* 쓰이지 않는 크기 — 어디에 쓸 만한지만 옅게 적어 둔다 */
+.ds3-useline.is-none { color: var(--dim); opacity: .7; font-style: italic; }
