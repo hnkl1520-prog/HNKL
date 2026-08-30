@@ -1229,8 +1229,10 @@
         .bg-xr:hover { transform: translateY(-8px); box-shadow: 0 30px 60px rgba(70,110,230,.42); }
         @media (hover: none) { .bg-step:hover, .bg-xr:hover { transform: none; } }
 
+
+
         /* 모바일: 세로로 쌓고 화살표는 아래 방향 느낌으로 숨김 */
-        @media (max-width: 720px) {
+        @media (min-width: 561px) and (max-width: 720px) {
             .bg-flow { flex-direction: column; align-items: center; gap: 14px; }
             .bg-step, .bg-xr { width: min(320px, 80vw); }
             .bg-arrow svg { transform: rotate(90deg); }
@@ -1300,9 +1302,6 @@
         @media (max-width: 900px) {
             .tl-grid { grid-template-columns: repeat(2, 1fr); gap: 34px 28px; }
             .tl-col__arrow { display: none; }
-        }
-        @media (max-width: 520px) {
-            .tl-grid { grid-template-columns: 1fr; }
         }
 
         /* =========================================================
@@ -1514,6 +1513,8 @@
         .text-center { text-align: center; }
         .hidden { display: none; }
         @media (min-width: 768px) { .md\:block { display: block; } }
+
+
 
     </style>
 </head>
@@ -3138,6 +3139,109 @@
         .qr-tuner__top output { color: #2997ff; font-weight: 700; }
         .qr-tuner__row input[type=range] { width: 100%; accent-color: #2997ff; margin: 0; }
         #qr-tuner-copy { width: 100%; padding: 8px; font-weight: 600; }
+        /* =========================================================
+           폰 (≤ 560px)
+           데스크탑–노트북–태블릿은 --vb-s 한 곡선으로 묶여 있다.
+           폰은 그 곡선을 벗어난 자리라 여기서 따로 잡는다.
+           ========================================================= */
+        @media (max-width: 560px) {
+            :root {
+                /* 섹션 사이·묶음 사이 간격 — 큰 화면 값을 그대로 줄이면
+                   폰에서는 빈 화면만 계속 넘기게 된다 */
+                --vb-pad-block: 56px;
+                --gap-group: 52px;
+                --gap-group-lg: 68px;
+                --vb-gap: 14px;
+            }
+
+            /* 히어로: 사진을 자르지 않는다.
+               높이를 사진 비율(16:9)에 맞춰 두면 잘리지도, 위아래가 비지도 않는다. */
+            .vb-hero { height: auto; min-height: 0; aspect-ratio: 16 / 9; }
+            .vb-hero--dummy { background-size: 100% 100%; background-position: center; }
+
+            /* 한 줄에 하나씩 쌓지 않는다 — 글자가 몇 자뿐인 카드는 옆으로 붙인다 */
+            /* 앞의 셋은 지나온 것, 마지막 하나는 다음 것 — 줄을 나눠 그 뜻을 살린다 */
+            .bg-flow {
+                display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+                gap: 10px; align-items: stretch;
+            }
+            .bg-xr { grid-column: 1 / -1; aspect-ratio: 16 / 10; }
+            /* 칸을 따르게 한다 — 고정 폭이 남아 있으면 칸을 밀어내고 화면 밖으로 넘친다 */
+            .bg-step, .bg-xr { width: auto; min-width: 0; padding: 14px 6px; }
+            /* 아이콘이 고정 폭이라 칸을 밀어내고 있었다 — 칸을 따르게 한다 */
+            .bg-step__icon img { width: 100%; max-width: 52px; }
+            .bg-xr__icon img { width: 100%; max-width: 92px; }
+            /* 화살표는 한 줄로 늘어설 때만 뜻이 있다 (2열에서는 방향이 어긋난다) */
+            .bg-arrow { display: none; }
+
+            /* 셋짜리 묶음은 2+1 로 남으면 마지막 하나가 붕 뜬다.
+               글이 붙은 것은 한 줄에 하나, 글자만 몇 자인 것은 세 개 나란히. */
+            .ql-method-grid { grid-template-columns: 1fr; gap: 22px; }
+            .sky-features { grid-template-columns: 1fr; max-width: none; gap: 22px; }
+            .ai-sec__grid { grid-template-columns: repeat(3, 1fr); gap: 10px; }
+            .ig-grid { grid-template-columns: 1fr 1fr; max-width: none; gap: 14px; }
+            .sky-asset__grid { grid-template-columns: repeat(2, 1fr); }
+            /* min-width 가 남아 있으면 칸을 밀어내고 화면 밖으로 나간다 */
+            .aff-kw-card { min-width: 0; }
+
+            /* ── 폰 글자 ──
+               넓은 화면에서는 64 → 12px 까지 일곱 단을 쓰지만, 폰에서는 그 폭이
+               읽는 데 도움이 안 된다. 단을 좁혀 큰 것은 낮추고 작은 것은 올린다. */
+            :root {
+                /* 카드 밖에서 강조하는 글자는 하나로 */
+                --fs-display: 30px;
+                --fs-h1:      30px;
+                /* 카드 안에서 강조하는 글자도 하나로 ('대부분 능동적으로~' 크기) */
+                --fs-h2:      18px;
+                --fs-h3:      18px;
+                --fs-body:    16px;
+                --fs-small:   15px;
+                --fs-caption: 13px;
+            }
+
+            /* 강조 글자를 두 단으로 묶는다.
+               토큰(--fs-*)을 안 쓰고 제자리에서 크기를 박아 둔 곳이 많아
+               (심지어 style="" 로 박힌 것도 있다) 여기서는 !important 로 눌러 맞춘다.
+               넓은 화면에서는 40·36·30·28·25·24·20·18px 여덟 단이 쓰이고 있었다. */
+            /* 카드 밖에서 강조하는 글자 — 전부 한 크기 */
+            .vb-title, .vb-subtitle, .ai-sec__title,
+            .vb-wrap > h3, .vb-wrap > h4, .reveal > h3, .reveal > h4 {
+                font-size: 24px !important; line-height: 1.4 !important;
+            }
+            /* 카드 안에서 강조하는 글자 — 전부 한 크기.
+               같은 상자 안에서 '분석하다'(1.5rem)와 '경기 분석 영상'이 달랐다. */
+            h4, .info-card p, .info-card strong, .qr-card__quote,
+            .vb-carousel__caption, .vb-carousel__caption strong, .vb-carousel__num,
+            [style*="font-size: 1.5rem"] {
+                font-size: 18px !important; line-height: 1.5 !important;
+            }
+            /* 숫자만 한 단 위로 (글자가 아니라 값이라 같이 묶으면 안 읽힌다) */
+            .circle-chart, .circle-chart span, .qr-donut__val, .qr-insights__num,
+            .mr-card__num, .qr-card__num,
+            [style*="font-size: 2.25rem"] { font-size: 26px !important; }
+
+            /* ⑤ 넓은 화면 기준으로 넣어 둔 <br> 이 폰에서는 엉뚱한 데서 끊는다.
+               지우면 원문에 공백이 없어 낱말이 붙으므로, 줄바꿈을 공백으로 바꿔 놓는다. */
+            .vb-lead br, .vb-body br, .bg-head p br, .tg-head p br, .vb-desc br {
+                content: " "; display: inline;
+            }
+            .vb-lead, .vb-body, .bg-head p, .tg-head p, .vb-desc { word-break: keep-all; }
+
+            /* 서비스 흐름도는 720px 폭이 있어야 뜻이 산다.
+               줄여서 뭉개는 대신 가로로 넘겨 보게 한다. */
+            .sf-scroll {
+                overflow-x: auto; -webkit-overflow-scrolling: touch;
+                margin-inline: -20px; padding-inline: 20px;
+                scrollbar-width: none;
+            }
+            .sf-scroll::-webkit-scrollbar { display: none; }
+            .sf-track { min-width: 700px; }
+
+            /* 상자가 크니 아이콘도 그만큼 키운다 */
+            .bg-step__icon img { max-width: 58px; }
+            .bg-xr__icon img { max-width: 112px; }
+        }
+
     </style>
 
 
