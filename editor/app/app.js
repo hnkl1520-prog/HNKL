@@ -2333,6 +2333,17 @@ const PATTERN_THUMB = {
         '<path fill="currentColor" opacity=".38" fill-rule="evenodd" d="'
         + 'M56.5 15h27a3.5 3.5 0 0 1 3.5 3.5v17a3.5 3.5 0 0 1-3.5 3.5h-27a3.5 3.5 0 0 1-3.5-3.5v-17a3.5 3.5 0 0 1 3.5-3.5Z'
         + 'M65.5 21v12l10-6Z" />',
+    // 인터랙션 — 무슨 일이 일어나는지를 네모의 위치·크기·농도로만 보인다
+    xLift:       '<rect x="46" y="8" width="48" height="26" rx="4" fill="currentColor" opacity=".38"/>'
+        + '<rect x="52" y="40" width="36" height="4" rx="2" fill="currentColor" opacity=".14"/>',
+    xGrow:       '<rect x="40" y="6" width="60" height="42" rx="5" fill="currentColor" opacity=".14"/>'
+        + '<rect x="52" y="15" width="36" height="24" rx="4" fill="currentColor" opacity=".38"/>',
+    xPulse:      '<rect x="44" y="10" width="52" height="34" rx="5" fill="currentColor" opacity=".14"/>'
+        + '<rect x="52" y="16" width="36" height="22" rx="4" fill="currentColor" opacity=".38"/>'
+        + '<circle cx="70" cy="27" r="3" fill="currentColor" opacity=".55"/>',
+    xFade:       '<rect x="46" y="34" width="48" height="12" rx="3" fill="currentColor" opacity=".38"/>'
+        + '<rect x="52" y="20" width="36" height="9" rx="3" fill="currentColor" opacity=".2"/>'
+        + '<rect x="58" y="10" width="24" height="6" rx="3" fill="currentColor" opacity=".1"/>',
 };
 
 // 자리표시 스타일 — 삽입할 때 페이지에 한 번만 넣는다
@@ -3033,3 +3044,40 @@ applyStage();
 loadPages();
 // 인스펙터가 '토큰 중에서만' 고르게 하려면 토큰 목록이 먼저 필요하다.
 loadInsTokens().then(() => { if (selection) renderInspector(); });
+
+// ---------------------------------------------------------------- 토글 알약
+/**
+ * 고른 쪽을 따라 미끄러지는 알약.
+ * works 페이지의 dock-pill 과 같은 움직임 — GSAP 의 elastic.out(1, 0.4) 을
+ * CSS linear() 로 옮겨 놓았다 (app.css 의 --spring).
+ */
+function slidingPill(group) {
+    if (!group || group.querySelector(':scope > .tg-pill')) return;
+    group.classList.add('has-pill');
+    const pill = document.createElement('span');
+    pill.className = 'tg-pill';
+    group.prepend(pill);
+
+    let first = true;
+    const move = () => {
+        const on = group.querySelector(':scope > .on');
+        if (!on) { pill.style.opacity = '0'; return; }
+        // 처음 자리를 잡을 때는 미끄러지지 않게 (화면이 뜨자마자 튀어나온다)
+        if (first) pill.style.transition = 'none';
+        pill.style.opacity = '1';
+        pill.style.left = on.offsetLeft + 'px';
+        pill.style.top = on.offsetTop + 'px';
+        pill.style.width = on.offsetWidth + 'px';
+        pill.style.height = on.offsetHeight + 'px';
+        if (first) { requestAnimationFrame(() => { pill.style.transition = ''; }); first = false; }
+    };
+
+    // .on 은 여기저기서 붙였다 뗐다 한다 (클릭·단축키·프로그램). 속성을 지켜보는 편이 확실하다.
+    new MutationObserver(move).observe(group, { attributes: true, attributeFilter: ['class'], subtree: true });
+    window.addEventListener('resize', move);
+    requestAnimationFrame(move);
+}
+
+for (const sel of ['.mode-switch', '.bp', '.canvas-tools', '.lp-rail']) {
+    document.querySelectorAll(sel).forEach(slidingPill);
+}

@@ -1088,3 +1088,73 @@ body.is-dragging-num, body.is-dragging-num * { cursor: ns-resize !important; use
 
 /* 쓰이지 않는 크기 — 어디에 쓸 만한지만 옅게 적어 둔다 */
 .ds3-useline.is-none { color: var(--dim); opacity: .7; font-style: italic; }
+
+
+/* ══════════════════════════════════════════════════════════════
+   둥근 안 — 시험 삼아. 되돌리려면 이 블록만 지우면 된다.
+   · 아이콘만 있는 버튼은 동그라미
+   · 둘 중 하나를 고르는 묶음은 알약
+   · 값을 넣고 색을 고르는 칸은 손대지 않는다 (모난 쪽이 읽기 쉽다)
+   ══════════════════════════════════════════════════════════════ */
+
+/* ── 아이콘 버튼: 동그라미 ── */
+.topbar .btn:not(.primary),
+.topbar .btn.primary,
+#saveBtn, #revertBtn, #redoBtn, #reloadBtn, #openRawBtn {
+    width: 38px; height: 38px; padding: 0;
+    border-radius: 999px; justify-content: center;
+}
+/* 왼쪽 레일 · 캔버스 툴바도 같은 규칙 */
+.rail-btn { border-radius: 999px; }
+.ct-tool { border-radius: 999px; }
+
+/* ── 고르는 묶음: 알약 ── */
+.bp, .seg, .mode-switch { border-radius: 999px; }
+.bp button, .seg button, .segRow button, .mode-btn { border-radius: 999px; }
+.canvas-tools { border-radius: 999px; }
+
+/* ── Edit / Design System: 스위치 ──
+   묶음이 알약이고 고른 쪽이 그 안에서 미끄러지는 알약처럼 보이게 한다. */
+.mode-switch {
+    padding: 3px; gap: 2px;
+    background: var(--gray-10); border-color: transparent;
+}
+.mode-btn {
+    padding: 6px 16px; font-size: 13px; font-weight: 500;
+    transition: background .18s cubic-bezier(.4,0,.2,1), color .18s, box-shadow .18s;
+}
+.mode-btn.on {
+    box-shadow: 0 1px 3px rgba(0,0,0,.18);
+}
+
+/* ── 미끄러지는 알약 ──
+   works 페이지의 dock-pill 과 같은 움직임. GSAP 의 elastic.out(1, 0.4) 을
+   CSS 로 옮긴 것이라 마지막에 살짝 넘쳤다가 달라붙는다. */
+:root {
+    --spring: linear(0, 0.2231, 0.5, 0.7725, 1, 1.1609, 1.25, 1.2747, 1.25, 1.1942,
+        1.125, 1.0569, 1, 0.9598, 0.9375, 0.9313, 0.9375, 0.9514, 0.9688, 0.9858,
+        1, 1.0101, 1.0156, 1.0172, 1.0156, 1.0121, 1.0078, 1.0036, 1, 0.9975,
+        0.9961, 0.9957, 0.9961, 0.997, 0.998, 0.9991, 1, 1.0006, 1.001, 1.0011, 1);
+}
+/* 이미 fixed/absolute 인 묶음(캔버스 툴바)의 자리를 뺏지 않도록 static 일 때만 */
+.mode-switch, .bp, .lp-rail { position: relative; }
+.tg-pill {
+    position: absolute; left: 0; top: 0; z-index: 1;
+    border-radius: 999px; background: var(--text); pointer-events: none; opacity: 0;
+    transition: left .9s var(--spring), top .9s var(--spring),
+                width .9s var(--spring), height .9s var(--spring), opacity .15s;
+}
+/* 알약이 면을 맡으므로 고른 버튼 자신은 비운다 (글자만 흰색으로) */
+.has-pill > .on {
+    background: transparent !important;
+    border-color: transparent !important;
+    position: relative; z-index: 2;
+}
+.has-pill > button, .has-pill > .rail-btn, .has-pill > .ct-tool { position: relative; z-index: 2; }
+/* 색은 알약이 지나간 뒤에 바뀌어야 글자가 흰 배경 위에 흰색으로 뜨지 않는다.
+   (알약 자신은 빼야 한다 — 여기 걸리면 미끄러짐이 통째로 덮인다) */
+.has-pill > button, .has-pill > .rail-btn, .has-pill > .ct-tool { transition: color .25s .1s; }
+
+@media (prefers-reduced-motion: reduce) {
+    .tg-pill { transition: opacity .15s; }
+}
