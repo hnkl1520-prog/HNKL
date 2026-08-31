@@ -182,6 +182,8 @@
 
     function describe(el) {
         const cs = getComputedStyle(el);
+        // 사진의 '틀'(.ed-ph)은 부모다. 비율을 고치려면 부모를 알아야 한다.
+        const par = el.parentElement;
         const computed = {};
         for (const p of PROPS) computed[p] = cs.getPropertyValue(p).trim();
 
@@ -198,7 +200,11 @@
         }
 
         const r = el.getBoundingClientRect();
+        const parentInfo = par && par !== document.body
+            ? { parentPath: pathOf(par), parentClasses: [...par.classList].filter(c => !c.startsWith('__ed')) }
+            : {};
         return {
+            ...parentInfo,
             page: PAGE,
             path: pathOf(el),
             tag: el.tagName.toLowerCase(),
@@ -259,7 +265,7 @@
         .__ed-boxhint {
             position: absolute; z-index: 2147483644; pointer-events: none; border-radius: 2px;
         }
-        .__ed-boxhint--margin  { background: rgba(245,158,11,.38); outline: 1px solid rgba(245,158,11,.7); }
+        .__ed-boxhint--margin  { background: rgba(79,209,197,.38); outline: 1px solid rgba(79,209,197,.7); }
         .__ed-boxhint--padding { background: rgba(59,130,246,.34); outline: 1px solid rgba(59,130,246,.7); }
         /* 글자 고치는 중 — 어디를 고치고 있는지 분명히 */
         .__ed-editing {
@@ -332,6 +338,12 @@
     }
 
     function select(el) {
+        // 사진 자리(.ed-ph)를 누르면 껍데기가 아니라 그 안의 사진·영상이 잡혀야 한다.
+        // 껍데기가 잡히면 인스펙터에 '미디어' 칸이 아예 안 뜬다.
+        if (el.classList?.contains('ed-ph')) {
+            const inner = el.querySelector(':scope > img, :scope > video, :scope > iframe');
+            if (inner) el = inner;
+        }
         clearBoxHint();
         clearPicked();
         selected?.classList.remove('__ed-selected');
@@ -972,8 +984,8 @@ function sectionLabel(s, n) {
                 band.className = '__ed-gap-bar';
                 band.style.cssText =
                     'position:absolute;z-index:2147483640;cursor:ns-resize;' +
-                    'background:repeating-linear-gradient(45deg,rgba(245,158,11,.22) 0 8px,rgba(245,158,11,.10) 8px 16px);' +
-                    'border:1px dashed rgba(245,158,11,.75);' +
+                    'background:repeating-linear-gradient(45deg,rgba(79,209,197,.22) 0 8px,rgba(79,209,197,.10) 8px 16px);' +
+                    'border:1px dashed rgba(79,209,197,.75);' +
                     'display:flex;align-items:center;justify-content:center;transition:background .12s';
                 band.style.left = r.left + window.scrollX + 'px';
                 band.style.width = r.width + 'px';
@@ -989,11 +1001,11 @@ function sectionLabel(s, n) {
                 band.appendChild(tag);
 
                 band.addEventListener('mouseenter', () => {
-                    band.style.background = 'repeating-linear-gradient(45deg,rgba(245,158,11,.38) 0 8px,rgba(245,158,11,.20) 8px 16px)';
+                    band.style.background = 'repeating-linear-gradient(45deg,rgba(79,209,197,.38) 0 8px,rgba(79,209,197,.20) 8px 16px)';
                 });
                 band.addEventListener('mouseleave', () => {
                     if (!band.__dragging) band.style.background =
-                        'repeating-linear-gradient(45deg,rgba(245,158,11,.22) 0 8px,rgba(245,158,11,.10) 8px 16px)';
+                        'repeating-linear-gradient(45deg,rgba(79,209,197,.22) 0 8px,rgba(79,209,197,.10) 8px 16px)';
                 });
                 // 위쪽 띠는 위로 끌면 넓어지고, 아래쪽 띠는 아래로 끌면 넓어진다
                 band.addEventListener('mousedown', e => startGapDrag(e, sec, band, tag, side));
@@ -1033,7 +1045,7 @@ function sectionLabel(s, n) {
         e.preventDefault(); e.stopPropagation();
         band.__dragging = true;
         band.style.background =
-            'repeating-linear-gradient(45deg,rgba(245,158,11,.5) 0 8px,rgba(245,158,11,.3) 8px 16px)';
+            'repeating-linear-gradient(45deg,rgba(79,209,197,.5) 0 8px,rgba(79,209,197,.3) 8px 16px)';
         const startY = e.clientY;
         const cs = getComputedStyle(sec);
         const start = Math.round(parseFloat(side === 'top' ? cs.paddingTop : cs.paddingBottom)) || 0;

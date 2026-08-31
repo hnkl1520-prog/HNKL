@@ -901,14 +901,17 @@ body { font-weight: 400; }
     align-items: center; justify-items: center;
     gap: 4px 2px; padding: 18px 5px 6px;
 }
-.sp-ring--margin  { background: rgba(245,158,11,.10); border: 1px dashed rgba(245,158,11,.45); }
+/* 개발자도구의 주황(margin)·파랑(padding) 관습을 쓰다가 팔레트 안으로 들여왔다.
+   Inside 는 Primary 50(#3B82F6), Outside 는 Secondary 2 · Teal 50(#4FD1C5).
+   보라(Secondary 1)도 되지만 파랑과 같은 계열이라 10% 로 깔면 서로 구분이 잘 안 된다. */
+.sp-ring--margin  { background: rgba(79,209,197,.14); border: 1px dashed rgba(79,209,197,.5); }
 .sp-ring--padding { background: rgba(59,130,246,.10); border: 1px dashed rgba(59,130,246,.45); width: 100%; box-sizing: border-box; }
 .sp-ring__name {
     position: absolute; top: 4px; left: 7px;
     font-size: 9px; font-weight: 600;
 }
-.sp-ring--margin  > .sp-ring__name { color: #b45309; }
-.sp-ring--padding > .sp-ring__name { color: #1d4ed8; }
+.sp-ring--margin  > .sp-ring__name { color: var(--text); }
+.sp-ring--padding > .sp-ring__name { color: var(--text); }
 /* 위 → 오른쪽 → 아래 → 왼쪽 순으로 넣는다 */
 .sp-ring > .sp-edge:nth-of-type(1) { grid-area: 1 / 2; }
 .sp-ring > .sp-edge:nth-of-type(2) { grid-area: 2 / 3; }
@@ -930,8 +933,8 @@ body { font-weight: 400; }
 }
 .sp-edge__val:hover { border-color: var(--line); }
 .sp-edge__val.is-changed { color: var(--accent); }
-/* 디자인 시스템 단계에서 벗어난 값 */
-.sp-edge.is-free .sp-edge__val { color: #b45309; }
+/* 눈금에서 벗어난 값도 그대로 둔다 — 모든 간격을 토큰 안에 가두는 건 무리다.
+   가까우면 자석처럼 붙는 것만 남기고, 색으로 나무라지 않는다. */
 .sp-edge__input {
     width: 40px; font: inherit; font-size: 12px; text-align: center;
     border: 1px solid var(--accent); border-radius: 4px; padding: 1px 2px; background: var(--surface-1);
@@ -1206,3 +1209,33 @@ body.is-dragging-num, body.is-dragging-num * { cursor: ns-resize !important; use
     margin: -6px 2px 14px;
 }
 .sp-between__label { font-size: 11px; color: var(--dim); }
+
+/* ── 화면 한가운데 뜨는 작은 창 ── */
+.dlg-back {
+    position: fixed; inset: 0; z-index: 400;
+    display: grid; place-items: center;
+    background: rgba(20, 20, 24, .28);
+    backdrop-filter: blur(3px);
+}
+.dlg {
+    width: 260px; padding: 22px 22px 18px;
+    background: var(--surface-1); border: 1px solid var(--line);
+    border-radius: var(--r-card); box-shadow: 0 24px 60px rgba(0,0,0,.22);
+}
+.dlg__title { font-size: 14px; font-weight: 600; color: var(--text); text-align: center; }
+.dlg__row {
+    display: flex; align-items: center; justify-content: center; gap: 18px;
+    margin: 18px 0 20px;
+}
+.dlg__step {
+    width: 32px; height: 32px; padding: 0; border-radius: 999px;
+    border: 1px solid var(--line); background: var(--surface-2);
+    font-size: 17px; line-height: 1; color: var(--text); cursor: pointer;
+}
+.dlg__step:hover { background: var(--gray-10); }
+.dlg__num {
+    min-width: 40px; text-align: center;
+    font-size: 26px; font-weight: 600; color: var(--text); font-variant-numeric: tabular-nums;
+}
+.dlg__acts { display: flex; gap: 8px; }
+.dlg__acts .btn { flex: 1; justify-content: center; height: var(--ctl-h); }

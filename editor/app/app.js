@@ -180,7 +180,7 @@ function askProjectInfo() {
 }
 
 // 라이브러리에서 미리보기로 떨어뜨렸을 때: 화면에 바로 넣고, 저장 대기열에 쌓는다.
-function onComponentDropped({ key, kind, path, position }) {
+async function onComponentDropped({ key, kind, path, position }) {
     // ① 인터랙션 — 그 요소에 클래스를 붙이고, 필요한 CSS 를 페이지에 넣는다
     if (kind === 'motion') {
         const def = MOTION_DEFS[key];
@@ -238,9 +238,9 @@ function onComponentDropped({ key, kind, path, position }) {
     // 표처럼 '무엇을 적을지'가 정해져야 뜻이 생기는 컴포넌트는 넣을 때 물어본다.
     // 값이 비면 기본 예시가 들어가고, 나머지는 인스펙터에서 고치면 된다.
     if (key === 'carousel') {
-        const n = prompt('How many cards?', String(compCount.carousel || 3));
+        const n = await askCount('How many cards?', compCount.carousel || 3);
         if (n === null) return;                       // 취소
-        compCount.carousel = Math.max(1, Math.min(12, parseInt(n, 10) || 3));
+        compCount.carousel = n;
     }
     const opt = (key === 'projectinfo') ? askProjectInfo() : undefined;
     if (opt === null) return;    // 창에서 취소
@@ -1452,6 +1452,50 @@ function mediaSrc(u) {
  * 영상이면 <video>, 사진이면 <img> 로 태그까지 바꾼다.
  * src 만 갈아 끼우면 영상 자리에 재생이 안 되는 <img> 가 남는다.
  */
+/**
+ * 숫자 하나를 묻는 창. 브라우저 기본 prompt 는 이 앱과 아무 관계 없는 모양이라
+ * 화면 한가운데에 우리 결로 띄운다.
+ */
+function askCount(title, value, min = 1, max = 12) {
+    return new Promise(resolve => {
+        const back = el('div', 'dlg-back');
+        const box = el('div', 'dlg');
+        box.innerHTML = `<div class="dlg__title">${title}</div>`;
+
+        const row = el('div', 'dlg__row');
+        const dec = el('button', 'dlg__step'); dec.type = 'button'; dec.textContent = '−';
+        const num = el('span', 'dlg__num', String(value));
+        const inc = el('button', 'dlg__step'); inc.type = 'button'; inc.textContent = '+';
+        const set = n => { value = Math.max(min, Math.min(max, n)); num.textContent = String(value); };
+        dec.onclick = () => set(value - 1);
+        inc.onclick = () => set(value + 1);
+        row.append(dec, num, inc);
+        box.appendChild(row);
+
+        const acts = el('div', 'dlg__acts');
+        const cancel = el('button', 'btn ghost'); cancel.type = 'button'; cancel.textContent = 'Cancel';
+        const ok = el('button', 'btn primary'); ok.type = 'button'; ok.textContent = 'Add';
+        acts.append(cancel, ok);
+        box.appendChild(acts);
+
+        const close = v => { back.remove(); document.removeEventListener('keydown', onKey); resolve(v); };
+        cancel.onclick = () => close(null);
+        ok.onclick = () => close(value);
+        back.onclick = e => { if (e.target === back) close(null); };
+        const onKey = e => {
+            if (e.key === 'Escape') close(null);
+            if (e.key === 'Enter') close(value);
+            if (e.key === 'ArrowUp') set(value + 1);
+            if (e.key === 'ArrowDown') set(value - 1);
+        };
+        document.addEventListener('keydown', onKey);
+
+        back.appendChild(box);
+        document.body.appendChild(back);
+        ok.focus();
+    });
+}
+
 /** 캐러셀 전체 설정 — 카드 하나가 아니라 묶음에 걸리는 값 */
 function carouselRow() {
     const g = el('div', 'group');
@@ -1524,8 +1568,7 @@ function mediaRow() {
             : `<img src="${mediaSrc(cur)}" alt="">`;
     } else {
         now.innerHTML =
-            '<svg class="mp-plus" viewBox="0 -960 960 960" aria-hidden="true">' +
-            '<path d="M440-440H240q-17 0-28.5-11.5T200-480q0-17 11.5-28.5T240-520h200v-200q0-17 11.5-28.5T480-760q17 0 28.5 11.5T520-720v200h200q17 0 28.5 11.5T760-480q0 17-11.5 28.5T720-440H520v200q0 17-11.5 28.5T480-160q-17 0-28.5-11.5T440-240v-200Z"/></svg>' +
+            '<svg class="mp-plus" viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="M480-480ZM212.31-140Q182-140 161-161q-21-21-21-51.31v-535.38Q140-778 161-799q21-21 51.31-21h300v60h-300q-5.39 0-8.85 3.46t-3.46 8.85v535.38q0 5.39 3.46 8.85t8.85 3.46h535.38q5.39 0 8.85-3.46t3.46-8.85v-300h60v300Q820-182 799-161q-21 21-51.31 21H212.31Zm43.08-152.31h449.22L565-478.46 445-322.69l-85-108.08-104.61 138.46ZM680-600v-80h-80v-60h80v-80h60v80h80v60h-80v80h-60Z"/></svg>' +
             '<span>Drop a file here, or click to choose</span>';
         now.onclick = () => inp.focus();
     }
@@ -1551,6 +1594,33 @@ function mediaRow() {
         updateDirty();
         renderInspector();
     };
+
+    // 사진 크기는 폭을 % 로 미는 것보다 '틀의 비율' 을 고르는 편이 맞다.
+    // 이미지는 틀에 꽉 차게(cover) 들어가므로, 폭만 늘리면 잘리는 자리만 바뀐다.
+    const shapes = [['ed-ph--16x9', '16:9'], ['ed-ph--4x3', '4:3'],
+                    ['ed-ph--1x1', '1:1'], ['ed-ph--3x4', '3:4']];
+    const frame = selection.parentClasses?.some?.(c => c === 'ed-ph') ? null : null;
+    const shapeRow = el('div', 'field');
+    shapeRow.appendChild(el('label', null, 'Shape'));
+    const seg = el('div', 'segRow');
+    for (const [cls, name] of shapes) {
+        const b = el('button');
+        b.type = 'button';
+        b.textContent = name;
+        b.className = (selection.parentClasses || []).includes(cls) ? 'on' : '';
+        b.onclick = () => {
+            const keep = (selection.parentClasses || [])
+                .filter(c => !/^ed-ph--/.test(c) && !c.startsWith('__ed'));
+            pending.push({ kind: 'attr', path: selection.parentPath,
+                           name: 'class', value: [...keep, cls].join(' ') });
+            toFrame('setAttr', { path: selection.parentPath, name: 'class', value: [...keep, cls].join(' ') });
+            updateDirty();
+            renderInspector();
+        };
+        seg.appendChild(b);
+    }
+    shapeRow.appendChild(seg);
+    if (selection.parentPath && (selection.parentClasses || []).includes('ed-ph')) g.appendChild(shapeRow);
 
     // 폴더에 뭐가 있는지는 입력칸에서 자동완성으로 — 격자로 다 늘어놓으면
     // 인스펙터가 미디어 고르는 창이 되어 버린다. 여기 주인공은 간격이다.
@@ -2265,7 +2335,7 @@ document.querySelectorAll('.rail-btn').forEach(b =>
 // .ed-ph 는 링크를 채우면 저절로 티가 안 나는 얇은 점선 자리표시다.
 const MEDIA_HTML = {
     image:
-`<div class="ed-ph ed-ph--16x9">
+`<div class="ed-ph ed-ph--4x3">
     <img src="" alt="" loading="lazy" style="width:100%;height:100%;object-fit:cover;display:block;border-radius:16px;">
 </div>`,
     video:
@@ -2436,8 +2506,8 @@ ${Array.from({ length: n }, (_, i) => `            <div class="vb-carousel__item
         </div>
     </div>
     <div class="vb-carousel-nav">
-        <button type="button" class="vb-carousel-nav__arrow" data-carousel-prev="${id}" aria-label="이전">‹</button>
-        <button type="button" class="vb-carousel-nav__arrow" data-carousel-next="${id}" aria-label="다음">›</button>
+        <button type="button" class="vb-carousel-nav__arrow" data-carousel-prev="${id}" aria-label="이전"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M18 18L9.5 12L18 6V18ZM8 6V18H6V6H8Z"/></svg></button>
+        <button type="button" class="vb-carousel-nav__arrow" data-carousel-next="${id}" aria-label="다음"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M6 18L14.5 12L6 6V18ZM16 6V18H18V6H16Z"/></svg></button>
     </div>
 </div>`;
     },
@@ -2470,6 +2540,8 @@ const MEDIA_PH_CSS =
 :where(.ed-ph){width:100%;border-radius:16px}
 :where(.ed-ph--16x9){aspect-ratio:16/9}
 :where(.ed-ph--3x4){aspect-ratio:3/4}
+:where(.ed-ph--4x3){aspect-ratio:4/3}
+:where(.ed-ph--1x1){aspect-ratio:1}
 /* 로고는 '높이 고정 · 폭 자동'이라 빈 이미지면 폭이 0 이 된다 */
 :where(.ed-ph--logo){display:inline-block;width:120px;aspect-ratio:2/1}
 /* 테두리는 outline — border 와 달리 박스 크기를 키우지 않는다 */
@@ -2508,17 +2580,29 @@ const PATTERN_THUMB = {
         '<path fill="currentColor" opacity=".38" fill-rule="evenodd" d="'
         + 'M56.5 15h27a3.5 3.5 0 0 1 3.5 3.5v17a3.5 3.5 0 0 1-3.5 3.5h-27a3.5 3.5 0 0 1-3.5-3.5v-17a3.5 3.5 0 0 1 3.5-3.5Z'
         + 'M65.5 21v12l10-6Z" />',
-    // 인터랙션 — 무슨 일이 일어나는지를 네모의 위치·크기·농도로만 보인다
-    xLift:       '<rect x="46" y="8" width="48" height="26" rx="4" fill="currentColor" opacity=".38"/>'
-        + '<rect x="52" y="40" width="36" height="4" rx="2" fill="currentColor" opacity=".14"/>',
-    xGrow:       '<rect x="40" y="6" width="60" height="42" rx="5" fill="currentColor" opacity=".14"/>'
-        + '<rect x="52" y="15" width="36" height="24" rx="4" fill="currentColor" opacity=".38"/>',
-    xPulse:      '<rect x="44" y="10" width="52" height="34" rx="5" fill="currentColor" opacity=".14"/>'
-        + '<rect x="52" y="16" width="36" height="22" rx="4" fill="currentColor" opacity=".38"/>'
-        + '<circle cx="70" cy="27" r="3" fill="currentColor" opacity=".55"/>',
-    xFade:       '<rect x="46" y="34" width="48" height="12" rx="3" fill="currentColor" opacity=".38"/>'
-        + '<rect x="52" y="20" width="36" height="9" rx="3" fill="currentColor" opacity=".2"/>'
-        + '<rect x="58" y="10" width="24" height="6" rx="3" fill="currentColor" opacity=".1"/>',
+    // 인터랙션 — '가만히 있을 때' 를 옅게, '움직인 뒤' 를 진하게 겹쳐 그린다.
+    // 한 장으로 움직임을 보이려면 전후를 같이 놓는 수밖에 없다 (프레이머·피그마도 같은 방식).
+    xLift:
+        // 원래 자리(옅음) 위로 떠오른 카드(진함) + 아래 그림자
+        '<rect x="48" y="20" width="44" height="22" rx="4" fill="currentColor" opacity=".12"/>'
+        + '<rect x="48" y="9" width="44" height="22" rx="4" fill="currentColor" opacity=".4"/>'
+        + '<ellipse cx="70" cy="46" rx="19" ry="2.5" fill="currentColor" opacity=".16"/>',
+    xGrow:
+        // 작은 원래 크기(옅음) 에서 바깥으로 커진 카드(진함)
+        '<rect x="56" y="17" width="28" height="20" rx="3" fill="currentColor" opacity=".14"/>'
+        + '<rect x="44" y="10" width="52" height="34" rx="5" fill="currentColor" opacity=".38"/>',
+    xPulse:
+        // 원래 크기(옅은 테두리) 안으로 눌려 들어간 카드(진함)
+        '<rect x="42" y="8" width="56" height="38" rx="5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-dasharray="3 3" opacity=".28"/>'
+        + '<rect x="48" y="12" width="44" height="30" rx="4" fill="currentColor" opacity=".38"/>'
+        // 안쪽을 향한 표시 — 눌리는 방향
+        + '<path d="M52 18 L56 22 M88 18 L84 22 M52 36 L56 32 M88 36 L84 32" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" fill="none" opacity=".5"/>',
+    xFade:
+        // 아래에서 올라오며 또렷해진다 — 지나온 자리를 옅게 남긴다
+        '<rect x="50" y="36" width="40" height="10" rx="3" fill="currentColor" opacity=".1"/>'
+        + '<rect x="50" y="24" width="40" height="10" rx="3" fill="currentColor" opacity=".22"/>'
+        + '<rect x="50" y="12" width="40" height="10" rx="3" fill="currentColor" opacity=".45"/>'
+        + '<path d="M70 8 L74 12 H66 Z" fill="currentColor" opacity=".5"/>',
 };
 
 // 자리표시 스타일 — 삽입할 때 페이지에 한 번만 넣는다
@@ -2527,7 +2611,7 @@ const PATTERN_THUMB = {
 const MOTION_ITEMS = [
     { key: 'hover-lift',  name: 'Lift on hover', desc: 'Rises slightly + shadow', thumb: 'xLift' },
     { key: 'hover-grow',  name: 'Grow on hover',   desc: 'Scales to 1.04',        thumb: 'xGrow' },
-    { key: 'click-pulse', name: 'Pulse on click',   desc: 'Presses in, springs back',    thumb: 'xPulse' },
+    { key: 'click-pulse', name: 'Press on click',   desc: 'Sinks in, springs back',    thumb: 'xPulse' },
     { key: 'fade-up',     name: 'Reveal on scroll',    desc: 'Rises from below',    thumb: 'xFade' },
 ];
 // class 는 요소에 붙이고, css 는 페이지 <style> 에 한 번만 넣는다.
