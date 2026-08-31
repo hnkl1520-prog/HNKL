@@ -1,5 +1,6 @@
 // patch.js 검증. 실행: node lib/patch.test.js
-import { patchInlineStyle, patchCssRule, parseStyle, stringifyStyle } from './patch.js';
+import { patchInlineStyle, patchCssRule, parseStyle, stringifyStyle, replaceElement
+} from './patch.js';
 
 let pass = 0, fail = 0;
 function check(name, actual, expected) {
@@ -136,6 +137,22 @@ check('삽입 끄면 예외', (() => {
     try { patchCssRule(SAMPLE, '.card', 'z-index', '1', { insertIfMissing: false }); return false; }
     catch { return true; }
 })(), true);
+
+
+// ── 요소 갈아 끼우기 (이미지 자리에 영상) ──
+// 경로는 <html> 부터의 인덱스다: body(1) > div(0) > 자식
+check('replaceElement: 그 자리에서만 바꾼다',
+    replaceElement('<div>\n    <p class="a">hi</p>\n    <p class="b">bye</p>\n</div>',
+        [1, 0, 0], '<video src="v.mp4"></video>').text,
+    '<div>\n    <video src="v.mp4"></video>\n    <p class="b">bye</p>\n</div>');
+
+check('replaceElement: 뒤따르는 형제를 밀지 않는다',
+    replaceElement('<div><img src=""><p>x</p></div>', [1, 0, 0], '<video></video>').text,
+    '<div><video></video><p>x</p></div>');
+
+check('replaceElement: 바뀐 태그 이름을 알려준다',
+    replaceElement('<div><img src=""></div>', [1, 0, 0], '<video></video>').after,
+    'video');
 
 console.log(`\n결과: 통과 ${pass} / 실패 ${fail}\n`);
 process.exit(fail ? 1 : 0);

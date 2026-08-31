@@ -13,7 +13,7 @@ import fs from 'node:fs';
 import fsp from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { patchInlineStyle, patchCssRule, insertHtml, patchAttr, applyMotion, moveElement, removeElement, duplicateElement, linkAsset, patchText } from './lib/patch.js';
+import { patchInlineStyle, patchCssRule, insertHtml, patchAttr, applyMotion, moveElement, removeElement, duplicateElement, linkAsset, patchText, replaceElement } from './lib/patch.js';
 import { buildDesignSystem, saveTokens } from './lib/designsystem.js';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -193,6 +193,26 @@ const server = http.createServer(async (req, res) => {
         }
 
         // 디자인 시스템 (tokens.css 파싱 + vibra/common 사용처 스캔). 표시 전용.
+        // 이 페이지가 쓸 수 있는 사진·영상 목록.
+        // 인스펙터에서 썸네일로 골라 넣기 위한 것이라, 페이지 옆 media/ 만 훑는다.
+        if (pathname === '/__api/media') {
+            const rel = url.searchParams.get('page') || '';
+            const dir = path.join(PUBLIC, path.dirname(rel), 'media');
+            const OK = /\.(png|jpe?g|gif|webp|avif|svg|mp4|webm|mov)$/i;
+            let items = [];
+            try {
+                items = (await fsp.readdir(dir, { withFileTypes: true }))
+                    .filter(d => d.isFile() && OK.test(d.name))
+                    .map(d => ({
+                        name: d.name,
+                        url: 'media/' + d.name,                       // 페이지 기준 상대 경로
+                        kind: /\.(mp4|webm|mov)$/i.test(d.name) ? 'video' : 'image',
+                    }))
+                    .sort((a, b) => a.name.localeCompare(b.name));
+            } catch { /* media 폴더가 없으면 빈 목록 */ }
+            return sendJson(res, 200, { items });
+        }
+
         if (pathname === '/__api/designsystem') {
             return sendJson(res, 200, buildDesignSystem());
         }
@@ -249,6 +269,9 @@ const server = http.createServer(async (req, res) => {
                     const r = removeElement(text, edit.path);
                     text = r.text;
                     applied.push({ kind: 'remove', before: r.before, after: r.after });
+                } else if (edit.kind === 'replace') {
+                    const r = replaceElement(text, edit.path, edit.html);
+                    text = r.text; applied.push(r);
                 } else if (edit.kind === 'duplicate') {
                     const r = duplicateElement(text, edit.path);
                     text = r.text;

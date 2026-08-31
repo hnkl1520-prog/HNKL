@@ -2991,9 +2991,12 @@
                     pauseAllVideos();
                     if (video) video.play().catch(() => {});
                 }
-                // 사진 카드는 볼 게 금방 끝나므로 더 빨리 넘김 (영상 카드는 재생 시간 확보)
+                // 사진 카드는 볼 게 금방 끝나므로 더 빨리 넘김 (영상 카드는 재생 시간 확보).
+                // 에디터에서 고칠 수 있도록 트랙의 data- 값을 먼저 본다.
                 function currentDelay() {
-                    return getActiveItem().querySelector('video') ? 5000 : 2200;
+                    const hasVideo = !!getActiveItem().querySelector('video');
+                    const set = hasVideo ? track.dataset.delayVideo : track.dataset.delay;
+                    return Number(set) || (hasVideo ? 5000 : 2200);
                 }
 
                 // 카드 클릭 = 그 영상 바로 재생 (+ 젤리 커서 확대 효과)

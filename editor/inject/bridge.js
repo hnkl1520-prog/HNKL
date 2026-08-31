@@ -231,6 +231,14 @@
     style.id = '__ed-chrome';   // 컴포넌트를 뜰 때 이 스타일이 딸려가지 않도록 표시해 둔다
     style.textContent = `
         .__ed-hover { outline: 2px solid rgba(59,130,246,.55) !important; outline-offset: -2px !important; }
+        /* 캐러셀 끝의 '한 장 더' — 에디터에서만 보인다 */
+        .__ed-addcard {
+            flex: 0 0 auto; align-self: stretch; min-width: 96px;
+            border: 2px dashed rgba(59,130,246,.45); border-radius: 14px;
+            background: rgba(59,130,246,.06); color: rgba(59,130,246,.85);
+            font-size: 28px; font-weight: 300; line-height: 1; cursor: pointer;
+        }
+        .__ed-addcard:hover { background: rgba(59,130,246,.13); }
         .__ed-selected { outline: 2px solid #3B82F6 !important; outline-offset: -2px !important; }
         /* Shift 로 함께 고른 것 — 고른 것과 같은 급임을 보이려 같은 색, 조금 옅게 */
         .__ed-picked { outline: 2px solid rgba(59,130,246,.6) !important; outline-offset: -2px !important; }
@@ -298,6 +306,9 @@
 
     document.addEventListener('click', e => {
         if (editing && editing.contains(e.target)) return;   // 글자 고치는 중엔 선택하지 않는다
+        // 에디터가 얹어 둔 것(캐러셀의 '한 장 더' 등)은 페이지 요소가 아니다.
+        // 여기서 걸러내지 않으면 잡는 단계에서 먼저 채가 제 일을 못 한다.
+        if (e.target.closest && e.target.closest('.__ed-addcard')) return;
         if (moving) {
             if (e.target.closest && e.target.closest('.__ed-movebar')) return;  // 화살표는 그대로 통과
             e.preventDefault(); e.stopPropagation();
@@ -1356,6 +1367,8 @@ function sectionLabel(s, n) {
             if (!moving) { hideMoveBar(); hideMoveLine(); dragEl = null; } else clearHover();
         }
         else if (type === 'setPicking') {
+            // 고르기가 켜져 있을 때만 '한 장 더' 를 보여 준다
+            setTimeout(() => window.postMessage({ source: '__hnkl_editor_host', type: 'showAddCard', payload: { on: !!payload } }, '*'), 0);
             picking = !!payload;
             document.documentElement.classList.toggle('__ed-picking', picking);
             if (!picking) clearHover();
@@ -1586,6 +1599,46 @@ function sectionLabel(s, n) {
                 }
             }
             requestAnimationFrame(syncGapBars);
+        }
+        else if (type === 'showAddCard') {
+            // 캐러셀 끝에 '한 장 더' 버튼을 얹는다 (에디터에서만 보이는 것)
+            document.querySelectorAll('.__ed-addcard').forEach(n => n.remove());
+            if (!payload.on) return;
+            for (const track of document.querySelectorAll('.vb-carousel__track')) {
+                const b = document.createElement('button');
+                b.type = 'button';
+                b.className = '__ed-addcard';
+                b.textContent = '+';
+                b.title = '카드 한 장 더';
+                b.addEventListener('click', ev => {
+                    ev.preventDefault(); ev.stopPropagation();
+                    const items = track.querySelectorAll('.vb-carousel__item');
+                    const last = items[items.length - 1];
+                    if (last) post('addCard', { path: pathOf(last) });
+                });
+                track.appendChild(b);
+            }
+        }
+        else if (type === 'duplicatePreview') {
+            const el = elementAtPath(payload.path);
+            if (!el) return;
+            const copy = el.cloneNode(true);
+            copy.classList.remove('__ed-selected', '__ed-hover');
+            el.after(copy);
+            setTimeout(reportHeight, 80);
+        }
+        else if (type === 'replacePreview') {
+            // 사진 ↔ 영상 — 태그가 바뀌므로 요소째 갈아 끼운다
+            const el = elementAtPath(payload.path);
+            if (!el) return;
+            const tmp = document.createElement('div');
+            tmp.innerHTML = payload.html;
+            const next = tmp.firstElementChild;
+            if (!next) return;
+            // 에디터가 붙여 둔 표시는 새 요소에도 옮긴다 (고른 상태가 풀리지 않게)
+            for (const c of el.classList) if (c.startsWith('__ed')) next.classList.add(c);
+            el.replaceWith(next);
+            setTimeout(reportHeight, 80);
         }
         else if (type === 'setAttr') {
             const el = elementAtPath(payload.path);

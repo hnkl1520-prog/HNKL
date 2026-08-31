@@ -509,6 +509,29 @@ export function removeElement(source, path) {
 }
 
 /**
+ * 요소 하나를 다른 HTML 로 갈아 끼운다.
+ *
+ * 이미지 자리에 영상을 넣으면 <img> 를 <video> 로 바꿔야 한다.
+ * src 만 바꿔서는 안 되고, 지웠다 다시 넣으면 뒤따르는 형제들의 경로가 밀린다.
+ * 그래서 그 자리에서 글자만 바꾼다 — 앞뒤 들여쓰기는 건드리지 않는다.
+ */
+export function replaceElement(source, path, html) {
+    const document = parse(source, { sourceCodeLocationInfo: true });
+    const el = findByPath(document, path);
+    if (!el) throw new Error('요소를 찾지 못했습니다. 파일이 그 사이 바뀌었을 수 있어요.');
+    const loc = el.sourceCodeLocation;
+    if (!loc) throw new Error('요소의 원본 위치를 알 수 없습니다.');
+
+    const cls = (el.attrs || []).find(a => a.name === 'class');
+    return {
+        text: source.slice(0, loc.startOffset) + html + source.slice(loc.endOffset),
+        before: el.nodeName + (cls ? '.' + cls.value.trim().split(/\s+/)[0] : ''),
+        after: (html.match(/^<\s*([a-z0-9-]+)/i) || [, '?'])[1],
+        mode: 'replace'
+    };
+}
+
+/**
  * 요소를 그대로 하나 더 만들어 바로 뒤에 붙인다.
  * 원본 문자열을 그대로 복사하므로 들여쓰기·주석·따옴표 스타일이 유지된다.
  */

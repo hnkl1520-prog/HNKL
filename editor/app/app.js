@@ -132,6 +132,13 @@ window.addEventListener('message', e => {
     else if (msg.type === 'gapDragMove') onGapMove(msg.payload);
     else if (msg.type === 'gapDragEnd') { onGapEnd(msg.payload); refreshGapExceptions(); }
     else if (msg.type === 'gapExceptions') renderGapExceptions(msg.payload);
+    else if (msg.type === 'addCard') {
+        // 캐러셀 끝의 + — 마지막 카드를 그대로 하나 더 만든다
+        pending.push({ kind: 'duplicate', path: msg.payload.path });
+        toFrame('duplicatePreview', { path: msg.payload.path });
+        updateDirty();
+        toast('Card added — not saved yet', 'ok');
+    }
     else if (msg.type === 'scrollToY') {
         // 미리보기 안 좌표 → 캔버스 이동 (화면 가운데에 오도록)
         const stageEl = document.getElementById('stage');
@@ -230,6 +237,11 @@ function onComponentDropped({ key, kind, path, position }) {
         : 0;
     // 표처럼 '무엇을 적을지'가 정해져야 뜻이 생기는 컴포넌트는 넣을 때 물어본다.
     // 값이 비면 기본 예시가 들어가고, 나머지는 인스펙터에서 고치면 된다.
+    if (key === 'carousel') {
+        const n = prompt('How many cards?', String(compCount.carousel || 3));
+        if (n === null) return;                       // 취소
+        compCount.carousel = Math.max(1, Math.min(12, parseInt(n, 10) || 3));
+    }
     const opt = (key === 'projectinfo') ? askProjectInfo() : undefined;
     if (opt === null) return;    // 창에서 취소
     const html = (typeof src === 'function') ? src(n, opt) : src;
@@ -1320,8 +1332,10 @@ function renderInspector() {
     // 무엇을 골랐느냐에 따라 보여줄 것이 다르다.
     // 특히 '글자 속성'은 자식 태그가 없을 때만 뜻이 있다 — 제목과 설명이 묶인
     // 덩어리를 고르고 글자 크기를 하나로 정할 수는 없기 때문이다.
+    // 글자를 담을 수 없는 것들 — 자식이 없다고 '글자 하나짜리'로 보면 안 된다
+    const NO_TEXT = /^(IMG|VIDEO|IFRAME|SOURCE|BR|HR|INPUT|CANVAS|SVG|EMBED|OBJECT|AREA|TRACK|WBR|SELECT|TEXTAREA)$/i;
     const ctx = {
-        isLeafText: !!selection.textOnly,
+        isLeafText: !!selection.textOnly && !NO_TEXT.test(selection.tag),
         isMedia: /^(IMG|VIDEO|IFRAME|SOURCE)$/i.test(selection.tag),
         isFlexOrGrid: /flex|grid/.test(selection.computed?.display || ''),
         isContainer: selection.childCount > 0,
@@ -1331,8 +1345,22 @@ function renderInspector() {
     if (ctx.isLeafText) box.appendChild(textRow());
     if (ctx.isMedia) box.appendChild(mediaRow());
 
+    // 캐러셀 트랙이면 '넘어가는 속도'는 이 덩어리 전체의 설정이다
+    if (/vb-carousel__track/.test((selection.classes || []).join(' '))) {
+        box.appendChild(carouselRow());
+    }
+
     // ② 주인공 — 이 덩어리가 만드는 공간
     box.appendChild(spacingBoard());
+
+    // 카드 사이 간격은 여백과 같은 종류다. Layout 접힘 안에 묻어 두면
+    // 정작 제일 자주 만지는 값을 찾느라 두 번 클릭하게 된다.
+    if (/flex|grid/.test(selection.computed?.display || '')) {
+        const row = el('div', 'sp-between');
+        row.appendChild(el('span', 'sp-between__label', 'Between'));
+        row.appendChild(edgeField('gap', '↔'));
+        box.appendChild(row);
+    }
 
     // 이웃과의 간격을 따로 두었다가 뺐다 — 간격 판과 같은 margin 을 만지는데
     // 두 곳에서 조절하니 한쪽을 바꾸면 다른 쪽이 0 으로 보여 헷갈렸다.
@@ -1345,15 +1373,16 @@ function renderInspector() {
             b.appendChild(alignRow());
             for (const prop of ['font-size', 'line-height', 'font-weight', 'color']) b.appendChild(fieldRow(prop));
         }));
-    } else if (ctx.isContainer) {
+    } else if (ctx.isContainer && !ctx.isFlexOrGrid) {
         // 덩어리 — 안에 여러 크기가 섞여 있어 '글자 크기' 하나를 정할 수 없다.
+        // 다만 카드가 늘어선 묶음(flex·grid)은 빼둔다 — 거기서 정렬은
+        // Layout 의 Across·Down 이 맡는다. 둘 다 띄우면 어느 쪽이 먹는지 알 수 없다.
         box.appendChild(foldGroup('Text', b => {
             b.appendChild(alignRow());   // 정렬은 덩어리 단위로도 뜻이 있다
         }));
     }
     if (ctx.isFlexOrGrid) {
         box.appendChild(foldGroup('Layout', b => {
-            b.appendChild(fieldRow('gap'));
             // 이름은 무엇이 일어나는지로 부른다 (flex-start / space-between 은 CSS 말이다)
             b.appendChild(choiceRow('justify-content', 'Across',
                 [['flex-start', 'Start'], ['center', 'Middle'],
@@ -1393,25 +1422,167 @@ function embedUrl(v) {
     return m ? `https://www.youtube.com/embed/${m[1]}` : v;
 }
 
+// 이 페이지 옆 media/ 폴더에 뭐가 있는지 — 한 번 받아 두고 쓴다
+let mediaFiles = null;
+async function loadMediaFiles() {
+    if (mediaFiles) return mediaFiles;
+    try {
+        const r = await fetch('/__api/media?page=' + encodeURIComponent(currentPage));
+        mediaFiles = (await r.json()).items || [];
+    } catch { mediaFiles = []; }
+    return mediaFiles;
+}
+
+const isVideoUrl = u => /\.(mp4|webm|mov)(\?|#|$)/i.test(String(u || ''));
+
+/**
+ * 파일에 적히는 경로는 페이지 기준(media/1.jpg)이지만,
+ * 에디터 화면은 다른 자리에서 도니 그대로 쓰면 썸네일이 안 뜬다.
+ * 보여줄 때만 페이지가 있는 폴더를 앞에 붙인다.
+ */
+function mediaSrc(u) {
+    if (!u || /^(https?:|data:|\/)/i.test(u)) return u;
+    const dir = (currentPage || '').replace(/[^/]*$/, '');
+    return '/' + dir + u;
+}
+
+/**
+ * 미디어를 고른다 — media/ 폴더를 훑어 썸네일로 늘어놓는다.
+ *
+ * 영상이면 <video>, 사진이면 <img> 로 태그까지 바꾼다.
+ * src 만 갈아 끼우면 영상 자리에 재생이 안 되는 <img> 가 남는다.
+ */
+/** 캐러셀 전체 설정 — 카드 하나가 아니라 묶음에 걸리는 값 */
+function carouselRow() {
+    const g = el('div', 'group');
+    g.innerHTML = '<h3>Carousel</h3>';
+
+    const secRow = (attr, label, fallback) => {
+        const row = el('div', 'pt-row');
+        row.appendChild(el('span', 'pt-label', label));
+        const field = el('div', 'pt-field');
+        const now = Number(selection.attrs?.[attr]) || fallback;
+        const val = el('span', 'pt-val', (now / 1000).toFixed(1));
+        field.append(val, el('span', 'pt-unit', 'sec'));
+        row.appendChild(field);
+
+        // 다른 값들과 같이 끌어서 조절한다
+        let dragging = false, from = 0, base = 0;
+        const onMove = ev => {
+            if (!dragging) return;
+            ev.preventDefault();
+            const next = Math.min(20, Math.max(0.5, base + (from - ev.clientY) * 0.05));
+            const shown = next.toFixed(1);
+            if (shown === val.textContent) return;
+            val.textContent = shown;
+            const ms = Math.round(next * 1000);
+            const i = pending.findIndex(p => p.kind === 'attr' && samePath(p.path, selection.path) && p.name === attr);
+            const edit = { kind: 'attr', path: selection.path, name: attr, value: String(ms) };
+            if (i >= 0) pending[i] = edit; else pending.push(edit);
+            toFrame('setAttr', { path: selection.path, name: attr, value: String(ms) });
+            updateDirty();
+        };
+        const onUp = () => {
+            dragging = false;
+            document.removeEventListener('mousemove', onMove);
+            document.removeEventListener('mouseup', onUp);
+            document.body.classList.remove('is-dragging-num');
+        };
+        field.addEventListener('mousedown', ev => {
+            ev.preventDefault();
+            dragging = true; from = ev.clientY; base = parseFloat(val.textContent) || 1;
+            document.addEventListener('mousemove', onMove);
+            document.addEventListener('mouseup', onUp);
+            document.body.classList.add('is-dragging-num');
+        });
+        return row;
+    };
+
+    // 사진과 영상은 머무는 시간이 다르다 — 영상은 재생 시간을 벌어야 한다
+    g.appendChild(secRow('data-delay', 'Photo card', 2200));
+    g.appendChild(secRow('data-delay-video', 'Video card', 5000));
+    return g;
+}
+
 function mediaRow() {
     const g = el('div', 'group');
     g.innerHTML = '<h3>Media</h3>';
-    const row = el('div', 'field');
-    const label = el('label', null, 'Link');
+
+    const cur = selection.attrs?.src || '';
+    const isVid = selection.tag?.toUpperCase() === 'VIDEO' || isVideoUrl(cur);
+
+    // 주소 칸을 먼저 만들어 둔다 (빈 자리를 누르면 여기로 보낸다)
     const inp = el('input');
     inp.type = 'text';
-    inp.value = selection.attrs?.src || '';
-    inp.placeholder = 'media/… or a YouTube link';
-    inp.addEventListener('change', () => {
-        const v = embedUrl(inp.value.trim());
-        inp.value = v;
-        pending.push({ kind: 'attr', path: selection.path, name: 'src', value: v });
-        toFrame('setAttr', { path: selection.path, name: 'src', value: v });
+    inp.value = cur;
+
+    // 지금 무엇이 들어 있는지 먼저 보여 준다
+    const now = el('div', 'mp-now' + (cur ? '' : ' is-empty'));
+    if (cur) {
+        now.innerHTML = isVid
+            ? `<video src="${mediaSrc(cur)}" muted playsinline></video><span class="mp-play">▶</span>`
+            : `<img src="${mediaSrc(cur)}" alt="">`;
+    } else {
+        now.innerHTML =
+            '<svg class="mp-plus" viewBox="0 -960 960 960" aria-hidden="true">' +
+            '<path d="M440-440H240q-17 0-28.5-11.5T200-480q0-17 11.5-28.5T240-520h200v-200q0-17 11.5-28.5T480-760q17 0 28.5 11.5T520-720v200h200q17 0 28.5 11.5T760-480q0 17-11.5 28.5T720-440H520v200q0 17-11.5 28.5T480-160q-17 0-28.5-11.5T440-240v-200Z"/></svg>' +
+            '<span>Drop a file here, or click to choose</span>';
+        now.onclick = () => inp.focus();
+    }
+    g.appendChild(now);
+
+    /** 고른 것을 넣는다. 태그가 달라지면 요소째 갈아 끼운다. */
+    const pick = url => {
+        const wantVideo = isVideoUrl(url);
+        const nowTag = selection.tag?.toUpperCase();
+        if (wantVideo !== (nowTag === 'VIDEO')) {
+            // 영상 ↔ 사진 — 태그가 바뀐다
+            const cls = (selection.classes || []).filter(c => !c.startsWith('__ed')).join(' ');
+            const attr = cls ? ` class="${cls}"` : '';
+            const html = wantVideo
+                ? `<video${attr} src="${url}" autoplay muted loop playsinline></video>`
+                : `<img${attr} src="${url}" alt="" loading="lazy">`;
+            pending.push({ kind: 'replace', path: selection.path, html });
+            toFrame('replacePreview', { path: selection.path, html });
+        } else {
+            pending.push({ kind: 'attr', path: selection.path, name: 'src', value: url });
+            toFrame('setAttr', { path: selection.path, name: 'src', value: url });
+        }
         updateDirty();
-        toast('Link changed — not saved yet', 'ok');
+        renderInspector();
+    };
+
+    // 폴더에 뭐가 있는지는 입력칸에서 자동완성으로 — 격자로 다 늘어놓으면
+    // 인스펙터가 미디어 고르는 창이 되어 버린다. 여기 주인공은 간격이다.
+    const list = el('datalist');
+    list.id = 'mp-files';
+    g.appendChild(list);
+    loadMediaFiles().then(items => {
+        for (const it of items) {
+            const o = el('option');
+            o.value = it.url;
+            list.appendChild(o);
+        }
     });
-    row.append(label, inp);
+
+    // 폴더 밖의 것 (유튜브 등) 은 주소로
+    const row = el('div', 'field');
+    row.appendChild(el('label', null, 'Link'));
+    inp.placeholder = 'media/… or a YouTube link';
+    inp.setAttribute('list', 'mp-files');
+    inp.addEventListener('change', () => pick(embedUrl(inp.value.trim())));
+    row.appendChild(inp);
     g.appendChild(row);
+
+    // 파일을 여기로 끌어다 놓아도 된다 (파인더에서)
+    g.addEventListener('dragover', ev => { ev.preventDefault(); g.classList.add('is-over'); });
+    g.addEventListener('dragleave', () => g.classList.remove('is-over'));
+    g.addEventListener('drop', ev => {
+        ev.preventDefault();
+        g.classList.remove('is-over');
+        const f = ev.dataTransfer.files?.[0];
+        if (f) { pick('media/' + f.name); toast(`media/ 폴더에 ${f.name} 이 있어야 보입니다`, 'warn'); }
+    });
     return g;
 }
 
@@ -2303,9 +2474,13 @@ const MEDIA_PH_CSS =
 :where(.ed-ph--logo){display:inline-block;width:120px;aspect-ratio:2/1}
 /* 테두리는 outline — border 와 달리 박스 크기를 키우지 않는다 */
 .ed-ph{position:relative;background:rgba(127,127,140,.08);overflow:hidden;outline:1px dashed rgba(127,127,140,.45);outline-offset:-1px}
-.ed-ph::after{content:'Add a media link';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:13px;color:rgba(127,127,140,.9);pointer-events:none}
-.ed-ph--logo::after{font-size:11px;content:'Logo'}
-.ed-ph:has(img[src]:not([src=""]))::after,.ed-ph:has(video[src]:not([src=""]))::after,.ed-ph:has(iframe[src]:not([src=""]))::after{display:none}
+.ed-ph::before{content:'+';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:34px;font-weight:200;line-height:1;color:rgba(127,127,140,.55);transform:translateY(-13px);pointer-events:none}
+.ed-ph::after{content:'Drop a file here, or click to choose';position:absolute;inset:0;display:flex;align-items:flex-end;justify-content:center;padding-bottom:calc(50% - 34px);font-size:12px;color:rgba(127,127,140,.9);pointer-events:none}
+.ed-ph--logo::before{font-size:20px;transform:translateY(-7px)}
+.ed-ph--logo::after{font-size:10px;content:'Logo';padding-bottom:calc(50% - 20px)}
+/* 링크가 채워지면 안내도 사라진다 */
+.ed-ph:has(img[src]:not([src=""]))::after,.ed-ph:has(video[src]:not([src=""]))::after,.ed-ph:has(iframe[src]:not([src=""]))::after,
+.ed-ph:has(img[src]:not([src=""]))::before,.ed-ph:has(video[src]:not([src=""]))::before,.ed-ph:has(iframe[src]:not([src=""]))::before{display:none}
 .ed-ph:has(img[src]:not([src=""])),.ed-ph:has(video[src]:not([src=""])),.ed-ph:has(iframe[src]:not([src=""])){background:none;outline:none}
 /* 링크가 비어 있는 동안은 이미지가 자리를 차지하지 않게 (0px 찌그러짐 방지) */
 .ed-ph > img[src=""],.ed-ph > video:not([src]),.ed-ph > img:not([src]){position:absolute;inset:0;width:100%;height:100%}
@@ -2493,6 +2668,7 @@ function loadComponentPatterns() {
     }
     applyCardOrder(host);
     enableCardReorder(host);
+    enableCardFold(host);
 }
 loadComponentPatterns();
 loadSavedComponents();
@@ -3164,4 +3340,36 @@ function enableCardReorder(host) {
         ev.stopPropagation();                        // 미리보기에 넣지 않는다
         rememberCardOrder(host);
     });
+}
+
+// ---------------------------------------------------------------- 갈래 접기
+var CARD_FOLD_KEY = 'hnkl.cardFold';
+
+function foldedGroups() {
+    try { return new Set(JSON.parse(localStorage.getItem(CARD_FOLD_KEY)) || []); } catch { return new Set(); }
+}
+/** 갈래 제목을 눌러 접었다 편다 — 카드가 열한 장이라 다 펴 두면 스크롤이 길다 */
+function enableCardFold(host) {
+    const folded = foldedGroups();
+
+    const paint = label => {
+        const on = folded.has(label.textContent.trim());
+        label.classList.toggle('is-folded', on);
+        // 제목과 제목 사이가 한 갈래다 (감싸는 상자가 없다)
+        for (let n = label.nextElementSibling; n && !n.classList.contains('lp-group-sub'); n = n.nextElementSibling) {
+            n.hidden = on;
+        }
+    };
+
+    for (const label of host.querySelectorAll('.lp-group-sub')) {
+        label.tabIndex = 0;
+        paint(label);
+        label.onclick = () => {
+            const key = label.textContent.trim();
+            folded.has(key) ? folded.delete(key) : folded.add(key);
+            try { localStorage.setItem(CARD_FOLD_KEY, JSON.stringify([...folded])); } catch { /* 지금 화면은 그대로 */ }
+            paint(label);
+        };
+        label.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); label.click(); } };
+    }
 }
