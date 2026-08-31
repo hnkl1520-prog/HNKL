@@ -143,10 +143,10 @@ body { font-weight: 400; }
     /* minmax(0,1fr): 좌·우 구역이 내용보다 좁아도 칸을 넘어 중앙을 침범하지 않게 */
     display: grid; grid-template-columns: minmax(0,1fr) auto minmax(0,1fr);
     align-items: center; gap: 8px;
-    padding: 0 14px; height: 48px; flex: 0 0 auto;
+    padding: 0 18px; height: 54px; flex: 0 0 auto;
     background: var(--bar); border-bottom: 1px solid var(--line);
 }
-.bar-zone { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.bar-zone { display: flex; align-items: center; gap: 10px; min-width: 0; }
 /* grid-column 을 못박는다 — 중앙 구역이 display:none 이 되어도 우측 구역이
    빈 auto 칸으로 흘러들어가 가운데에 서지 않게 한다 (DS 모드) */
 .bar-left   { grid-column: 1; justify-self: start; overflow: hidden; }
@@ -159,9 +159,9 @@ body { font-weight: 400; }
 .bar-zone[hidden] { display: none; }
 /* 브랜드 로고 — 사이트 assets/logo.svg 를 그대로 쓴다 */
 .brand {
-    height: 18px; width: auto; display: block; flex: 0 0 auto;
+    height: 19px; width: auto; display: block; flex: 0 0 auto;
 }
-.sep { width: 1px; height: 22px; background: var(--line); }
+.sep { width: 1px; height: 24px; background: var(--line); }
 /* 우측 존의 편집 전용 액션 묶음 — DS 모드에서 이 덩어리만 숨는다 (모드 스위처는 남는다) */
 .bar-actions { display: flex; align-items: center; gap: 8px; }
 .bar-actions[hidden] { display: none; }
@@ -264,7 +264,7 @@ body { font-weight: 400; }
 /* 뷰포트 제어는 하나의 묶음이라 테두리로 감싼다.
    바깥 12px · 안쪽 여백 4px → 버튼은 8px 이어야 모서리가 평행하다. */
 .bp {
-    display: flex; gap: 4px; padding: 4px;
+    display: flex; gap: 3px; padding: 3px;
     border: 1px solid var(--line); border-radius: var(--r-group); background: var(--surface-1);
 }
 .bp button {
@@ -1101,9 +1101,10 @@ body.is-dragging-num, body.is-dragging-num * { cursor: ns-resize !important; use
 .topbar .btn:not(.primary),
 .topbar .btn.primary,
 #saveBtn, #revertBtn, #redoBtn, #reloadBtn, #openRawBtn {
-    width: 38px; height: 38px; padding: 0;
+    width: 36px; height: 36px; padding: 0;
     border-radius: 999px; justify-content: center;
 }
+.bar .ico { width: 20px; height: 20px; }
 /* 왼쪽 레일 · 캔버스 툴바도 같은 규칙 */
 .rail-btn { border-radius: 999px; }
 .ct-tool { border-radius: 999px; }
@@ -1116,7 +1117,7 @@ body.is-dragging-num, body.is-dragging-num * { cursor: ns-resize !important; use
 /* ── Edit / Design System: 스위치 ──
    묶음이 알약이고 고른 쪽이 그 안에서 미끄러지는 알약처럼 보이게 한다. */
 .mode-switch {
-    padding: 3px; gap: 2px;
+    padding: 3px; gap: 3px;
     background: var(--gray-10); border-color: transparent;
 }
 .mode-btn {
@@ -1158,3 +1159,8 @@ body.is-dragging-num, body.is-dragging-num * { cursor: ns-resize !important; use
 @media (prefers-reduced-motion: reduce) {
     .tg-pill { transition: opacity .15s; }
 }
+
+/* 끌고 있는 카드 — 어디로 가는지 보이게 */
+.lp-card.is-dragging { opacity: .4; }
+.lp-card { cursor: grab; }
+.lp-card:active { cursor: grabbing; }

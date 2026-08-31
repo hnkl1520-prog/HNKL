@@ -2491,6 +2491,8 @@ function loadComponentPatterns() {
             host.appendChild(card);
         }
     }
+    applyCardOrder(host);
+    enableCardReorder(host);
 }
 loadComponentPatterns();
 loadSavedComponents();
@@ -3078,6 +3080,88 @@ function slidingPill(group) {
     requestAnimationFrame(move);
 }
 
-for (const sel of ['.mode-switch', '.bp', '.canvas-tools', '.lp-rail']) {
+for (const sel of ['.mode-switch', '.canvas-tools']) {
     document.querySelectorAll(sel).forEach(slidingPill);
+}
+
+// ---------------------------------------------------------------- 카드 순서
+var CARD_ORDER_KEY = 'hnkl.cardOrder';
+
+function savedCardOrder() {
+    try { return JSON.parse(localStorage.getItem(CARD_ORDER_KEY)) || null; } catch { return null; }
+}
+
+/**
+ * 카드와 갈래 제목(TEXT·MEDIA·LAYOUT)이 한 부모를 공유한다.
+ * 그래서 순서는 '갈래별로' 기억해야 한다 — 통째로 이어 붙이면 제목이 전부 위로 밀린다.
+ * 갈래를 옮긴 카드도 이 방식이면 저절로 새 갈래에 적힌다 (DOM 을 다시 읽어 담으므로).
+ */
+function groupOf(card) {
+    for (let n = card.previousElementSibling; n; n = n.previousElementSibling) {
+        if (n.classList.contains('lp-group-sub')) return n.textContent.trim();
+    }
+    return '';
+}
+/** 자리만 바뀌는 일이라 '저장' 을 따로 누르게 하지 않는다 */
+function rememberCardOrder(host) {
+    const byGroup = {};
+    for (const c of host.querySelectorAll('.lp-card')) {
+        if (!c.dataset.comp) continue;
+        (byGroup[groupOf(c)] ||= []).push(c.dataset.comp);
+    }
+    try { localStorage.setItem(CARD_ORDER_KEY, JSON.stringify(byGroup)); } catch { /* 저장 못 해도 지금 화면은 그대로 */ }
+}
+/** 지난번에 옮겨 둔 순서대로 다시 늘어놓는다 (갈래 안에서만) */
+function applyCardOrder(host) {
+    const saved = savedCardOrder();
+    if (!saved || Array.isArray(saved)) return;      // 예전에 통째로 저장해 둔 것은 버린다
+    const cards = new Map([...host.querySelectorAll('.lp-card')].map(c => [c.dataset.comp, c]));
+    for (const label of host.querySelectorAll('.lp-group-sub')) {
+        const order = saved[label.textContent.trim()];
+        if (!order?.length) continue;
+        let at = label;                              // 제목 바로 뒤부터 차례로 꽂는다
+        for (const key of order) {
+            const c = cards.get(key);
+            if (!c) continue;
+            at.after(c);
+            at = c;
+        }
+    }
+}
+
+/** 목록 안에서 끌면 순서 바꾸기, 페이지로 끌면 넣기 — 둘을 가른다 */
+function enableCardReorder(host) {
+    if (!host || host.dataset.reorder) return;
+    host.dataset.reorder = '1';
+    let dragging = null;
+
+    host.addEventListener('dragstart', ev => {
+        dragging = ev.target.closest('.lp-card');
+        if (dragging) dragging.classList.add('is-dragging');
+    });
+    host.addEventListener('dragend', () => {
+        if (!dragging) return;
+        dragging.classList.remove('is-dragging');
+        dragging = null;
+    });
+
+    host.addEventListener('dragover', ev => {
+        if (!dragging) return;                       // 바깥에서 온 것은 상관하지 않는다
+        ev.preventDefault();
+        // 갈래 제목 위로 끌면 그 갈래의 맨 앞으로 (빈 갈래로도 옮길 수 있게)
+        const label = ev.target.closest('.lp-group-sub');
+        if (label) { label.after(dragging); return; }
+
+        const over = ev.target.closest('.lp-card');
+        if (!over || over === dragging) return;
+        const r = over.getBoundingClientRect();
+        if (ev.clientY > r.top + r.height / 2) over.after(dragging);
+        else over.before(dragging);
+    });
+    host.addEventListener('drop', ev => {
+        if (!dragging) return;
+        ev.preventDefault();
+        ev.stopPropagation();                        // 미리보기에 넣지 않는다
+        rememberCardOrder(host);
+    });
 }
