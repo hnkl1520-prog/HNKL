@@ -192,21 +192,11 @@
 <div id="dsView" class="ds-view" hidden>
     <div class="ds-toolbar">
         <span class="grow"></span>
-        <button id="chipTunerBtn" class="btn ghost tiny" title="Adjust chip size and padding">Chip shape</button>
         <span id="dsDirty" class="ds-dirty" hidden>Changed <b id="dsDirtyCount">0</b></span>
-        <button id="dsRevert" class="btn ghost tiny" disabled>Undo</button>
-        <button id="dsSave" class="btn primary tiny" disabled>Save</button>
+        <button id="dsRevert" class="ct-tool ct-tool--bar" disabled title="Undo" aria-label="Undo"><svg class="ico" viewBox="0 -960 960 960" aria-hidden="true"><path d="M288.08-220v-60h287.07q62.62 0 107.77-41.35 45.16-41.34 45.16-102.11 0-60.77-45.16-101.93-45.15-41.15-107.77-41.15H294.31l111.3 111.31-42.15 42.15L180-596.54 363.46-780l42.15 42.15-111.3 111.31h280.84q87.77 0 150.35 58.58t62.58 144.5q0 85.92-62.58 144.69Q662.92-220 575.15-220H288.08Z"/></svg></button>
+        <button id="dsSave" class="btn primary" disabled title="Save" aria-label="Save"><svg class="ico" viewBox="0 -960 960 960" aria-hidden="true"><path d="M820-671.54v459.23Q820-182 799-161q-21 21-51.31 21H212.31Q182-140 161-161q-21-21-21-51.31v-535.38Q140-778 161-799q21-21 51.31-21h459.23L820-671.54ZM760-646 646-760H212.31q-5.39 0-8.85 3.46t-3.46 8.85v535.38q0 5.39 3.46 8.85t8.85 3.46h535.38q5.39 0 8.85-3.46t3.46-8.85V-646ZM550.77-298.46Q580-327.69 580-369.23q0-41.54-29.23-70.77-29.23-29.23-70.77-29.23-41.54 0-70.77 29.23Q380-410.77 380-369.23q0 41.54 29.23 70.77 29.23 29.23 70.77 29.23 41.54 0 70.77-29.23ZM255.39-564.62h328.45v-139.99H255.39v139.99ZM200-646v446-560 114Z"/></svg></button>
     </div>
 
-    <!-- 칩 모양 조절 인스펙터 (CSS 변수만 바꿈 — 파일 영향 없음) -->
-    <div id="chipTuner" class="chip-tuner" hidden>
-        <div class="ct-head">
-            <span>Chip shape</span>
-            <button id="chipTunerClose" class="ct-close" aria-label="Close">✕</button>
-        </div>
-        <div id="chipTunerRows"></div>
-        <p class="ct-note">View setting only — not saved to the file.</p>
-    </div>
     <div class="ds-canvas" id="dsCanvas">
         <div class="ds-loading" id="dsLoading">Loading…</div>
     </div>

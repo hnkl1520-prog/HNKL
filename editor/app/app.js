@@ -2905,14 +2905,23 @@ function dsSection(title, desc) {
 function chipCard(name, label) {
     const card = el('div', 'ds3-chip');
     card.dataset.cell = name;
-    const inp = el('input', 'ds3-chip-color');
-    inp.type = 'color';
+    // 색 면 — 누르면 우리 고르개가 열린다 (브라우저 기본 창은 결이 완전히 다르다)
+    const inp = el('button', 'ds3-chip-color');
+    inp.type = 'button';
     inp.dataset.chip = name;
-    inp.title = label + ' — click to pick a color';
-    inp.addEventListener('input', () => applyEdit(name, inp.value.toUpperCase()));
+    inp.title = label;
     const meta = el('div', 'ds3-chip-meta');
     meta.append(el('div', 'ds3-chip-name', label), dEl('div', 'ds3-chip-hex', 'hex', name));
     card.append(inp, meta);
+
+    const pop = el('div', 'color-pop');
+    pop.hidden = true;
+    pop.appendChild(pickerBlock(effHex(name) || '#808080', v => {
+        applyEdit(name, v.toUpperCase());
+        inp.style.background = v;
+    }));
+    card.appendChild(pop);
+    inp.addEventListener('click', () => openPopBeside(inp, pop));
     const chg = el('span', 'ds3-chg'); chg.dataset.chg = name; card.appendChild(chg);
     return card;
 }
@@ -3143,7 +3152,8 @@ function refresh() {
     const SAMPLE = 'The quick brown fox';
     const q = s => document.querySelectorAll(s);
 
-    q('[data-chip]').forEach(i => { const h = effHex(i.dataset.chip); if (h) i.value = h.toLowerCase(); });
+    // 색 면은 이제 버튼이다 — value 가 아니라 배경으로 칠한다
+    q('[data-chip]').forEach(i => { const h = effHex(i.dataset.chip); if (h) i.style.background = h; });
     q('[data-hex]').forEach(e => e.textContent = effHex(e.dataset.hex) || '');
 
     q('[data-rolechip]').forEach(e => e.style.background = roleHex(e.dataset.rolechip) || 'transparent');
@@ -3255,46 +3265,6 @@ $('#dsConfirmCancel')?.addEventListener('click', () => { $('#dsConfirm').hidden 
 $('#dsConfirmOk')?.addEventListener('click', dsSaveCommit);
 
 // ---------------------------------------------------------------- 칩 모양 조절 인스펙터
-// 칩 크기·색 면적·아래 텍스트 여백을 직접 만져볼 수 있는 작은 창.
-// CSS 변수만 바꾸므로 파일에는 아무 영향이 없다.
-const CHIP_VARS = [
-    { v: '--chip-w', label: 'Chip width', min: 60, max: 200, def: 96 },
-    { v: '--chip-h', label: 'Swatch height', min: 40, max: 180, def: 96 },
-    { v: '--chip-px', label: 'Text padding X', min: 0, max: 24, def: 10 },
-    { v: '--chip-pt', label: 'Text padding top', min: 0, max: 24, def: 8 },
-    { v: '--chip-pb', label: 'Text padding bottom', min: 0, max: 24, def: 8 },
-    { v: '--chip-gap', label: 'Name–code gap', min: 0, max: 16, def: 0 },
-    { v: '--chip-radius', label: 'Radius', min: 0, max: 24, def: 10 },
-];
-function buildChipTuner() {
-    const host = $('#chipTunerRows');
-    if (!host || host.childElementCount) return;
-    const canvas = document.getElementById('dsCanvas');
-    for (const c of CHIP_VARS) {
-        const row = el('div', 'ct-row');
-        const top = el('div', 'ct-top');
-        const out = el('output', null, c.def + 'px');
-        top.append(el('span', null, c.label), out);
-        const inp = el('input', 'ct-range');
-        inp.type = 'range'; inp.min = c.min; inp.max = c.max; inp.value = c.def; inp.step = 1;
-        inp.addEventListener('input', () => {
-            canvas.style.setProperty(c.v, inp.value + 'px');
-            out.textContent = inp.value + 'px';
-        });
-        row.append(top, inp);
-        host.appendChild(row);
-    }
-}
-$('#chipTunerBtn')?.addEventListener('click', () => {
-    const p = $('#chipTuner');
-    buildChipTuner();
-    p.hidden = !p.hidden;
-    $('#chipTunerBtn').classList.toggle('on', !p.hidden);
-});
-$('#chipTunerClose')?.addEventListener('click', () => {
-    $('#chipTuner').hidden = true;
-    $('#chipTunerBtn').classList.remove('on');
-});
 
 
 

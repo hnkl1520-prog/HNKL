@@ -663,7 +663,9 @@ body { font-weight: 400; }
 }
 .ds-toolbar-toggle input { accent-color: var(--accent); margin: 0; }
 /* 버튼 키도 다른 칸들과 같게 */
-.ds-toolbar .btn { height: var(--ctl-h); box-sizing: border-box; padding: 0 12px; font-size: 12px; }
+/* 편집 탭 상단바와 같은 아이콘 버튼 — 한 도구로 읽히게 */
+#dsRevert, #dsSave { width: 36px; height: 36px; padding: 0; border-radius: 999px; justify-content: center; }
+.ds-toolbar .ico { width: 20px; height: 20px; }
 
 .ds-canvas { flex: 1; min-height: 0; overflow: auto; padding: 24px 24px 90px; background: var(--stage); }
 .ds-loading { color: var(--dim); font-size: 13px; padding: 60px 0; text-align: center; }
@@ -724,12 +726,8 @@ body { font-weight: 400; }
 }
 .ds3-chip-color {
     display: block; width: 100%; height: var(--chip-h);
-    padding: 0; border: 0; background: none; cursor: pointer;
+    padding: 0; border: 0; cursor: pointer;
     border-radius: var(--chip-radius) var(--chip-radius) 0 0;
-}
-.ds3-chip-color::-webkit-color-swatch-wrapper { padding: 0; }
-.ds3-chip-color::-webkit-color-swatch {
-    border: 0; border-radius: var(--chip-radius) var(--chip-radius) 0 0;
 }
 .ds3-chip-meta { padding: var(--chip-pt) var(--chip-px) var(--chip-pb); background: var(--surface-1); }
 /* 컴포넌트 카드(.lp-card__name/__use)와 같은 굵기·간격으로 */
@@ -835,28 +833,6 @@ body { font-weight: 400; }
 }
 
 /* ── 칩 모양 조절 창 ── */
-.chip-tuner {
-    position: absolute; right: 16px; top: 50px; width: 230px; z-index: 210;
-    background: rgba(27,28,32,.96); border: 1px solid var(--line); border-radius: 12px;
-    padding: 13px; box-shadow: 0 14px 44px rgba(0,0,0,.6);
-    backdrop-filter: blur(10px);
-}
-.chip-tuner[hidden] { display: none; }
-.ct-head {
-    display: flex; align-items: center; justify-content: space-between;
-    font-size: 12px; font-weight: 700; color: var(--text); margin-bottom: 12px;
-}
-.ct-close { background: none; border: 0; color: var(--dim); cursor: pointer; font-size: 12px; padding: 2px 4px; }
-.ct-close:hover { color: var(--text); }
-.ct-row { margin-bottom: 12px; }
-.ct-top {
-    display: flex; justify-content: space-between; align-items: baseline;
-    font-size: 11px; color: var(--dim); margin-bottom: 3px;
-}
-.ct-top output { color: var(--accent); font-weight: 700; font-variant-numeric: tabular-nums; }
-.ct-range { width: 100%; accent-color: var(--accent); margin: 0; }
-.ct-note { font-size: 10px; color: var(--dim); margin: 12px 0 0; line-height: 1.5; }
-#chipTunerBtn.on { background: var(--accent); border-color: var(--accent); color: #fff; }
 
 .ds-dirty { color: var(--warn); font-size: 12px; white-space: nowrap; }
 .ds-dirty b { font-variant-numeric: tabular-nums; }
@@ -996,7 +972,6 @@ body.is-dragging-num, body.is-dragging-num * { cursor: ns-resize !important; use
 .cp { margin-bottom: 10px; }
 .cp-sv {
     position: relative; aspect-ratio: 1; border-radius: 8px; cursor: crosshair;
-    border: 1px solid var(--hairline);
 }
 .cp-bar { display: flex; align-items: center; gap: 10px; margin-top: 11px; }
 .cp-pipette {
