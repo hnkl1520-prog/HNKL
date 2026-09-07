@@ -186,13 +186,14 @@
         // DATA
         // ===============================================
         // 경로 규칙: img·url 모두 public 루트 기준 전체 경로 (프로젝트별 폴더 구조)
+        // active: false 는 목록에 나오지 않음 (데이터는 그대로 두고 다시 켜기만 하면 됨)
         const projectsData = [
-            { title: "VIBRA: XR FOOTBALL BROADCASTING SERIVCE", cat: "XR, UX, INTERACTION", img: "works/projects/vibra/thumb.png", url: "works/projects/vibra/vibra.html" },
-            { title: "REST MODE", cat: "Mobility, UX, UI", img: "works/projects/restmode/thumb.png", url: "works/projects/restmode/restmode.html" },
-            { title: "SWIG : a Smart Golf Cart", cat: "Mobility, UX, UI", img: "works/projects/swig/thumb.png", url: "404.html" },
-            { title: "VA PLAY", cat: "AR, Mobile Service", img: "works/projects/vaplay/thumb.png", url: "404.html" },
-            { title: "CAP:US ", cat: "App Design", img: "works/projects/capus/thumb.png", url: "404.html" },
-            { title: "KORAIL EDUCATION APP", cat: "UX, UI, AR, 3D", img: "works/projects/korail/thumb.png", url: "404.html" }
+            { active: true,  title: "VIBRA: XR FOOTBALL BROADCASTING SERIVCE", cat: "XR, UX, INTERACTION", img: "works/projects/vibra/thumb.png", url: "works/projects/vibra/vibra.html" },
+            { active: true,  title: "KORAIL EDUCATION APP", cat: "UX, UI, AR, 3D", img: "works/projects/korail/thumb.png", url: "404.html" },
+            { active: false, title: "REST MODE", cat: "Mobility, UX, UI", img: "works/projects/restmode/thumb.png", url: "works/projects/restmode/restmode.html" },
+            { active: false, title: "SWIG : a Smart Golf Cart", cat: "Mobility, UX, UI", img: "works/projects/swig/thumb.png", url: "404.html" },
+            { active: false, title: "VA PLAY", cat: "AR, Mobile Service", img: "works/projects/vaplay/thumb.png", url: "404.html" },
+            { active: false, title: "CAP:US ", cat: "App Design", img: "works/projects/capus/thumb.png", url: "404.html" }
         ];
 
         const labsData = [
@@ -274,7 +275,8 @@
 
         function renderWorks(category) {
             const grid = document.getElementById('works-grid');
-            const data = category === 'projects' ? projectsData : labsData;
+            const data = (category === 'projects' ? projectsData : labsData)
+                .filter(item => item.active !== false);
             
             // [수정] 16:9 비율 제어를 위한 클래스 토글
             if (category === 'projects') {
