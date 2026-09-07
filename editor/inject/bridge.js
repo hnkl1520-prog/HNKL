@@ -1041,6 +1041,15 @@ function sectionLabel(s, n) {
         }
     }
 
+    /**
+     * 맞닿은 '짝' 섹션. 눈에 보이는 간격은 두 여백의 합이라 함께 움직여야 한다.
+     * 옆이 섹션이 아니면(캐러셀 블록·래퍼 div 등) 짝이 없다 — 남의 여백을 건드리면 안 된다.
+     */
+    function mateOf(sec, side) {
+        const el = side === 'bottom' ? sec.nextElementSibling : sec.previousElementSibling;
+        return (el && el.matches && el.matches(GAP_SEL)) ? el : null;
+    }
+
     function startGapDrag(e, sec, band, tag, side) {
         e.preventDefault(); e.stopPropagation();
         band.__dragging = true;
@@ -1066,20 +1075,22 @@ function sectionLabel(s, n) {
             } else {
                 if (side === 'bottom') sec.style.paddingBottom = next + 'px';
                 else sec.style.paddingTop = next + 'px';
-                const mate = side === 'bottom' ? sec.nextElementSibling : sec.previousElementSibling;
-                if (mate && mate.classList.contains('vb-section')) {
+                const mate = mateOf(sec, side);
+                if (mate) {
                     if (side === 'bottom') mate.style.paddingTop = next + 'px';
                     else mate.style.paddingBottom = next + 'px';
                 }
             }
             syncGapBars();                       // 적용 뒤 곧바로 오버레이를 맞춘다
-            post('gapDragMove', { path: pathOf(sec), px: next, side });
+            const mv = mateOf(sec, side);
+            post('gapDragMove', { path: pathOf(sec), matePath: mv ? pathOf(mv) : null, px: next, side });
         };
         const onUp = ev => {
             band.__dragging = false;
             document.removeEventListener('mousemove', onMove, true);
             document.removeEventListener('mouseup', onUp, true);
-            post('gapDragEnd', { path: pathOf(sec), px: calc(ev), side });
+            const mu = mateOf(sec, side);
+            post('gapDragEnd', { path: pathOf(sec), matePath: mu ? pathOf(mu) : null, px: calc(ev), side });
             setTimeout(buildGapBars, 80);
         };
         document.addEventListener('mousemove', onMove, true);
@@ -1163,6 +1174,36 @@ function sectionLabel(s, n) {
         }
         return cur || el;
     }
+    /**
+     * 블록을 사람이 부르는 이름으로. div.vb-group 같은 건 디자이너에게 아무 뜻이 없다.
+     * 제목이 있으면 제목을, 없으면 무엇처럼 생겼는지를 말한다.
+     */
+    function blockName(el) {
+        if (!el || el === document.body) return 'the page';
+        const firstLine = h => {
+            let t = '';
+            for (const n of h.childNodes) { if (n.nodeName === 'BR') break; t += n.textContent || ''; }
+            return (t || h.textContent || '').replace(/\s+/g, ' ').trim();
+        };
+        const KIND = [
+            ['.vb-carousel-block, .vb-carousel', 'the carousel'],
+            ['.sky-features, .vb-grid, .ig-grid, .bg-flow', 'the cards'],
+            ['.vb-hero', 'the cover'],
+            ['video, .vb-video-section', 'the video'],
+            ['img, picture, figure', 'the image'],
+        ];
+        for (const [sel, name] of KIND) if (el.matches && el.matches(sel)) return name;
+        for (const sel of ['h1', 'h2', 'h3', '.vb-title', '.vb-group__name', '.vb-eyebrow', 'h4', 'p']) {
+            const h = el.matches && el.matches(sel) ? el : el.querySelector(sel);
+            if (h) {
+                const t = firstLine(h);
+                if (t) return '\u201c' + (t.length > 22 ? t.slice(0, 21) + '\u2026' : t) + '\u201d';
+            }
+        }
+        if (el.tagName === 'SECTION') return 'this section';
+        return 'this block';
+    }
+
     function dropTargetAt(x, y) {
         const el = liftOutOfLayout(blockAt(x, y));
         const r = el.getBoundingClientRect();
@@ -1201,11 +1242,8 @@ function sectionLabel(s, n) {
         zone.style.left = (t.r.left + window.scrollX) + 'px';
         zone.style.width = t.r.width + 'px';
         zone.style.height = t.r.height + 'px';
-        const el = t.el;
-        const name = el.tagName.toLowerCase() +
-            (el.classList[0] ? '.' + el.classList[0] : '');
         zone.querySelector('#__ed-drop-label').textContent =
-            `Insert ${t.position === 'before' ? 'above' : 'below'} ${name}`;
+            `${t.position === 'before' ? 'Above' : 'Below'} ${blockName(t.el)}`;
         return t;
     }
     function hideDrop() {

@@ -596,11 +596,11 @@ function renderGapExceptions({ base, list }) {
 }
 function refreshGapExceptions() { toFrame('listGapExceptions', {}); }
 
-function onGapMove({ path, px, side }) {
-    gapLast = { path, px, side };
+function onGapMove({ path, matePath, px, side }) {
+    gapLast = { path, matePath, px, side };
     toFrame('gapPreview', { scope: gapScope, path, px, side });
 }
-function onGapEnd({ path, px, side }) {
+function onGapEnd({ path, matePath, px, side }) {
     gapLast = null;
     if (gapScope === 'all') {
         // 토큰 한 줄만 바꾸면 13개 섹션이 함께 움직인다
@@ -616,11 +616,11 @@ function onGapEnd({ path, px, side }) {
             e.changes[prop] = px + 'px';
         };
         put(path, side === 'bottom' ? 'padding-bottom' : 'padding-top');
-        const mate = side === 'bottom'
-            ? path.slice(0, -1).concat(path[path.length - 1] + 1)
-            : path.slice(0, -1).concat(path[path.length - 1] - 1);
-        if (mate[mate.length - 1] >= 0) put(mate, side === 'bottom' ? 'padding-top' : 'padding-bottom');
-        toast(`This edge ${px}px (both sides)`, 'ok');
+        // 짝은 미리보기가 실제로 확인해서 보내 준다. 여기서 자리를 세어 짐작하면
+        // 옆이 섹션이 아닐 때(캐러셀 블록·래퍼 div) 엉뚱한 곳에 여백이 박힌다 —
+        // 화면엔 안 보이고 저장한 뒤에야 간격이 두 배로 벌어졌다.
+        if (matePath) put(matePath, side === 'bottom' ? 'padding-top' : 'padding-bottom');
+        toast(matePath ? `This edge ${px}px (both sides)` : `This edge ${px}px`, 'ok');
     }
     updateDirty();
 }
@@ -1458,6 +1458,10 @@ function mediaSrc(u) {
  */
 function askCount(title, value, min = 1, max = 12) {
     return new Promise(resolve => {
+        // 이미 묻고 있는 중이면 이번 드롭은 없던 일로.
+        // 안 그러면 같은 창이 뒤에 겹겹이 쌓여, 한 번 놓은 줄 알았는데
+        // 확인을 누를 때마다 하나씩 더 들어간다.
+        if (document.querySelector('.dlg-back')) { resolve(null); return; }
         const back = el('div', 'dlg-back');
         const box = el('div', 'dlg');
         box.innerHTML = `<div class="dlg__title">${title}</div>`;

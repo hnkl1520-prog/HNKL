@@ -130,6 +130,33 @@
 
         <!-- 아무것도 고르지 않았을 때 — 이 패널은 '페이지 전체'를 다룬다.
              요소를 고르면 그 요소로 바뀐다. (접어 두면 못 찾는다는 걸 겪었다) -->
+        <!-- 간격 — 이 툴이 하는 주된 일이라, 무엇을 고르고 있든 늘 닿을 수 있게
+             선택 패널 바깥에 둔다. (안에 두었더니 블록을 고르는 순간 사라져서
+             간격을 만지려면 먼저 선택을 풀어야 했다) -->
+        <details class="fold" id="spacingFold" open>
+            <summary>Spacing</summary>
+            <div class="fold__body">
+                <label class="sp-row sp-toggle">
+                    <span class="sp-check">
+                        <input type="checkbox" id="gapShow"> Show spacing in preview
+                    </span>
+                </label>
+                <div class="sp-exc" id="gapExc" hidden>
+                    <button class="sp-exc__sum" id="gapExcSum" type="button">
+                        <b>0</b> sections set their own
+                    </button>
+                    <div class="sp-exc__list" id="gapExcList" hidden></div>
+                </div>
+                <div class="sp-row" id="gapScopeRow" hidden>
+                    <span>Drag applies to</span>
+                    <div class="seg" id="gapScope">
+                        <button data-scope="all" class="on">All</button>
+                        <button data-scope="one">This edge</button>
+                    </div>
+                </div>
+            </div>
+        </details>
+
         <div id="emptyState">
             <!-- 파일 경로는 좌상단에 이미 있으므로 다시 쓰지 않는다 -->
             <details class="fold" id="pageBg" open>
@@ -141,29 +168,8 @@
                 <summary>Layout</summary>
                 <div class="fold__body">
                     <div id="pageLayout"></div>
-                    <!-- 섹션 사이 간격도 '페이지가 놓이는 틀'이라 같은 묶음에 둔다 -->
-                    <label class="sp-row sp-toggle">
-                        <span class="sp-check">
-                            <input type="checkbox" id="gapShow"> Show spacing in preview
-                        </span>
-                    </label>
-                    <div class="sp-exc" id="gapExc" hidden>
-                        <button class="sp-exc__sum" id="gapExcSum" type="button">
-                            <b>0</b> sections set their own
-                        </button>
-                        <div class="sp-exc__list" id="gapExcList" hidden></div>
-                    </div>
-                <div class="sp-row" id="gapScopeRow" hidden>
-                    <span>Drag applies to</span>
-                    <div class="seg" id="gapScope">
-                        <button data-scope="all" class="on">All</button>
-                        <button data-scope="one">This edge</button>
-                    </div>
-                </div>
                 </div>
             </details>
-
-
         </div>
 
         <div id="inspector" hidden>
