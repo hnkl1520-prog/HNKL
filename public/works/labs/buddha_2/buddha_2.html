@@ -102,10 +102,46 @@
         let sceneSolid, sceneWire, sceneNormal, sceneOverlap, camera, renderer;
         let solidGroup, wireGroup, normalGroup, overlapGroup;
         
-        // 2개의 박스 상태 (스크린샷 기반 사용자 지정 고정 위치)
-        let bounds1 = { left: 1047, top: 345, width: 199, height: 354 };
-        let bounds2 = { left: 1217, top: 796, width: 356, height: 235 };
+        // 2개의 박스 상태.
+        // 고정 픽셀로 잡으면 창 크기가 다를 때 모델에서 벗어나므로,
+        // 모델의 화면상 가로·세로를 각각 1로 본 비율로 잡고 매번 계산한다.
+        const BOX1_REL = { left: -0.281, top: -0.024, width: 0.646, height: 0.693 }; // 좌상 (닷 매트릭스)
+        const BOX2_REL = { left:  0.196, top:  0.554, width: 1.168, height: 0.472 }; // 우하 (노멀)
+
+        let bounds1 = { left: 0, top: 0, width: 0, height: 0 };
+        let bounds2 = { left: 0, top: 0, width: 0, height: 0 };
         let boundsNeedsUpdate = true;
+
+        // 모델은 가장 긴 축이 5.0 유닛이 되도록 정규화되어 원점에 놓인다.
+        // 가로는 로드 직후 실제 값으로 덮어쓴다.
+        let modelUnits = { w: 3.278, h: 5.0 };
+        let boxesUntouched = true; // 사용자가 한 번이라도 잡으면 자동 배치를 멈춘다
+
+        // 모델이 화면에서 차지하는 사각형 (원점 중심 + 원근 투영으로 계산)
+        function modelScreenRect() {
+            const visibleH = 2 * camera.position.z * Math.tan((camera.fov * Math.PI / 180) / 2);
+            const pxPerUnit = window.innerHeight / visibleH;
+            const w = modelUnits.w * pxPerUnit;
+            const h = modelUnits.h * pxPerUnit;
+            return {
+                left: (window.innerWidth  - w) / 2,
+                top:  (window.innerHeight - h) / 2,
+                width: w, height: h
+            };
+        }
+
+        function layoutBoxes() {
+            const m = modelScreenRect();
+            const place = (rel) => ({
+                left:   Math.round(m.left + rel.left * m.width),
+                top:    Math.round(m.top  + rel.top  * m.height),
+                width:  Math.round(rel.width  * m.width),
+                height: Math.round(rel.height * m.height)
+            });
+            Object.assign(bounds1, place(BOX1_REL));
+            Object.assign(bounds2, place(BOX2_REL));
+            boundsNeedsUpdate = true;
+        }
 
         init();
         animate();
@@ -160,6 +196,11 @@
                 const scaledBox = new THREE.Box3().setFromObject(modelSolid);
                 const center = scaledBox.getCenter(new THREE.Vector3());
                 modelSolid.position.sub(center);
+
+                // 실제 치수를 알았으니 박스를 모델에 맞춰 다시 잡는다
+                const scaledSize = scaledBox.getSize(new THREE.Vector3());
+                modelUnits = { w: scaledSize.x, h: scaledSize.y };
+                if (boxesUntouched) layoutBoxes();
 
                 // 0. 원본 (배경 화면)
                 solidGroup.add(modelSolid);
@@ -223,6 +264,7 @@
             renderer.autoClear = false;
             container.appendChild(renderer.domElement);
 
+            layoutBoxes();
             updateBoxDOM();
             
             // 드래그 로직
@@ -265,6 +307,7 @@
                 if (handle === 'box' && e.target !== boxEl) return;
                 e.preventDefault();
                 activeHandle = handle;
+                boxesUntouched = false;
                 
                 document.getElementById('box1').style.zIndex = boxId === 'box1' ? 20 : 10;
                 document.getElementById('box2').style.zIndex = boxId === 'box2' ? 20 : 10;
@@ -346,6 +389,7 @@
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
+            if (boxesUntouched) layoutBoxes();
         }
 
         function animate() {
