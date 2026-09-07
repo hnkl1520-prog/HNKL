@@ -48,7 +48,7 @@
 
             /* 페이지 고유 레이아웃 리듬 (반응형 대비 clamp)
                vw 항은 그대로 두고 상·하한만 배율을 곱함 = 브라우저 축소와 같은 결과 */
-            --vb-pad-block: clamp(calc(80px * var(--vb-s)), 11vw, calc(180px * var(--vb-s)));
+            --vb-pad-block: 248px;
             --vb-pad-inline: clamp(calc(24px * var(--vb-s)), 6vw, calc(100px * var(--vb-s)));
             --vb-maxw: calc(1280px * var(--vb-s));
 
@@ -351,21 +351,20 @@
            ========================================================= */
         .vb-info-grid {
             display: grid;
-            grid-template-columns: minmax(280px, 0.9fr) minmax(240px, 0.7fr);
+            /* 좌우를 한 덩어리로 묶어 화면 가운데에 (트랙을 내용 폭으로 두고 justify-content로 중앙) */
+            grid-template-columns: calc(400px * var(--vb-s)) auto;
+            justify-content: center;
             gap: clamp(calc(40px * var(--vb-s)), 6vw, calc(96px * var(--vb-s)));
-            align-items: start;
+            /* 두 컬럼 높이를 맞춰 마지막 줄(Contribution 밑선)과 마지막 로고 밑단을 같은 선에 */
+            align-items: stretch;
         }
+        /* 기여도 패널을 펼치면 좌측만 길어지므로 그때는 크레딧을 위로 붙임 */
+        .vb-info-grid:has(.vb-roles-wrap.is-open) { align-items: start; }
         /* 프로젝트 인포 — 좌(라벨+메타) / 우(크레딧).
            좌측 블록은 폭을 좁혀 컬럼 안에서 가운데로: 키↔값 사이가 너무 벌어져 한눈에 안 들어오던 문제 해결
            (아래 섹션들이 전부 가운데 정렬이라 톤도 맞춤) */
-        .vb-info-col {
-            /* 그리드 항목에 margin:auto를 주면 내용 크기로 줄어버리므로 justify-self로 가운데 정렬 */
-            width: 100%;
-            max-width: calc(400px * var(--vb-s));
-            justify-self: center;
-        }
-        .vb-info-col .vb-info-label { text-align: center; }
-        .vb-meta { display: flex; flex-direction: column; gap: 22px; }
+        .vb-info-col { width: 100%; }
+        .vb-meta { --vb-meta-gap: 22px; display: flex; flex-direction: column; gap: var(--vb-meta-gap); }
         .vb-meta__row {
             display: flex;
             justify-content: space-between;
@@ -394,6 +393,8 @@
         .vb-toggle-btn[aria-expanded="true"] .vb-toggle__icon { transform: rotate(180deg); }
 
         /* 접힘/펼침 (grid-template-rows 0fr→1fr 기법으로 높이 부드럽게) */
+        /* 접혀 있을 땐 앞 줄과의 간격까지 0으로 — 마지막 밑선이 좌측 컬럼의 바닥이 되도록 */
+        .vb-roles-wrap:not(.is-open) { margin-top: calc(-1 * var(--vb-meta-gap)); }
         .vb-roles-wrap {
             display: grid; grid-template-rows: 0fr;
             transition: grid-template-rows 0.45s cubic-bezier(0.16, 1, 0.3, 1);
@@ -416,7 +417,7 @@
             transition: width 0.7s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
-        .vb-credits { display: flex; flex-direction: column; gap: clamp(calc(36px * var(--vb-s)), 4vw, calc(52px * var(--vb-s))); }
+        .vb-credits { display: flex; flex-direction: column; justify-content: space-between; gap: clamp(calc(36px * var(--vb-s)), 4vw, calc(52px * var(--vb-s))); }
         /* 세 라벨(PROJECT INFO · PRODUCED WITH · FEATURED BY) 동일 스타일 + 라벨↔내용 간격 통일 */
         .vb-info-label,
         .vb-credit__label {
@@ -427,7 +428,8 @@
         /* 크레딧 로고 (PNG) */
         .vb-logos { display: flex; flex-wrap: wrap; align-items: center; gap: 20px; }
         .vb-logo {
-            height: 64px; width: auto; max-width: calc(280px * var(--vb-s));
+            height: auto; width: auto;
+            max-height: 64px; max-width: calc(280px * var(--vb-s));
             object-fit: contain;
             opacity: 0.85;
             transition: opacity 0.2s ease;
@@ -802,7 +804,7 @@
         .sec-centered .vb-body { max-width: calc(760px * var(--vb-s)); margin-inline: auto; }
         .sec-centered .vb-group__head { justify-content: center; }
 
-        .vb-group { margin-top: var(--gap-group); }
+        .vb-group { margin-top: 224px; }
         .vb-group:first-of-type { margin-top: 0; }
         /* 카드·캐러셀 뒤에 오는 그룹은 한 단계 더 띄운다 */
         .vb-group--lg { margin-top: var(--gap-group-lg); }
@@ -1362,13 +1364,12 @@
             /* 섹션 세로 리듬 축소 */
             .vb-section { padding-block: clamp(56px, 12vw, 96px); }
             /* 프로젝트 인포 2열 → 1열 */
-            .vb-info-grid { grid-template-columns: 1fr; }
-            .vb-info-col { max-width: none; }
+            .vb-info-grid { grid-template-columns: 1fr; justify-content: stretch; align-items: start; }
             /* 커버 오버뷰: 1.5배는 폰에서 과함 → 조금 낮춤 */
             .vb-cover__inner .vb-subtitle { font-size: calc(var(--fs-h3) * 1.3); }
             .vb-cover__inner .vb-body { font-size: calc(var(--fs-body) * 1.2); }
             /* 크레딧 로고 축소 */
-            .vb-logo { height: 52px; }
+            .vb-logo { max-height: 52px; }
 
             /* 화면 꽉 채우기 블록: 100vw 는 스크롤바 폭만큼 넘친다 → 실제 보이는 폭 기준으로 */
             .vb-fullbleed,
@@ -1448,7 +1449,7 @@
                 --fs-caption: 12px;
             }
             .vb-section { padding-block: clamp(44px, 11vw, 72px); }
-            .vb-logo { height: 46px; }
+            .vb-logo { max-height: 46px; }
             .vb-back-btn { padding: 14px 34px; }
             /* 좌우 여백을 조금 더 좁혀 본문 폭 확보 */
             :root { --vb-pad-inline: 20px; }
@@ -2138,7 +2139,8 @@
                                 <span class="vb-group__num">C</span>
                                 <span class="vb-group__name">UX Direction</span>
                             </div>
-                            <p class="aff-desc reveal">리서치 과정에서 확인한 여러 페인 포인트와 인사이트를 종합해, 서비스의 6가지 컨셉 키워드를 도출했어요.</p>
+                            <p class="aff-desc reveal">리서치 과정에서 확인한 여러 페인 포인트와 인사이트를 종합해,<br>
+서비스의 6가지 컨셉 키워드를 도출했어요.</p>
                             <div class="aff-kw-row reveal">
                                 <div class="aff-kw-card">
                                     <span class="aff-kw-card__en">Immersion</span>
