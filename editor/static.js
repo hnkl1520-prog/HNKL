@@ -18,6 +18,8 @@ const MIME = {
     '.html': 'text/html; charset=utf-8',
     '.css': 'text/css; charset=utf-8',
     '.js': 'text/javascript; charset=utf-8',
+    '.mjs': 'text/javascript; charset=utf-8',
+    '.wasm': 'application/wasm',
     '.json': 'application/json; charset=utf-8',
     '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
     '.gif': 'image/gif', '.svg': 'image/svg+xml', '.webp': 'image/webp',
@@ -51,10 +53,29 @@ const server = http.createServer((req, res) => {
             : res.end('not found: ' + pathname);
     }
 
-    res.writeHead(200, {
+    const size = fs.statSync(file).size;
+    const headers = {
         'Content-Type': MIME[path.extname(file)] || 'application/octet-stream',
         'Cache-Control': 'no-store',
-    });
+        'Accept-Ranges': 'bytes',
+        'Content-Length': size,
+    };
+
+    // Browsers request byte ranges when loading and looping case-study videos.
+    const range = req.headers.range?.match(/^bytes=(\d*)-(\d*)$/);
+    if (range) {
+        const start = range[1] ? Number(range[1]) : Math.max(0, size - Number(range[2]));
+        const end = range[1] && range[2] ? Math.min(Number(range[2]), size - 1) : size - 1;
+        if ((!range[1] && !range[2]) || !Number.isSafeInteger(start) || !Number.isSafeInteger(end) || start > end || start >= size) {
+            res.writeHead(416, { 'Content-Range': `bytes */${size}`, 'Content-Length': 0 });
+            return res.end();
+        }
+        res.writeHead(206, { ...headers, 'Content-Range': `bytes ${start}-${end}/${size}`, 'Content-Length': end - start + 1 });
+        return req.method === 'HEAD' ? res.end() : fs.createReadStream(file, { start, end }).pipe(res);
+    }
+
+    res.writeHead(200, headers);
+    if (req.method === 'HEAD') return res.end();
     fs.createReadStream(file).pipe(res);
 });
 

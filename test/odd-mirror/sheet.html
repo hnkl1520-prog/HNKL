@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>Odd Mirror — 그림 확인 시트</title>
+<style>
+  body { margin: 0; padding: 16px; background: #EEEDF2; font: 13px/1.4 -apple-system, "Apple SD Gothic Neo", system-ui, sans-serif; color: #1B1446; }
+  h2 { margin: 18px 0 8px; font-size: 15px; }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; }
+  figure { margin: 0; }
+  figcaption { font-size: 11px; margin-top: 2px; max-width: 240px; }
+  canvas { display: block; border-radius: 6px; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="module">
+// 앱 파일의 구역을 그대로 불러와 합성 얼굴로 그린다 (모델·카메라 없이 확인 가능한 렌더링 검증)
+import * as S from './synth.mjs';
+
+const html = await (await fetch('/public/works/labs/odd-mirror/odd-mirror.html')).text();
+const code = ['STYLE', 'GEOM', 'SHAPE', 'EXPR', 'HAIR', 'GLASSES', 'DRAW'].map((n) => html.match(new RegExp(`// ==== ${n} START ====\\n([\\s\\S]*?)// ==== ${n} END ====`))[1]).join('\n');
+const names = ['CANON_IMG', 'EYE_MID', 'U', 'LM', 'fitPose', 'frontalize', 'referenceFace', 'createShapeScan', 'shapeAddSample', 'shapeFinalize', 'TRAITS', 'TEMPLATE', 'PARTS',
+  'exprTarget', 'exprUpdate', 'neutralExpr', 'HAIR', 'createHairModel', 'hairAddSample', 'hairProfile', 'hairCommit', 'hairDisplayStep', 'headOutline', 'polyRadius',
+  'drawBust', 'bustPivotY', 'STYLE', 'mix', 'PIVOT_Y', 'eyeWhiteAmount', 'mouthGeometry'];
+const G = new Function(`${code}\nreturn { ${names.join(', ')} };`)();
+
+const params = new URLSearchParams(location.search);
+const which = params.get('sheet') || 'people';
+const root = document.getElementById('root');
+
+function section(title) {
+  const h = document.createElement('h2'); h.textContent = title; root.appendChild(h);
+  const row = document.createElement('div'); row.className = 'row'; root.appendChild(row);
+  return row;
+}
+function cell(row, w, h, caption, bg) {
+  const fig = document.createElement('figure'), c = document.createElement('canvas');
+  c.width = w; c.height = h; fig.appendChild(c);
+  const cap = document.createElement('figcaption'); cap.textContent = caption; fig.appendChild(cap);
+  row.appendChild(fig);
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, w, h);
+  return ctx;
+}
+
+const HAIR_TONE = { black: '#1B1446', dark: '#3A2A1E', brown: '#7A5234', blond: '#F2B64C', gray: '#B9B6C4' };
+function makePerson(name, { id = 0, hair = 'short', tone = 'black', clipTop = null, glasses = null } = {}) {
+  const shape = S.scanPerson(G, S.PEOPLE[name], { seed: name.length * 13 });
+  const geoMeas = {};
+  for (const k in G.TRAITS) geoMeas[k] = G.TEMPLATE[k] + shape.traits[k].eff;
+  const hm = G.createHairModel();
+  const masks = S.synthHairMasks(G, geoMeas, hair, { clipAboveY: clipTop });
+  for (let i = 0; i < 3; i++) G.hairAddSample(hm, masks.masks, masks.valid, null, i);
+  G.hairCommit(hm, G.hairProfile(hm, geoMeas));
+  const pal = G.STYLE.palette[id % G.STYLE.palette.length];
+  return {
+    name, shape, geoMeas, hm, pal,
+    rig: {
+      mirror: true, geo: shape.geo, geoMeas, asym: shape.asym,
+      colors: { face: pal[0], shirt: pal[2], hair: HAIR_TONE[tone], brow: tone === 'black' || tone === 'dark' ? G.STYLE.ink : G.mix(HAIR_TONE[tone], G.STYLE.ink, 0.5) },
+      expr: null, hair: hm.display, hairHeadR: hm.target.headR, hairProv: hm.target.prov, glasses, debug: false,
+    },
+  };
+}
+function exprFor(person, e, pose = {}) {
+  const Hd = S.shapeFace(G, S.PEOPLE[person.name], e);
+  const o = S.observe(G, S.project(G, Hd, pose));
+  return G.exprUpdate(null, G.exprTarget(o.F, person.shape, S.blendshapes(e), o.pose), 16, 1);
+}
+function draw(ctx, person, { expr = null, scale = 52, w = 240, h = 300, eyeY = null } = {}) {
+  person.rig.expr = expr || G.neutralExpr();
+  const ey = eyeY ?? 30 + 2.1 * scale;
+  G.drawBust(ctx, person.rig, w / 2, ey + G.bustPivotY(person.shape.geo) * scale, scale);
+}
+
+const CAST = [
+  ['보통', { hair: 'short', tone: 'dark' }],
+  ['둥근얼굴_큰눈', { hair: 'bowl', tone: 'black' }],
+  ['긴얼굴_긴코', { hair: 'side', tone: 'brown' }],
+  ['각진턱_가는눈', { hair: 'short', tone: 'black' }],
+  ['작은턱_넓은미간', { hair: 'long', tone: 'blond' }],
+  ['두꺼운입술_넓은코', { hair: 'bald', tone: 'gray' }],
+];
+
+if (which === 'people') {
+  let row = section('1. 서로 다른 얼굴 비율 (사람마다 다른 색)');
+  CAST.forEach(([name, opt], i) => { const p = makePerson(name, { id: i, ...opt }); draw(cell(row, 240, 300, `${name} · 강조: ${p.shape.emphasis.join(', ') || '없음'}`, p.pal[1]), p); });
+  row = section('2. 같은 색으로 — 형태 차이만');
+  CAST.forEach(([name, opt]) => { const p = makePerson(name, { id: 0, ...opt, tone: 'black' }); draw(cell(row, 240, 300, name, '#FFB23F'), p); });
+}
+
+if (which === 'expressions') {
+  for (const [name, opt, id] of [['둥근얼굴_큰눈', { hair: 'bowl' }, 1], ['각진턱_가는눈', { hair: 'short' }, 3]]) {
+    const p = makePerson(name, { id, ...opt });
+    const row = section(`3. 표정 — ${name}`);
+    for (const [label, e] of [['무표정', {}], ['미소', { smile: 0.8 }], ['입 벌림', { open: 0.6 }], ['웃으며 벌림', { smile: 0.9, open: 0.45 }], ['눈 감음', { blink: 1 }], ['웃으며 눈 감음', { smile: 1, blink: 1 }], ['오므림', { pucker: 1 }], ['한쪽 입꼬리', { smileR: 1 }], ['눈썹 올림', { brow: 1 }]]) {
+      draw(cell(row, 200, 250, label, p.pal[1]), p, { expr: exprFor(p, e), scale: 46, w: 200, h: 250, eyeY: 120 });
+    }
+  }
+}
+
+if (which === 'mouth') {
+  const p = makePerson('보통', { id: 2, hair: 'short' });
+  const row = section('4. 입 벌림 0 → 0.6 (0.05 간격, 입 부분 확대)');
+  for (let i = 0; i <= 12; i++) {
+    const v = i * 0.05, ctx = cell(row, 150, 110, `벌림 ${v.toFixed(2)}`, p.pal[1]);
+    const e = exprFor(p, { open: v });
+    ctx.save(); ctx.translate(75 - 120 * 2.5, 45 - (110 + p.shape.geo.mouthY * 60) * 2.5); ctx.scale(2.5, 2.5);
+    draw(ctx, p, { expr: e, scale: 60, w: 240, h: 300, eyeY: 110 });
+    ctx.restore();
+    const g = G.mouthGeometry(p.shape.geo, p.shape.asym, e.mouth);
+    ctx.fillStyle = 'rgba(27,20,70,0.7)'; ctx.font = '10px sans-serif'; ctx.fillText(`그림 벌림 ${g.open.toFixed(3)}`, 6, 104);
+  }
+  const row2 = section('4-2. 웃으며 벌림 0 → 0.5 (치아가 서서히)');
+  for (let i = 0; i <= 10; i++) {
+    const v = i * 0.05, ctx = cell(row2, 150, 110, `벌림 ${v.toFixed(2)} + 미소`, p.pal[1]);
+    ctx.save(); ctx.translate(75 - 120 * 2.5, 45 - (110 + p.shape.geo.mouthY * 60) * 2.5); ctx.scale(2.5, 2.5);
+    draw(ctx, p, { expr: exprFor(p, { open: v, smile: 0.9 }), scale: 60, w: 240, h: 300, eyeY: 110 });
+    ctx.restore();
+  }
+}
+
+if (which === 'bust') {
+  for (const [name, opt, id] of [['작은턱_넓은미간', { hair: 'long', tone: 'blond' }, 4], ['보통', { hair: 'short', tone: 'dark' }, 0], ['긴얼굴_긴코', { hair: 'side', tone: 'brown' }, 2]]) {
+    const p = makePerson(name, { id, ...opt });
+    const row = section(`5. 흉상 구도 — ${name}`);
+    for (const [label, e, pose] of [['정면', {}, {}], ['왼쪽으로 기울임', {}, { roll: -0.35 }], ['오른쪽으로 기울임', {}, { roll: 0.35 }], ['입 벌림', { open: 0.8 }, {}], ['기울임 + 입 벌림', { open: 0.7 }, { roll: 0.3 }], ['고개 돌림', {}, { yaw: 0.35 }], ['고개 숙임', {}, { pitch: 0.25 }]]) {
+      draw(cell(row, 260, 340, label, p.pal[1]), p, { expr: exprFor(p, e, pose), scale: 50, w: 260, h: 340, eyeY: 150 });
+    }
+  }
+}
+
+if (which === 'eyes') {
+  const row = section('6. 눈 모양 연속 규칙 — 같은 사람, 화면 크기만 다르게 (머리 1단위 px)');
+  for (const [name, id] of [['각진턱_가는눈', 3], ['보통', 0], ['둥근얼굴_큰눈', 1]]) {
+    const p = makePerson(name, { id, hair: 'short' });
+    for (const sc of [26, 40, 60, 90]) {
+      const w = Math.round(sc * 4), h = Math.round(sc * 4.4);
+      const ctx = cell(row, w, h, `${name} · ${sc}px · 흰 면 ${G.eyeWhiteAmount(p.shape.geo, sc).toFixed(2)}`, p.pal[1]);
+      draw(ctx, p, { scale: sc, w, h, eyeY: sc * 2.2 });
+    }
+  }
+  const row2 = section('6-2. 눈 감기 0 → 1 (둥근 눈, 60px)');
+  const p = makePerson('둥근얼굴_큰눈', { id: 1, hair: 'short' });
+  for (let i = 0; i <= 6; i++) { const ctx = cell(row2, 200, 90, `감음 ${(i / 6).toFixed(2)}`, p.pal[1]); ctx.save(); ctx.translate(100 - 120 * 2.2, 45 - 170 * 2.2); ctx.scale(2.2, 2.2); draw(ctx, p, { expr: exprFor(p, { blink: i / 6 }), scale: 60, w: 240, h: 300, eyeY: 170 }); ctx.restore(); }
+}
+
+if (which === 'hair') {
+  const row = section('7. 헤어 — 실루엣·앞머리·귀 가림, 잘린 윗머리는 추정(점선은 확인 화면 표시)');
+  for (const [label, name, opt, id] of [['짧은 머리', '보통', { hair: 'short', tone: 'dark' }, 0], ['바가지', '둥근얼굴_큰눈', { hair: 'bowl' }, 1], ['옆가르마', '긴얼굴_긴코', { hair: 'side', tone: 'brown' }, 2],
+    ['긴 머리', '작은턱_넓은미간', { hair: 'long', tone: 'blond' }, 4], ['민머리', '두꺼운입술_넓은코', { hair: 'bald', tone: 'gray' }, 5], ['윗머리 잘림 → 추정', '보통', { hair: 'short', tone: 'dark', clipTop: -1.2 }, 6]]) {
+    const p = makePerson(name, { id, ...opt });
+    p.rig.debug = label.includes('추정');
+    draw(cell(row, 240, 300, `${label} · 추정 ${Math.round(p.hm.target.estimatedShare * 100)}%`, p.pal[1]), p);
+  }
+}
+
+if (which === 'eyestyles') {
+  const PEOPLE3 = [['각진턱_가는눈', 3, '가는 눈'], ['보통', 0, '보통 눈'], ['둥근얼굴_큰눈', 1, '둥근 눈']];
+  const LABEL = { soft: 'A 어두운 면 (지금)', bold: 'B 흰자 + 큰 눈동자 (윤곽선 없음)', boldline: 'B2 흰자 둘레에 선까지', round: 'C 동그란 만화 눈 (눈동자 키움)' };
+  for (const style of ['soft', 'bold', 'boldline', 'round']) {
+    const row = section(`${LABEL[style]}`);
+    for (const [name, id, tag] of PEOPLE3) {
+      const p = makePerson(name, { id, hair: 'short', tone: 'dark' });
+      p.rig.eyeStyle = style;
+      draw(cell(row, 230, 290, `${tag} · 크게`, p.pal[1]), p, { scale: 58, w: 230, h: 290, eyeY: 125 });
+    }
+    for (const [name, id, tag] of PEOPLE3) {
+      const p = makePerson(name, { id, hair: 'short', tone: 'dark' });
+      p.rig.eyeStyle = style;
+      draw(cell(row, 120, 150, `${tag} · 작게`, p.pal[1]), p, { scale: 30, w: 120, h: 150, eyeY: 65 });
+    }
+    const p2 = makePerson('보통', { id: 0, hair: 'short', tone: 'dark' });
+    p2.rig.eyeStyle = style;
+    for (const [lab, e] of [['미소', { smile: 0.9 }], ['반쯤 감음', { blink: 0.5 }], ['감음', { blink: 1 }], ['웃으며 감음', { smile: 1, blink: 1 }]]) {
+      draw(cell(row, 160, 200, lab, p2.pal[1]), p2, { expr: exprFor(p2, e), scale: 40, w: 160, h: 200, eyeY: 88 });
+    }
+  }
+}
+
+if (which === 'glasses') {
+  const row = section('8. 안경 그리기 (형태 추정값을 넣었을 때)');
+  for (const [label, sh, id] of [['둥근 테', { dx: 0.02, dy: 0.02, a: 0.33, b: 0.28, nT: 2, nB: 2, thick: true, dark: true }, 0], ['사각 테', { dx: 0.04, dy: 0.03, a: 0.41, b: 0.26, nT: 5, nB: 5, thick: true, dark: true }, 3], ['얇은 금속 테', { dx: 0.02, dy: 0.02, a: 0.36, b: 0.27, nT: 3, nB: 3, thick: false, dark: false }, 6], ['아래만 둥근 테', { dx: 0.03, dy: 0.02, a: 0.38, b: 0.27, nT: 5, nB: 2.5, thick: false, dark: true }, 2]]) {
+    const p = makePerson('보통', { id, hair: 'short', tone: 'dark', glasses: { shape: sh, alpha: 1 } });
+    draw(cell(row, 240, 300, label, p.pal[1]), p);
+  }
+}
+
+window.__done = true;
+</script>
+</body>
+</html>

@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="ko">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Odd Mirror · 형태 연구 02</title>
+<style>
+  *{box-sizing:border-box} body{margin:0;background:#f8f7f3;color:#242329;font:14px/1.65 -apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo",sans-serif} button,a{ -webkit-tap-highlight-color:transparent} button{font:inherit;cursor:pointer} main{max-width:1440px;margin:auto;padding:36px 44px 56px} header{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #d9d7cf;padding-bottom:18px}.brand{font-size:19px;font-weight:750;letter-spacing:-.6px}.edition{font-size:12px;letter-spacing:1.5px;color:#66636b} .intro{display:flex;justify-content:space-between;gap:24px;align-items:end;margin:32px 0 22px} h1{font-size:30px;letter-spacing:-1.3px;line-height:1.3;margin:0 0 10px} p{margin:0} .muted{color:#6e6a72} .controls{display:flex;background:#e9e7e0;padding:4px;border-radius:9px;flex-shrink:0}.controls button{background:transparent;border:0;padding:7px 14px;color:#65616a;border-radius:6px;font-size:13px}.controls button[aria-pressed="true"]{color:#242329;background:#fff;box-shadow:0 1px 3px #0001} button:focus-visible,a:focus-visible{outline:3px solid #655bf3;outline-offset:4px} .studies{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px}.study{margin:0;--skin:#3530ef;--hair:#151039;--ink:#151039;--panel:#eeeae0;--white:#fffdf6;--brow:var(--hair)} .portrait{display:block;width:100%;height:auto;background:var(--panel);border-radius:3px}.skin{fill:var(--skin)}.hair{fill:var(--hair)}.ink{fill:var(--ink)}.white{fill:var(--white)}.brow{fill:var(--brow)}.line{fill:none;stroke:var(--ink);stroke-width:3.8;stroke-linecap:round;stroke-linejoin:round}.browline{fill:none;stroke:var(--brow);stroke-width:5;stroke-linecap:round}figcaption{padding:16px 1px 0}.title{display:flex;gap:10px;align-items:baseline;margin-bottom:7px}h2{font-size:17px;letter-spacing:-.4px;margin:0}.num{font-size:11px;color:#78747c;font-variant-numeric:tabular-nums}figcaption p{font-size:13px;color:#66616c;max-width:33em}.note{border-top:1px solid #d9d7cf;margin-top:25px;padding-top:13px;font-size:12px;color:#78737d}.references{margin-top:36px}.sectionhead{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:14px}.sectionhead h2{font-size:15px}.sectionhead span{font-size:12px;color:#79747d}.refs{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:14px}.ref{margin:0}.ref button{display:block;width:100%;height:145px;padding:0;border:1px solid #e5e1d8;background:#eeece6;overflow:hidden;border-radius:3px}.ref img{width:100%;height:100%;object-fit:contain;display:block}.ref figcaption{padding-top:8px;font-size:11px;color:#6f6974}.ref b{display:block;color:#38333f;font-size:12px;font-weight:600}.principles{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:30px;border-top:1px solid #d9d7cf;padding-top:18px;font-size:12px;color:#6f6974}.principles b{color:#302b37;display:block;margin-bottom:4px}dialog{border:0;border-radius:8px;padding:12px;max-width:92vw;background:#f8f7f3}dialog::backdrop{background:#151039b8}dialog img{display:block;max-height:80vh;max-width:85vw;object-fit:contain;margin:auto}dialog button{display:block;margin:10px 0 0 auto;background:#151039;color:white;border:0;border-radius:5px;padding:6px 18px}body[data-color="individual"] .study:nth-child(1){--skin:#afa0e4;--panel:#e1ebe0}body[data-color="individual"] .study:nth-child(2){--skin:#e87259;--hair:#f3c36b;--brow:#f3c36b;--ink:#572c39;--panel:#e6e3da}body[data-color="individual"] .study:nth-child(3){--skin:#58b6a6;--hair:#222b34;--ink:#222b34;--panel:#f0d9dd}footer{font-size:11px;color:#88818b;margin-top:28px}footer a{color:inherit}@media(min-width:1200px){.portrait{max-height:440px}}@media(max-width:760px){main{padding:24px 20px}.intro{display:block}h1{font-size:26px}.controls{display:inline-flex;margin-top:18px}.studies{grid-template-columns:1fr;gap:30px}.portrait{max-height:470px}.refs{grid-template-columns:repeat(3,1fr)}.ref button{height:125px}.principles{grid-template-columns:1fr;gap:14px}.edition{font-size:10px}.sectionhead{gap:12px}}
+</style>
+<main>
+  <header><div class="brand">Odd Mirror</div><div class="edition">FORM STUDY / 02</div></header>
+  <div class="intro"><div><h1>적게 그려도, 다른 사람.</h1><p class="muted">얼굴의 비례, 여백, 두드러진 특징을 함께 조율한 세 가지 시안.</p></div><div class="controls" aria-label="시안 색상"><button type="button" data-color="shared" aria-pressed="true">같은 색으로</button><button type="button" data-color="individual" aria-pressed="false">각자의 색으로</button></div></div>
+  <section class="studies" aria-label="캐릭터 시안">
+    <figure class="study">
+      <svg class="portrait" viewBox="0 0 360 420" role="img" aria-labelledby="title-a">
+        <title id="title-a">좁아지는 턱, 가로로 긴 눈과 옆으로 흐르는 짧은 머리의 캐릭터</title>
+        <!-- 실제 인물 측정값이 아닌 조형 검토용 디자인 좌표. -->
+        <path class="skin" d="M153 302 Q158 330 153 351 Q180 355 207 351 Q202 330 208 302Z"/>
+        <path class="skin" d="M99 190 C80 181 72 192 77 211 Q82 226 101 221Z M261 192 C279 184 288 196 282 214 Q277 227 259 221Z"/>
+        <path class="skin" d="M96 148 C94 105 125 82 177 82 C232 80 264 107 264 151 L264 223 C264 250 250 274 238 293 C224 314 202 328 179 329 C156 329 136 316 121 294 C107 273 95 251 95 226Z"/>
+        <path class="hair" d="M95 197 C88 180 85 151 91 123 C98 88 120 70 150 66 C174 60 205 65 227 57 C243 62 262 80 268 104 C275 130 268 166 261 190 L254 190 L250 134 Q230 142 212 134 C226 126 235 116 238 107 C209 128 177 134 145 128 C124 124 111 138 109 159 L103 197Z"/>
+        <path class="line" d="M83 204 L96 208 M264 207 L276 202"/>
+        <path class="browline" d="M119 172 Q134 165 149 169 M205 170 Q219 166 233 173"/>
+        <path class="white" d="M116 195 Q133 183 154 192 Q148 208 134 207 Q122 207 116 195Z M203 193 Q220 184 239 197 Q231 209 218 207 Q206 205 203 193Z"/>
+        <defs><clipPath id="eye-a-left"><path d="M116 195 Q133 183 154 192 Q148 208 134 207 Q122 207 116 195Z"/></clipPath><clipPath id="eye-a-right"><path d="M203 193 Q220 184 239 197 Q231 209 218 207 Q206 205 203 193Z"/></clipPath></defs>
+        <ellipse class="ink" clip-path="url(#eye-a-left)" cx="138" cy="195" rx="8" ry="9"/><ellipse class="ink" clip-path="url(#eye-a-right)" cx="220" cy="195" rx="8" ry="9"/>
+        <path class="line nose" d="M177 199 L168 232 Q166 238 172 239 L185 238"/>
+        <path class="line" d="M151 277 Q171 283 193 278"/>
+      </svg>
+      <figcaption><div class="title"><span class="num">01</span><h2>기울기와 간격</h2></div><p>옆으로 흐르는 짧은 머리, 가로로 긴 눈, 아래로 좁아지는 턱을 함께 설계했습니다. 작은 귀와 짧은 입으로 얼굴 옆과 아래의 여백을 남겼습니다.</p></figcaption>
+    </figure>
+    <figure class="study">
+      <svg class="portrait" viewBox="0 0 360 420" role="img" aria-labelledby="title-b">
+        <title id="title-b">넓은 턱과 무거운 눈꺼풀, 한쪽으로 흐르는 머리의 캐릭터</title>
+        <path class="skin" d="M138 304 C145 321 143 338 141 349 Q182 353 223 349 C219 335 220 319 225 304Z"/>
+        <path class="skin" d="M79 181 C59 173 49 183 51 201 C52 215 64 224 83 220Z M281 176 C302 168 314 177 312 195 C311 211 299 220 279 217Z"/>
+        <path class="skin" d="M77 131 Q76 85 129 83 L235 84 Q280 86 282 131 L281 264 Q280 290 263 302 L222 327 Q181 341 144 326 L98 301 Q80 291 79 270Z"/>
+        <path class="hair" d="M66 183 L66 134 Q59 134 51 133 L82 106 Q98 65 143 62 C183 58 238 70 288 57 C298 90 294 134 283 180 L274 182 L269 115 C238 130 198 122 163 120 C129 118 103 120 86 132 L83 186Z"/>
+        <path class="brow" d="M106 157 L143 151 L159 159 L158 169 L141 163 L103 169Z M204 158 L242 150 L258 161 L263 174 L242 162 L204 169Z"/>
+        <path class="white" d="M108 183 L159 185 C156 204 146 211 134 210 C120 209 111 200 108 183Z"/>
+        <path class="ink" d="M126 184 L143 184 L143 190 Q140 197 135 197 Q128 196 126 190Z"/>
+        <path class="white" d="M206 185 L255 181 C253 198 246 208 232 210 C218 211 209 202 206 185Z"/>
+        <path class="ink" d="M222 184 L238 182 L240 190 Q237 198 232 198 Q225 198 222 191Z"/>
+        <path class="line nose" d="M186 176 C183 194 179 213 176 229 Q175 236 181 236 L198 234"/>
+        <path class="line" d="M129 277 C151 272 174 271 195 273 Q217 274 237 278 M129 273 L128 282 M237 274 L236 282"/>
+      </svg>
+      <figcaption><div class="title"><span class="num">02</span><h2>무게와 방향</h2></div><p>폭이 넓은 볼과 턱에 좁게 뜬 눈을 얹었습니다. 눈썹과 헤어의 흐름을 맞추고, 코는 길게 내려오는 선과 짧게 돌아가는 코끝으로 정리했습니다.</p></figcaption>
+    </figure>
+    <figure class="study">
+      <svg class="portrait" viewBox="0 0 360 420" role="img" aria-labelledby="title-c">
+        <title id="title-c">둥근 볼과 짧은 코, 부드럽게 감싸는 단발의 캐릭터</title>
+        <path class="hair" d="M67 322 C71 291 62 248 64 186 C63 103 94 60 174 57 C243 53 287 86 291 151 C294 200 287 275 301 326 C269 337 228 338 193 331 C147 340 99 337 67 322Z"/>
+        <path class="skin" d="M155 300 Q162 331 157 352 Q182 359 208 352 Q203 331 209 300Z"/>
+        <path class="skin" d="M91 187 C75 179 66 188 68 203 C70 215 81 219 94 216Z M267 185 C283 180 293 191 289 206 C286 217 276 221 264 214Z"/>
+        <path class="skin" d="M90 157 C90 111 124 86 176 87 C235 85 270 119 272 169 C273 190 269 208 270 226 C272 260 256 290 229 308 C207 323 168 329 143 316 C109 299 88 274 88 240 C89 210 86 187 90 157Z"/>
+        <!-- 큰 헤어 흐름 하나로 정리. 향후 관측한 윤곽을 입력으로 받는다. -->
+        <path class="hair" d="M80 212 C72 172 73 123 93 96 C113 66 145 65 171 66 C226 58 263 81 280 119 L282 205 C270 181 262 160 254 128 C235 142 218 141 196 130 C177 121 164 113 147 114 C128 118 107 134 102 155 Q101 189 89 211Z"/>
+        <path class="browline" d="M121 171 Q133 167 145 170 M205 169 Q218 165 231 169"/>
+        <ellipse class="white" cx="135" cy="204" rx="21" ry="22"/><ellipse class="ink" cx="139" cy="204" rx="11.5" ry="12.5"/>
+        <ellipse class="white" cx="222" cy="204" rx="21" ry="22"/><ellipse class="ink" cx="226" cy="204" rx="11.5" ry="12.5"/>
+        <path class="line nose" d="M179 215 L175 227 Q176 233 186 230"/>
+        <path class="line" d="M150 270 C163 278 187 280 204 271"/>
+      </svg>
+      <figcaption><div class="title"><span class="num">03</span><h2>둥근 면의 연결</h2></div><p>볼과 눈에 둥근 면을 모으고 코를 작게 생략했습니다. 앞머리의 큰 흐름과 관자놀이를 연결해, 헤어가 얼굴을 감싸도록 했습니다.</p></figcaption>
+    </figure>
+  </section>
+  <p class="note">세 시안은 모두 임의로 설계한 얼굴입니다. 실제 사람을 측정한 결과나 고정 캐릭터 유형이 아닙니다. 코는 같은 굵기의 선으로 통일했습니다. 헤어·안경은 초기 스캔에서 결정한 모습을 유지하며, 다시 스캔할 때만 갱신합니다.</p>
+  <section class="references"><div class="sectionhead"><h2>함께 보는 레퍼런스</h2><span>누르면 원본 확대</span></div><div class="refs">
+    <figure class="ref"><button type="button" aria-label="레퍼런스 1 확대"><img src="references/01.png" alt="긴 파란 얼굴" width="972" height="968"></button><figcaption><b>01 · 긴 얼굴의 여백</b>작은 눈, 긴 코, 넓게 남긴 턱</figcaption></figure>
+    <figure class="ref"><button type="button" aria-label="레퍼런스 2 확대"><img src="references/02.png" alt="다섯 가지 눈 표현" width="819" height="1456"></button><figcaption><b>02 · 눈의 방향</b>눈꺼풀 각도와 시선의 관계</figcaption></figure>
+    <figure class="ref"><button type="button" aria-label="레퍼런스 3 확대"><img src="references/03.png" alt="흰 면과 검은 면으로 그린 눈" width="735" height="809"></button><figcaption><b>03 · 최소한의 눈</b>흰 면의 잘림, 검은 면의 비율</figcaption></figure>
+    <figure class="ref"><button type="button" aria-label="레퍼런스 4 확대"><img src="references/04.png" alt="각진 보라색 얼굴" width="758" height="1348"></button><figcaption><b>04 · 배치와 생략</b>넓은 얼굴에 모여 있는 이목구비</figcaption></figure>
+    <figure class="ref"><button type="button" aria-label="레퍼런스 5 확대"><img src="references/05.png" alt="금발과 무거운 눈꺼풀의 캐릭터" width="800" height="600"></button><figcaption><b>05 · 인상을 만드는 방향</b>헤어·눈썹·턱의 각과 흐름</figcaption></figure>
+    <figure class="ref"><button type="button" aria-label="레퍼런스 6 확대"><img src="references/06.png" alt="작은 주황 얼굴과 큰 검은 몸" width="1024" height="1024"></button><figcaption><b>06 · 덩어리의 크기 대비</b>작은 머리와 큰 몸, 짧은 연결</figcaption></figure>
+  </div></section>
+  <div class="principles"><p><b>함께 유지할 것</b>제한된 색, 큰 면과 작은 선의 대비, 적은 제어점. 코는 선으로 그리되 길이·폭·기울기로 개인차를 만듭니다.</p><p><b>사람에 따라 바뀔 것</b>턱의 흐름, 눈의 흰 면, 코의 표현, 헤어의 방향. 모든 얼굴을 같은 윤곽 규칙에 가두지 않습니다.</p><p><b>다음 연결의 기준</b>초기 스캔으로 헤어·안경을 결정한 뒤 고정합니다. 표정과 고개 움직임만 따라가며, 수동 재스캔은 캐릭터 색을 유지합니다.</p></div>
+  <footer>얼굴 스타일 검토용 · 레퍼런스는 사용자 제공 원본 · <a href="../odd-mirror.html">기존 카메라 앱</a></footer>
+</main>
+<dialog aria-label="레퍼런스 원본"><img alt=""><form method="dialog"><button>닫기</button></form></dialog>
+<script>
+  for(const button of document.querySelectorAll('.controls button')) button.addEventListener('click',()=>{document.body.dataset.color=button.dataset.color;for(const b of document.querySelectorAll('.controls button'))b.setAttribute('aria-pressed',String(b===button))});
+  const dialog=document.querySelector('dialog');
+  for(const button of document.querySelectorAll('.ref button'))button.addEventListener('click',()=>{const source=button.querySelector('img'),target=dialog.querySelector('img');target.src=source.src;target.alt=source.alt;dialog.showModal()});
+  dialog.addEventListener('click',event=>{if(event.target===dialog)dialog.close()});
+  window.__done=true;
+</script>
+</html>

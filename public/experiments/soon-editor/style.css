@@ -1,0 +1,195 @@
+:root {
+  color-scheme: light;
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
+  color: #171719;
+  background: #f1f1ef;
+  --editor-blue: var(--primary-50);
+  --page-gutter: clamp(24px, 2.78vw, 48px);
+}
+
+* { box-sizing: border-box; }
+
+html { min-width: 280px; }
+
+body {
+  margin: 0;
+  height: 100svh;
+  min-height: 280px;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+button, a { -webkit-tap-highlight-color: transparent; }
+button { font: inherit; }
+a { color: inherit; text-decoration: none; }
+
+.page-header {
+  display: flex;
+  align-items: center;
+  padding: max(24px, env(safe-area-inset-top)) var(--page-gutter) 0;
+  position: relative;
+  z-index: 2;
+}
+
+.brand {
+  font-size: 21px;
+  font-weight: 850;
+  line-height: 1;
+  letter-spacing: -1.35px;
+}
+
+.editor {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 36px clamp(24px, 7.5vw, 144px) 48px;
+}
+
+.canvas-wrap {
+  width: min(100%, 1120px);
+  aspect-ratio: 28 / 9;
+  min-height: 0;
+  flex: 0 1 auto;
+}
+
+#letter-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.letter-shape { fill: #171719; }
+
+.control-line {
+  fill: none;
+  stroke: var(--editor-blue);
+  stroke-width: .6;
+  opacity: .5;
+  vector-effect: non-scaling-stroke;
+  pointer-events: none;
+}
+
+.anchor,
+.control-point {
+  fill: #fff;
+  stroke: var(--editor-blue);
+  stroke-width: 1.2;
+  vector-effect: non-scaling-stroke;
+  cursor: grab;
+  touch-action: none;
+  outline: none;
+}
+
+.anchor:hover,
+.anchor.is-selected,
+.anchor:focus-visible,
+.control-point:hover,
+.control-point:focus-visible {
+  fill: var(--editor-blue);
+  stroke: var(--editor-blue);
+}
+
+.anchor:active,
+.control-point:active,
+#letter-canvas.is-dragging,
+#letter-canvas.is-dragging .anchor,
+#letter-canvas.is-dragging .control-point { cursor: grabbing; }
+
+.caption {
+  padding: 0 var(--page-gutter) max(32px, env(safe-area-inset-bottom));
+  text-align: center;
+}
+
+h1 {
+  margin: 0 0 24px;
+  font-size: clamp(11px, 1.05vw, 15px);
+  font-weight: 400;
+  line-height: 1.4;
+  letter-spacing: .22em;
+}
+
+.back-btn {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  padding: .8rem 2.2rem;
+  border: 1.5px solid rgba(255, 255, 255, .6);
+  border-radius: 50px;
+  background: rgba(255, 255, 255, .65);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, .05), 0 8px 32px rgba(31, 38, 135, .05);
+  transition: background .25s ease, transform .25s ease, box-shadow .25s ease;
+}
+
+.back-btn span {
+  font-size: .95rem;
+  font-weight: 650;
+  line-height: 1.25;
+  color: #555;
+}
+
+.back-btn:hover {
+  background: rgba(255, 255, 255, .85);
+  transform: translateY(-2px);
+  box-shadow: 0 0 0 1px rgba(43, 80, 241, .1), 0 12px 40px rgba(43, 80, 241, .12);
+}
+
+a:focus-visible,
+button:focus-visible {
+  outline: 1.5px solid var(--editor-blue);
+  outline-offset: 5px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.fallback {
+  position: fixed;
+  left: 24px;
+  right: 24px;
+  top: 45%;
+  text-align: center;
+  color: #727277;
+  font-size: 13px;
+}
+
+@media (max-width: 600px) {
+  .page-header { padding-top: max(20px, env(safe-area-inset-top)); }
+  .brand { font-size: 18px; letter-spacing: -1.1px; }
+  .editor { padding: 24px 24px 44px; }
+  .caption { padding-bottom: max(28px, env(safe-area-inset-bottom)); }
+  h1 { margin-bottom: 20px; letter-spacing: .18em; }
+  .back-btn { padding: .7rem 1.8rem; }
+  .back-btn span { font-size: .9rem; }
+}
+
+@media (max-height: 600px) {
+  .page-header { padding-top: max(16px, env(safe-area-inset-top)); }
+  .editor { padding-top: 18px; padding-bottom: 24px; }
+  .caption { padding-bottom: max(18px, env(safe-area-inset-bottom)); }
+  h1 { margin-bottom: 12px; font-size: 11px; }
+  .back-btn { padding: .65rem 1.8rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .back-btn { transition: none; }
+  .back-btn:hover { transform: none; }
+}

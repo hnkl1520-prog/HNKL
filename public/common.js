@@ -56,6 +56,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // 2. JELLY CURSOR LOGIC
     // =================================================================
     const initCursor = () => {
+        if (document.body.matches('.page-about, .page-works') && matchMedia('(hover: none), (pointer: coarse)').matches) return;
         const cursorBgLayer = document.getElementById('cursor-bg-layer');
         const cursorCircle = document.getElementById('cursor-circle'); 
         const cursorTextLayer = document.getElementById('cursor-text-layer');

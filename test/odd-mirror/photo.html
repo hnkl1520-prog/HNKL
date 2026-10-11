@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>Odd Mirror — 실제 모델로 사진 한 장 확인</title>
+<style>
+  body { margin: 0; padding: 16px; background: #EEEDF2; font: 13px/1.5 -apple-system, "Apple SD Gothic Neo", system-ui, sans-serif; color: #1B1446; }
+  .row { display: flex; gap: 12px; align-items: flex-start; }
+  canvas { display: block; border-radius: 6px; }
+  pre { margin: 12px 0 0; white-space: pre-wrap; font: 12px/1.5 ui-monospace, Menlo, monospace; }
+</style>
+</head>
+<body>
+<div class="row"><canvas id="photo" width="560" height="560"></canvas><canvas id="mask" width="280" height="280"></canvas><canvas id="char" width="560" height="560"></canvas></div>
+<pre id="out">실행 중…</pre>
+<script type="module">
+// 실제 MediaPipe 모델(얼굴 랜드마크·머리카락 분할)을 사진 한 장에 돌려 앱과 같은 처리로 캐릭터를 만든다.
+// 사진 한 장이라 '시간 안정성'은 항상 좋게 나온다 — 실제 카메라 영상의 흔들림·조명 변화는 여기서 검증되지 않는다.
+import { FilesetResolver, FaceLandmarker, ImageSegmenter } from 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.0.1/vision_bundle.mjs';
+const MP = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.0.1';
+const out = document.getElementById('out');
+const log = (s) => { out.textContent += '\n' + s; };
+try {
+  const html = await (await fetch('/public/works/labs/odd-mirror/odd-mirror.html')).text();
+  const code = ['STYLE', 'GEOM', 'SHAPE', 'EXPR', 'HAIR', 'GLASSES', 'DRAW'].map((n) => html.match(new RegExp(`// ==== ${n} START ====\\n([\\s\\S]*?)// ==== ${n} END ====`))[1]).join('\n');
+  const G = new Function(`${code}\nreturn { fitPose, frontalize, referenceFace, headCropTransform, headToImage, createShapeScan, shapeAddSample, shapeFinalize, TRAITS, TEMPLATE, PARTS, HAIR, GL, EYE_MID, createHairModel, hairAddSample, hairProfile, hairCommit, hairRegionMean, PART_REGION, glassesEvidence, drawBust, bustPivotY, neutralExpr, STYLE, mix, measureTraits, isNeutral, OddComponents };`)();
+
+  const params = new URLSearchParams(location.search);
+  const src = params.get('src') || '/public/assets/Profile_Photo.png';
+  const crop = (params.get('crop') || '230,300,720,720').split(',').map(Number);
+  const img = new Image(); img.src = src; await img.decode();
+  const V = 960, cam = new OffscreenCanvas(V, V), cctx = cam.getContext('2d', { willReadFrequently: true });
+  cctx.fillStyle = '#ddd'; cctx.fillRect(0, 0, V, V);
+  cctx.drawImage(img, crop[0], crop[1], crop[2], crop[3], 0, 0, V, V);
+
+  const fileset = await FilesetResolver.forVisionTasks(`${MP}/wasm`);
+  const t0 = performance.now();
+  const lmk = await FaceLandmarker.createFromOptions(fileset, { baseOptions: { modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task', delegate: 'CPU' }, runningMode: 'IMAGE', numFaces: 1, outputFaceBlendshapes: true });
+  const seg = await ImageSegmenter.createFromOptions(fileset, { baseOptions: { modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_multiclass_256x256/float32/latest/selfie_multiclass_256x256.tflite', delegate: 'CPU' }, runningMode: 'IMAGE', outputConfidenceMasks: true, outputCategoryMask: false });
+  log(`모델 준비 ${Math.round(performance.now() - t0)}ms · 분할 부류: ${seg.getLabels().join(', ')}`);
+
+  const t1 = performance.now();
+  const res = lmk.detect(cam);
+  log(`랜드마크 1회 ${Math.round(performance.now() - t1)}ms (CPU, 헤드리스)`);
+  const lm = res.faceLandmarks[0];
+  if (!lm) throw new Error('얼굴을 찾지 못함');
+  const bs = {}; for (const c of res.faceBlendshapes[0].categories) bs[c.categoryName] = c.score;
+  const P = new Float64Array(478 * 3);
+  lm.forEach((p, i) => { P[3 * i] = p.x * V; P[3 * i + 1] = p.y * V; P[3 * i + 2] = p.z * V; });
+  const pose = G.fitPose(P), F = G.frontalize(P, lm.length, pose, new Float32Array(lm.length * 2)), ref = G.referenceFace(pose, V, V, 55);
+  log(`고개 좌우 ${(pose.yaw * 57.3).toFixed(1)}° 위아래 ${(pose.pitch * 57.3).toFixed(1)}° 기울기 ${(pose.roll * 57.3).toFixed(1)}° · 맞춤 오차 ${pose.rms.toFixed(3)} (원근만의 오차 ${ref.rms.toFixed(3)})`);
+  log(`표정 점수: 미소 ${((bs.mouthSmileLeft + bs.mouthSmileRight) / 2).toFixed(2)} 입벌림 ${bs.jawOpen.toFixed(2)} 깜빡임 ${((bs.eyeBlinkLeft + bs.eyeBlinkRight) / 2).toFixed(2)} → 무표정 판정 ${G.isNeutral(bs)}`);
+  const iris = (i) => [F[2 * i].toFixed(2), F[2 * i + 1].toFixed(2)];
+  log(`홍채 468 ${iris(468)} / 473 ${iris(473)} (머리 좌표: 왼쪽 눈 x≈-0.5, 오른쪽 x≈+0.5)`);
+
+  // 사진 + 랜드마크
+  const pc = document.getElementById('photo').getContext('2d');
+  pc.drawImage(cam, 0, 0, 560, 560);
+  pc.fillStyle = '#43BEA7';
+  for (let i = 0; i < 478; i++) pc.fillRect(P[3 * i] * 560 / V - 1, P[3 * i + 1] * 560 / V - 1, 2, 2);
+  // 머리 좌표 축 (눈선 가운데 원점, 1단위)
+  const o = G.headToImage(pose, 0, 0, G.EYE_MID[2]), ex = G.headToImage(pose, 1, 0, G.EYE_MID[2]), ey = G.headToImage(pose, 0, 1, G.EYE_MID[2]);
+  pc.strokeStyle = '#EE5E43'; pc.lineWidth = 2; pc.beginPath(); pc.moveTo(o[0] * 560 / V, o[1] * 560 / V); pc.lineTo(ex[0] * 560 / V, ex[1] * 560 / V); pc.moveTo(o[0] * 560 / V, o[1] * 560 / V); pc.lineTo(ey[0] * 560 / V, ey[1] * 560 / V); pc.stroke();
+
+  // 기본 형태: 같은 사진이라 표본을 여러 장 넣어도 흔들림 0 (시간 안정성은 여기서 검증 안 됨)
+  // 사진은 살짝 웃고 있어 무표정 조건을 통과하지 못할 수 있음 → 확인용으로 표정 점수 없이 넣고 그 사실을 표시
+  const scan = G.createShapeScan();
+  for (let k = 0; k < 12; k++) G.shapeAddSample(scan, P, F, pose, ref, G.isNeutral(bs) ? bs : {}, V, V, k * 100);
+
+  // 머리카락 분할 (앱과 같은 머리 좌표 크롭)
+  const S = G.HAIR.segPx, sc = new OffscreenCanvas(S, S), sctx = sc.getContext('2d', { willReadFrequently: true });
+  sctx.fillStyle = '#000'; sctx.fillRect(0, 0, S, S);
+  sctx.setTransform(...G.headCropTransform(pose, G.HAIR.x0, G.HAIR.x1, G.HAIR.y0, G.HAIR.y1, S, S, G.HAIR.zcm));
+  sctx.drawImage(cam, 0, 0); sctx.setTransform(1, 0, 0, 1, 0, 0);
+  const rgba = sctx.getImageData(0, 0, S, S);
+  let masks = null;
+  const t2 = performance.now();
+  seg.segment(rgba, (r) => {
+    const grab = (k) => Float32Array.from(r.confidenceMasks[k].getAsFloat32Array());
+    masks = { hair: grab(1), body: grab(2), face: grab(3), others: grab(5) };
+  });
+  log(`분할 1회 ${Math.round(performance.now() - t2)}ms`);
+  const valid = new Uint8Array(S * S), cs = (G.HAIR.x1 - G.HAIR.x0) / S;
+  for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) { const [px, py] = G.headToImage(pose, G.HAIR.x0 + (x + 0.5) * cs, G.HAIR.y0 + (y + 0.5) * cs, G.HAIR.zcm); valid[y * S + x] = px >= 0 && py >= 0 && px < V && py < V ? 1 : 0; }
+  const hm = G.createHairModel();
+  for (let k = 0; k < 3; k++) G.hairAddSample(hm, masks, valid, rgba.data, k);
+  // 분할 결과 보기 (머리카락 빨강, 얼굴 초록, 몸 파랑, 기타 노랑)
+  const mc = document.getElementById('mask').getContext('2d'), mimg = mc.createImageData(S, S);
+  for (let i = 0; i < S * S; i++) { mimg.data[4 * i] = 255 * Math.max(masks.hair[i], masks.others[i]); mimg.data[4 * i + 1] = 255 * Math.max(masks.face[i], masks.others[i]); mimg.data[4 * i + 2] = 255 * masks.body[i]; mimg.data[4 * i + 3] = 255; }
+  const tmp = new OffscreenCanvas(S, S); tmp.getContext('2d').putImageData(mimg, 0, 0);
+  mc.drawImage(tmp, 0, 0, 280, 280);
+
+  const occlusion = (part) => { const face = G.hairRegionMean(hm, G.PART_REGION[part], 'face'), oth = G.hairRegionMean(hm, G.PART_REGION[part], 'others'); return face == null ? null : Math.min(1, Math.max(0, (face + (part === 'eyes' || part === 'brows' ? 0.8 * (oth || 0) : 0) - 0.3) / 0.4)); };
+  const shape = G.shapeFinalize(scan, occlusion);
+  const geoMeas = {}; for (const k in G.TRAITS) geoMeas[k] = G.TEMPLATE[k] + shape.traits[k].eff;
+  G.hairCommit(hm, G.hairProfile(hm, geoMeas));
+  log(`표본 ${scan.samples.length}개 (무표정 조건 ${G.isNeutral(bs) ? '통과' : '미통과 → 확인용으로 강제 포함'})`);
+  log('부위 신뢰도: ' + G.PARTS.map((p) => `${p} ${shape.parts[p].c.toFixed(2)} ${shape.parts[p].prov}${shape.parts[p].why ? '(' + shape.parts[p].why + ')' : ''}`).join('  '));
+  log(`강조 부위: ${shape.emphasis.join(', ') || '없음'} · 부분 추정 ${Math.round(shape.estimatedShare * 100)}%`);
+  const top = Object.keys(G.TRAITS).map((k) => [k, shape.traits[k]]).sort((a, b) => b[1].sal - a[1].sal).slice(0, 8);
+  log('두드러진 수치: ' + top.map(([k, t]) => `${k} ${t.dev >= 0 ? '+' : ''}${t.dev.toFixed(3)} (${t.sal.toFixed(1)}JND)`).join('  '));
+  const tg = hm.target;
+  log(`헤어: 톤 ${hm.tone} RGB ${hm.rgb ? hm.rgb.map(Math.round).join(',') : '-'} · 윗머리 관측 ${Math.round(tg.upObserved * 100)}% · 추정 ${Math.round(tg.estimatedShare * 100)}% · 귀 가림 ${tg.earsCovered} · 민머리 ${tg.bald}`);
+
+  // 안경 판단 (사진: 안경 없음)
+  const gc = new OffscreenCanvas(G.GL.w, G.GL.h), gctx = gc.getContext('2d', { willReadFrequently: true });
+  gctx.setTransform(...G.headCropTransform(pose, G.GL.x0, G.GL.x1, G.GL.y0, G.GL.y1, G.GL.w, G.GL.h, G.EYE_MID[2]));
+  gctx.drawImage(cam, 0, 0); gctx.setTransform(1, 0, 0, 1, 0, 0);
+  const gd = gctx.getImageData(0, 0, G.GL.w, G.GL.h).data, gray = new Float32Array(G.GL.w * G.GL.h);
+  for (let i = 0; i < gray.length; i++) gray[i] = 0.299 * gd[4 * i] + 0.587 * gd[4 * i + 1] + 0.114 * gd[4 * i + 2];
+  const t3 = performance.now();
+  const ev = G.glassesEvidence(gray, F, G.hairRegionMean(hm, [-1, 1, -0.35, 0.35], 'others'));
+  log(`안경(실험) 점수 ${ev.score.toFixed(2)} (켜짐 기준 ${G.GL.onScore}) ${JSON.stringify(Object.fromEntries(Object.entries(ev.detail).map(([k, v]) => [k, v == null ? v : +v.toFixed(2)])))} · ${Math.round(performance.now() - t3)}ms`);
+
+  // 캐릭터
+  const cc = document.getElementById('char').getContext('2d');
+  const pal = G.STYLE.palette[0];
+  cc.fillStyle = pal[1]; cc.fillRect(0, 0, 560, 560);
+  const tone = G.STYLE.hairTones.find((t) => t.key === hm.tone) || G.STYLE.hairTones[0];
+  const rig = { mirror: true, geo: shape.geo, geoMeas, asym: shape.asym, colors: { face: pal[0], shirt: pal[2], hair: tone.color, brow: G.STYLE.ink }, expr: G.neutralExpr(), hair: hm.display, hairHeadR: tg.headR, hairProv: tg.prov, glasses: null, debug: false };
+  rig.components=G.OddComponents.fromMeasurements({geo:shape.geo,base:G.TEMPLATE,parts:shape.parts,hair:hm,glasses:null,asym:shape.asym});
+  log('선택 부품: '+['face','eyes','brows','nose','mouth','hair'].map(k=>k+'='+rig.components[k]).join(' / '));
+  const scale = 88;
+  G.drawBust(cc, rig, 280, 60 + 2.2 * scale + G.bustPivotY(shape.geo) * scale, scale);
+  window.__result = { ok: true };
+} catch (e) {
+  log('오류: ' + (e && e.stack || e));
+  window.__result = { ok: false, error: String(e) };
+}
+window.__done = true;
+</script>
+</body>
+</html>

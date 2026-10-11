@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>파란 캐릭터 시안</title>
+<style>
+  body { margin: 0; padding: 20px; background: #EEEDF2; font: 13px/1.45 -apple-system, "Apple SD Gothic Neo", system-ui, sans-serif; color: #1B1446; }
+  .row { display: flex; gap: 14px; align-items: flex-start; }
+  figure { margin: 0; width: 300px; }
+  figcaption { font-size: 12px; margin-top: 6px; color: rgba(27,20,70,0.8); }
+  canvas, img { display: block; border-radius: 8px; width: 300px; height: 380px; object-fit: cover; }
+  .empty { width: 300px; height: 380px; border-radius: 8px; background: #E8563B; display: grid; place-items: center; color: rgba(255,255,255,0.85); font-size: 12px; text-align: center; padding: 20px; box-sizing: border-box; }
+</style>
+</head>
+<body>
+<div class="row" id="row"></div>
+<script type="module">
+import { VARIANTS, drawBlue, BLUE_PALETTE } from './blue.mjs';
+const row = document.getElementById('row');
+// 레퍼런스 칸: test/odd-mirror/style/ref/blue.png 가 있으면 그 이미지, 없으면 빈 칸
+const ref = document.createElement('figure');
+const img = new Image();
+img.src = './ref/blue.png';
+await new Promise((r) => { img.onload = r; img.onerror = r; });
+if (img.naturalWidth) ref.appendChild(img);
+else { const d = document.createElement('div'); d.className = 'empty'; d.textContent = '레퍼런스 자리 — style/ref/blue.png 를 넣으면 여기 표시'; ref.appendChild(d); }
+const rc = document.createElement('figcaption'); rc.textContent = '레퍼런스'; ref.appendChild(rc); row.appendChild(ref);
+
+for (const V of VARIANTS) {
+  const fig = document.createElement('figure'), c = document.createElement('canvas');
+  c.width = 600; c.height = 760; fig.appendChild(c);
+  const ctx = c.getContext('2d'); ctx.scale(2, 2);
+  ctx.fillStyle = BLUE_PALETTE.bg; ctx.fillRect(0, 0, 300, 380);
+  drawBlue(ctx, V, 150, 205, 200);
+  const cap = document.createElement('figcaption'); cap.textContent = `${V.name} — ${V.note}`; fig.appendChild(cap);
+  row.appendChild(fig);
+}
+window.__done = true;
+</script>
+</body>
+</html>

@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="ko"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Odd Mirror · character study</title>
+<style>
+*{box-sizing:border-box}body{margin:0;padding:32px;background:#f4f3ef;color:#302c39;font:14px/1.6 system-ui,sans-serif}header{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:22px}h1{font-size:23px;letter-spacing:-.8px;margin:0}header p{color:#77717c;margin:0}.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}.expressions{grid-template-columns:repeat(6,minmax(0,1fr))}figure{margin:0;background:#e8e6e2;border-radius:12px;overflow:hidden}canvas{display:block;width:100%;height:auto}figcaption{padding:9px 14px 12px;background:#f9f8f4;font-size:12px}.strip{grid-template-columns:repeat(8,minmax(0,1fr))}@media(max-width:700px){body{padding:16px}header{display:block}.grid,.expressions,.strip{grid-template-columns:repeat(2,minmax(0,1fr))}}
+</style>
+<header><h1 id="title">Odd Mirror / 04</h1><p id="note">같은 조형 규칙, 서로 다른 얼굴</p></header><main class="grid" id="grid"></main>
+<script src="../../public/works/labs/odd-mirror/src/components.js"></script>
+<script>
+const C=OddComponents,params=new URLSearchParams(location.search),sheet=params.get('sheet')||'people';
+const cast=[
+  {face:'oval',eyes:'heavy',nose:'slope',brows:'bar',mouth:'level',hair:'back',values:{width:.97,length:1.04,eyeGap:.97,noseLength:1.1},colors:{face:'#e8aa91',hair:'#403448',shirt:'#67658b'}},
+  {face:'angular',eyes:'ring',nose:'short',brows:'angle',mouth:'bow',hair:'sweep',values:{width:1.05,length:.94,eyeTilt:.03,mouthWidth:1.05},colors:{face:'#a2bbaa',hair:'#243d3e',shirt:'#4f6861'}},
+  {face:'round',eyes:'round',nose:'wide',brows:'bar',mouth:'full',hair:'crop',values:{width:1.1,length:.81,eyeSize:1.04,mouthWidth:1.02},colors:{face:'#c1a5d4',hair:'#44364e',shirt:'#6f5980'}},
+  {face:'column',eyes:'slit',nose:'bend',brows:'line',mouth:'level',hair:'none',glasses:'round',values:{width:.91,length:1.13,eyeGap:.96,noseLength:1.25,mouthWidth:1.1},colors:{face:'#dea269',hair:'#433839',shirt:'#566879'}},
+  {face:'pear',eyes:'almond',nose:'short',brows:'bar',mouth:'curve',hair:'bob',values:{width:.94,length:.94,eyeGap:.94,eyeSize:1.08},colors:{face:'#edbca1',hair:'#a25546',shirt:'#d6c8ad'}},
+  {face:'taper',eyes:'tilted',nose:'slope',brows:'angle',mouth:'bow',hair:'long',values:{width:.96,length:1.08,eyeTilt:.05,mouthWidth:.83,hairSweep:-.8},colors:{face:'#abb4db',hair:'#3c4266',shirt:'#777d9b'}},
+  {face:'oval',eyes:'ring',nose:'wide',brows:'bar',mouth:'full',hair:'cap',glasses:'rect',values:{width:1.04,length:.99,mouthWidth:1.1,noseWidth:1.1},colors:{face:'#d4a29d',hair:'#4e4542',shirt:'#eee8d9'}},
+  {face:'angular',eyes:'heavy',nose:'bend',brows:'line',mouth:'curve',hair:'sweep',values:{width:1,length:1.11,eyeGap:1.1,hairSweep:-1,noseLength:1.12},colors:{face:'#bbc591',hair:'#545342',shirt:'#747d63'}}
+];
+function design(spec){const d=C.defaults();Object.assign(d,spec);d.values={...C.defaults().values,...spec.values};return d;}
+function pose(name){const e=C.neutral(),m=e.mouth;
+  if(name==='half'){e.eyeR.open=.53;e.eyeL.open=.57;e.gazeX=-.85;e.browR.out=.04;m.press=.4;m.cL[1]=.025;}
+  if(name==='frown'){e.eyeR.open=e.eyeL.open=.75;e.eyeR.lift=e.eyeL.lift=.3;e.browR.inn=e.browL.inn=-.11;m.frown=.85;m.smile=-.25;m.cR[1]=m.cL[1]=.04;}
+  if(name==='smile'){m.smile=.9;m.cR=[-.04,-.06];m.cL=[.04,-.06];e.eyeR.lift=e.eyeL.lift=.45;}
+  if(name==='laugh'){m.smile=1;m.open=.38;m.teeth=1;m.cR=[-.05,-.06];m.cL=[.05,-.06];e.eyeR.open=e.eyeL.open=.17;e.eyeR.lift=e.eyeL.lift=.9;e.browR.inn=e.browL.inn=.04;}
+  if(name==='surprise'){m.open=.36;m.pucker=.4;e.eyeR.open=e.eyeL.open=1.4;e.browR.inn=e.browL.inn=.13;e.browR.out=e.browL.out=.14;}
+  if(name==='wink'){e.eyeR.open=.015;e.eyeL.open=1.04;e.eyeR.lift=.6;m.smile=.4;m.cR[1]=-.06;}
+  if(name==='asym'){e.eyeR.open=.7;e.browL.inn=.12;e.browL.out=.09;e.gazeX=.6;m.cL[1]=-.10;m.cR[1]=.025;m.smile=.15;}
+  if(name==='pucker'){m.pucker=1;m.open=.16;e.gazeX=.3;}
+  if(name==='press'){m.press=1;m.cR[0]=-.07;m.cL[0]=.07;e.browR.inn=e.browL.inn=-.065;}
+  if(name==='closed'){e.eyeR.open=e.eyeL.open=0;}
+  if(name==='open'){m.open=.35;}
+  if(name==='eww'){m.sneer=.9;m.stretch=.8;m.upperR=.95;m.upperL=.45;m.open=.1;m.cR[1]=.025;m.cL[1]=.04;e.browR.inn=e.browL.inn=-.08;e.eyeR.open=.8;e.eyeL.open=.65;}
+  return e;
+}
+const labels={neutral:'무표정',half:'반쯤 감은 눈 · 옆 시선',frown:'찡그림',smile:'미소',laugh:'웃으며 벌림',surprise:'눈 크게 뜨기 · 입 벌림',wink:'한쪽 눈 감기',asym:'한쪽 눈썹 · 입꼬리',pucker:'오므림',press:'입술 누르기',closed:'눈 감음',open:'입 벌림',eww:'Eww · 윗입술 들기'};
+function cell(d,e,label,{w=280,h=330,colors=d.colors||{},scale=.98,bg='#e7e5df'}={}){
+  const f=document.createElement('figure'),c=document.createElement('canvas'),cap=document.createElement('figcaption');c.width=w;c.height=h;cap.textContent=label;f.append(c,cap);grid.append(f);
+  const g=c.getContext('2d');g.fillStyle=bg;g.fillRect(0,0,w,h);C.draw(g,d,{x:w/2,y:15+(C.geometry(d).bottom-42-42)*scale,scale,colors,expression:e,bust:true});return c;
+}
+if(sheet==='people'||sheet==='mono')cast.forEach((s,i)=>{const d=design(s),e=pose(['half','asym','laugh','smile','wink','neutral','surprise','frown'][i]);cell(d,e,String(i+1).padStart(2,'0')+' / '+C.catalog.face.find(x=>x[0]===d.face)[1],{colors:sheet==='mono'?{face:'#c0b2d9',hair:'#393346',shirt:'#655b79'}:s.colors});});
+if(sheet==='expressions'){
+  grid.classList.add('expressions');title.textContent='같은 얼굴 / 13가지 움직임';note.textContent='머리·안경·얼굴형 고정, 눈꺼풀·눈썹·입만 변화';
+  const d=design(cast[Number(params.get('person')||0)]);Object.entries(labels).forEach(([key,label])=>cell(d,pose(key),label,{w:230,h:285,scale:.83}));
+}
+if(sheet==='mouth'){
+  grid.classList.add('strip');title.textContent='입 / 벌림과 찡그림의 연속 변화';note.textContent='닫힌 선 → 따뜻한 면 · 웃음 ↔ 찡그림';
+  for(let i=0;i<16;i++){const d=design(cast[0]),e=C.neutral();if(i<8)e.mouth.open=i*.055;else {const v=(i-8)/7;e.mouth.smile=1-v;e.mouth.frown=v;e.mouth.cR[1]=e.mouth.cL[1]=-.06+.10*v;}cell(d,e,i<8?`벌림 ${(i*.055).toFixed(2)}`:`찡그림 ${((i-8)/7).toFixed(2)}`,{w:180,h:230,scale:.64});}
+}
+if(sheet==='eyes'){
+  grid.classList.add('expressions');title.textContent='눈 / 같은 표정 입력, 여섯 가지 기본 형태';note.textContent='무표정 · 반감김 · 완전히 감음 · 크게 뜸';
+  for(const [state,label]of [['neutral','무표정'],['half','반감김'],['closed','눈 감음'],['surprise','크게 뜸']])for(const [eyes,name]of C.catalog.eyes){const d=design({...cast[0],eyes});cell(d,pose(state),name+' / '+label,{w:210,h:270,scale:.79});}
+}
+window.__study={C,cast,design,pose};window.__done=true;
+</script></html>

@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>Odd Mirror — 그림체 예시</title>
+<style>
+  body { margin: 0; padding: 20px; background: #EEEDF2; font: 13px/1.45 -apple-system, "Apple SD Gothic Neo", system-ui, sans-serif; color: #1B1446; }
+  h2 { margin: 16px 0 8px; font-size: 14px; font-weight: 600; }
+  .row { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-start; }
+  figure { margin: 0; width: 260px; }
+  figcaption { font-size: 12px; margin-top: 5px; color: rgba(27,20,70,0.8); }
+  canvas { display: block; border-radius: 8px; width: 260px; height: 320px; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="module">
+import { EXAMPLES } from './examples.mjs';
+import { drawHead } from './lib.mjs';
+const params = new URLSearchParams(location.search);
+const which = params.get('sheet') || 'examples';
+const root = document.getElementById('root');
+const SHARED = { bg: '#FFB23F', skin: '#3440F0', hair: '#1B1446' };
+function section(title) { const h = document.createElement('h2'); h.textContent = title; root.appendChild(h); const r = document.createElement('div'); r.className = 'row'; root.appendChild(r); return r; }
+function cell(row, caption, bg) {
+  const fig = document.createElement('figure'), c = document.createElement('canvas');
+  c.width = 520; c.height = 640; fig.appendChild(c);
+  const cap = document.createElement('figcaption'); cap.textContent = caption; fig.appendChild(cap); row.appendChild(fig);
+  const ctx = c.getContext('2d'); ctx.scale(2, 2); ctx.fillStyle = bg; ctx.fillRect(0, 0, 260, 320); return ctx;
+}
+const draw = (ctx, ex, pal, expr) => drawHead(ctx, ex, pal, expr, 130, 170, 150);
+
+if (which === 'examples') {
+  let row = section('1. 같은 색 — 형태와 생략 방식의 차이만');
+  EXAMPLES.forEach((ex, i) => draw(cell(row, `${i + 1}. ${ex.name}`, SHARED.bg), ex, SHARED));
+  row = section('2. 각자의 팔레트');
+  EXAMPLES.forEach((ex, i) => draw(cell(row, `${i + 1}. ${ex.keep}`, ex.pal.bg), ex, ex.pal));
+}
+if (which === 'expr') {
+  const picks = (params.get('who') || '1,2').split(',').map((v) => +v - 1);
+  for (const i of picks) {
+    const ex = EXAMPLES[i], row = section(`${i + 1}. ${ex.name}`);
+    for (const [label, e] of [['무표정', {}], ['미소', { smile: 1 }], ['입 벌림', { open: 0.8 }], ['눈 감음', { blink: 1 }]]) draw(cell(row, label, ex.pal.bg), ex, ex.pal, e);
+  }
+}
+window.__done = true;
+</script>
+</body>
+</html>

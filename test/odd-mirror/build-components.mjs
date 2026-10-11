@@ -1,0 +1,21 @@
+// 편집 원본은 src/components.js. 앱 HTML은 라이브러리를 내장해 한 파일로 실행한다.
+import fs from 'node:fs';
+import { fileURLToPath } from 'node:url';
+const dir=new URL('../../public/works/labs/odd-mirror/',import.meta.url);
+const source=fs.readFileSync(new URL('src/components.js',dir),'utf8');
+const file=fileURLToPath(new URL('odd-mirror.html',dir));
+const start='// COMPONENT LIBRARY START',end='// COMPONENT LIBRARY END';
+let html=fs.readFileSync(file,'utf8');
+const embedded=`${start}\n${source}\n${end}`;
+if(html.includes(start)) html=html.slice(0,html.indexOf(start))+embedded+html.slice(html.indexOf(end)+end.length);
+else html=html.replace('// ==== DRAW START ====','// ==== DRAW START ====\n'+embedded);
+fs.writeFileSync(file,html);
+const appearance=fs.readFileSync(new URL('src/appearance.js',dir),'utf8');
+const as='// APPEARANCE LIBRARY START',ae='// APPEARANCE LIBRARY END',ab=`${as}\n${appearance}\n${ae}`;
+html=html.includes(as)?html.slice(0,html.indexOf(as))+ab+html.slice(html.indexOf(ae)+ae.length):html.replace('// ==== MAIN START ====','// ==== MAIN START ====\n'+ab);
+fs.writeFileSync(file,html);
+console.log('컴포넌트 라이브러리를 odd-mirror.html에 통합했습니다.');
+const tracking=fs.readFileSync(new URL('src/tracking.js',dir),'utf8');
+const ts='// TRACKING LIBRARY START',te='// TRACKING LIBRARY END',tb=`${ts}\n${tracking}\n${te}`;
+html=html.includes(ts)?html.slice(0,html.indexOf(ts))+tb+html.slice(html.indexOf(te)+te.length):html.replace('// ==== MAIN START ====','// ==== MAIN START ====\n'+tb);
+fs.writeFileSync(file,html);

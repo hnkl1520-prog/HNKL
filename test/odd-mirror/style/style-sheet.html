@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>Odd Mirror — 캐릭터 스타일 시트</title>
+<style>
+  body { margin: 0; padding: 20px; background: #EEEDF2; font: 13px/1.4 -apple-system, "Apple SD Gothic Neo", system-ui, sans-serif; color: #1B1446; }
+  h2 { margin: 16px 0 8px; font-size: 14px; font-weight: 600; }
+  .row { display: flex; flex-wrap: wrap; gap: 10px; }
+  figure { margin: 0; }
+  figcaption { font-size: 11px; margin-top: 3px; max-width: 230px; color: rgba(27,20,70,0.7); }
+  canvas { display: block; border-radius: 8px; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="module">
+import { CHARACTERS, PALETTES, SHARED_PALETTE, drawCharacter } from './chars.mjs';
+const params = new URLSearchParams(location.search);
+const which = params.get('sheet') || 'cast';
+const root = document.getElementById('root');
+function section(title) { const h = document.createElement('h2'); h.textContent = title; root.appendChild(h); const r = document.createElement('div'); r.className = 'row'; root.appendChild(r); return r; }
+function cell(row, w, h, caption, bg) {
+  const fig = document.createElement('figure'), c = document.createElement('canvas');
+  c.width = w * 2; c.height = h * 2; c.style.width = w + 'px'; c.style.height = h + 'px'; fig.appendChild(c);
+  const cap = document.createElement('figcaption'); cap.textContent = caption; fig.appendChild(cap); row.appendChild(fig);
+  const ctx = c.getContext('2d'); ctx.scale(2, 2); ctx.fillStyle = bg; ctx.fillRect(0, 0, w, h); return ctx;
+}
+const W = 230, H = 300;
+function draw(ctx, C, pal, expr) { drawCharacter(ctx, C, pal, expr, W / 2, H * C.fit.y, C.fit.scale * (W / 230)); }
+
+if (which === 'cast') {
+  let row = section('1. 같은 색 — 형태 차이만');
+  CHARACTERS.forEach((C, i) => draw(cell(row, W, H, `${i + 1}. ${C.name}`, SHARED_PALETTE.bg), C, SHARED_PALETTE));
+  row = section('2. 캐릭터별 팔레트');
+  CHARACTERS.forEach((C, i) => draw(cell(row, W, H, `${i + 1}`, PALETTES[i].bg), C, PALETTES[i]));
+}
+if (which === 'expr') {
+  const picks = (params.get('who') || '1,2').split(',').map((v) => +v - 1);
+  for (const i of picks) {
+    const C = CHARACTERS[i], pal = PALETTES[i];
+    const row = section(`${i + 1}. ${C.name}`);
+    for (const [label, e] of [['무표정', {}], ['미소', { smile: 1 }], ['입 벌림', { open: 0.8 }], ['눈 감음', { blink: 1 }], ['웃으며 벌림', { smile: 1, open: 0.6 }], ['웃으며 감음', { smile: 1, blink: 1 }]]) {
+      draw(cell(row, W, H, label, pal.bg), C, pal, e);
+    }
+  }
+}
+window.__done = true;
+</script>
+</body>
+</html>

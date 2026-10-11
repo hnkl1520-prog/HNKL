@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Portfolio - Works</title>
     
     <!-- Pretendard Font -->
@@ -86,8 +86,11 @@
             object-fit: cover;
         }
     </style>
+    <link rel="stylesheet" href="/responsive.css">
+    <link rel="stylesheet" href="site-chat.css?v=20261011-1">
+    <script src="site-chat.js?v=20261011-1" defer></script>
 </head>
-<body>
+<body class="page-works">
 
     <!-- [수정] 원형 프리로더 (검정 배경 + 키 컬러 그라데이션) -->
     <div id="preloader">
@@ -129,11 +132,11 @@
         <div class="header-inner">
             <div class="header-left">
                 <!-- 로고는 메인(또는 about)으로 이동 -->
-                <a href="about.html" class="header-logo hover-trigger">
+                <a href="about.html?v=20261007-5" class="header-logo hover-trigger">
                     <img src="assets/logo.svg" alt="HANUK Logo">
                 </a>
                 <nav class="header-nav">
-                    <a href="about.html" class="nav-link hover-trigger">About</a>
+                    <a href="about.html?v=20261007-5" class="nav-link hover-trigger">About</a>
                     <a href="#" class="nav-link active hover-trigger">Works</a>
                 </nav>
             </div>
@@ -167,12 +170,12 @@
         <div class="dock-pill" id="dock-pill"></div>
         
         <button onclick="switchCategory('projects', this)" class="dock-btn active hover-trigger" id="btn-projects">
-            <img src="assets/Projects.svg" class="dock-icon" alt="Projects Icon">
+            <img src="assets/Projects.svg?v=20261010-1" class="dock-icon" alt="Projects Icon">
             <span>Projects</span>
         </button>
         
         <button onclick="switchCategory('labs', this)" class="dock-btn hover-trigger" id="btn-labs">
-            <img src="assets/Labs.svg" class="dock-icon" alt="Labs Icon">
+            <img src="assets/Labs.svg?v=20261010-1" class="dock-icon" alt="Labs Icon">
             <span>Labs</span>
         </button>
     </nav>
@@ -188,6 +191,7 @@
         // 경로 규칙: img·url 모두 public 루트 기준 전체 경로 (프로젝트별 폴더 구조)
         // active: false 는 목록에 나오지 않음 (데이터는 그대로 두고 다시 켜기만 하면 됨)
         const projectsData = [
+            { active: true,  title: "HNKL — PORTFOLIO WEBSITE", cat: "WEB, DESIGN SYSTEM, INTERACTION", img: "works/projects/hnkl/thumb.webp?v=2", url: "works/projects/hnkl/hnkl.html" },
             { active: true,  title: "VIBRA: XR FOOTBALL BROADCASTING SERIVCE", cat: "XR, UX, INTERACTION", img: "works/projects/vibra/thumb.png", url: "works/projects/vibra/vibra.html" },
             { active: true,  title: "KORAIL EDUCATION APP", cat: "UX, UI, AR, 3D", img: "works/projects/korail/thumb.png", url: "404.html" },
             { active: false, title: "REST MODE", cat: "Mobility, UX, UI", img: "works/projects/restmode/thumb.png", url: "works/projects/restmode/restmode.html" },

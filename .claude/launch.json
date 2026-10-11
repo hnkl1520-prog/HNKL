@@ -4,20 +4,37 @@
     {
       "name": "static",
       "runtimeExecutable": "node",
-      "runtimeArgs": ["editor/static.js"],
+      "runtimeArgs": [
+        "editor/static.js"
+      ],
       "port": 8000
     },
     {
       "name": "editor",
       "runtimeExecutable": "node",
-      "runtimeArgs": ["editor/server.js"],
+      "runtimeArgs": [
+        "editor/server.js"
+      ],
       "port": 5180
     },
     {
       "name": "vibra-next",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["--prefix", "vibra-next", "run", "dev"],
+      "runtimeArgs": [
+        "--prefix",
+        "vibra-next",
+        "run",
+        "dev"
+      ],
       "port": 3000
+    },
+    {
+      "name": "odd-mirror-test",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "test/odd-mirror/serve.mjs"
+      ],
+      "port": 8010
     }
   ]
 }

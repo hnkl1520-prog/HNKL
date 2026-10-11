@@ -1,0 +1,50 @@
+Rock Face 03 - texture asset attribution and provenance
+
+Publisher: Poly Haven
+Asset: Rock Face 03
+Asset page: https://polyhaven.com/a/rock_face_03
+Photography: Dario Barresi
+Processing: Rico Cilliers
+Retrieved and license verified: 2026-10-11
+
+License: Creative Commons CC0 1.0 Universal
+License evidence: https://polyhaven.com/license
+CC0 deed: https://creativecommons.org/publicdomain/zero/1.0/
+The asset page labels this asset CC0. Poly Haven states its downloadable HDRIs, textures, and models are CC0, permitting commercial use and redistribution without required attribution. This record covers the four downloadable texture maps, not website renders, logos, or page content.
+
+Local limestone-* is an integration filename prefix, not a geological classification. The source name is Rock Face 03. The scan is naturally brown; no desaturation or recoloring has been baked into these files.
+
+All maps: 2048 x 2048 pixels. Approximate source scan width: 2.7 m.
+Normal: OpenGL (+Y), from the official nor_gl map, not DirectX.
+Color data: sRGB. Normal/roughness/height data should be sampled as linear data.
+Processing: official 2K JPG decoded and saved as JPEG quality 90, optimized Huffman coding, no chroma subsampling (4:4:4 for RGB), no crop/resize/color adjustment. Roughness and height retain native grayscale L channels. This reduces transfer size; the original source URLs below allow exact retrieval.
+
+Visual review: broad irregular rock faces, narrow fractures, chipped steps, and fine mineral detail; no manufactured block joints or repeating paving layout. Height and normal maps contain corresponding depth changes.
+
+limestone-color.jpg
+Source URL: https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/rock_face_03/rock_face_03_diff_2k.jpg
+Source SHA256: 644ee79df7ffbf5f6afc330b64dd3f33794bab8820915fe61ffe0c88ecfd7ece
+Local SHA256: a770ffe0c04cdca304d92ad01f3f2320011b2e13ce3806a9c137c1b23c638ec4
+Local bytes: 1722274
+Channels: RGB
+
+limestone-normal-gl.jpg
+Source URL: https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/rock_face_03/rock_face_03_nor_gl_2k.jpg
+Source SHA256: a498cef4ba6191f6959b6d03fb835263c77271948264a289af24497ab7111dec
+Local SHA256: 2ea4ca4c3a198f2926809dcf9aaef7cd4f82be81ff0f1b50c14d6d4e40f58c6d
+Local bytes: 2203977
+Channels: RGB
+
+limestone-roughness.jpg
+Source URL: https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/rock_face_03/rock_face_03_rough_2k.jpg
+Source SHA256: 9ca3e9e196685f702328f24d66f039b72f5330fc35cf2a2c265cfa50a7916301
+Local SHA256: 4216209327d8d8e26d5d6249346c5813cf46ac9082d670c61461c353fe480d67
+Local bytes: 1048848
+Channels: L
+
+limestone-height.jpg
+Source URL: https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/rock_face_03/rock_face_03_disp_2k.jpg
+Source SHA256: 5d24ec5a7f4f7333bcf9c158f63d0059d9a3ba234eeff7570a5f6cf2f4522cd5
+Local SHA256: 1164c56f2d1765b74b251cbb03c87e39255b2d4ec0394e4770328bb4a8073bb2
+Local bytes: 251331
+Channels: L

@@ -1,0 +1,23 @@
+/* Standalone, scoped mounts for the three HNKL concept animations.
+   Layout, gaps, and captions belong to the surrounding case-study page. */
+[data-core-motion] {
+  display: block;
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
+  isolation: isolate;
+  background: #252528;
+  border-radius: var(--hnkl-motion-radius, 28px);
+}
+
+[data-core-motion] > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+svg[data-core-motion] {
+  height: auto;
+}

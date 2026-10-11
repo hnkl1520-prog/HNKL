@@ -1,0 +1,50 @@
+STONE TEXTURES — SOURCE AND LICENSE
+
+Asset: Rock Boulder Dry
+Publisher: Poly Haven
+Photography: Dimitrios Savva
+Processing: Rico Cilliers
+Official asset page: https://polyhaven.com/a/rock_boulder_dry
+License: CC0 1.0 Universal (Public Domain Dedication)
+License evidence: https://polyhaven.com/license
+CC0 legal reference: https://creativecommons.org/publicdomain/zero/1.0/
+Verified/downloaded: 2026-10-11
+
+The official asset page labels this asset CC0. Poly Haven's license page states that its downloadable assets are CC0, may be used commercially, and may be redistributed; attribution is optional.
+Only the downloadable texture maps are included here. Website preview renders and logos are not included.
+
+Files are the unmodified official 1K JPG downloads (1024 x 1024).
+Normal convention: OpenGL (+Y), as identified by Poly Haven's Normal (GL) / nor_gl download.
+Color space: color map is sRGB; normal, roughness and AO are linear/non-color data.
+No recoloring, resizing or recompression has been applied.
+
+SOURCE FILES AND INTEGRITY
+
+stone-color.jpg
+Source: https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/rock_boulder_dry/rock_boulder_dry_diff_1k.jpg
+Bytes: 859211
+SHA-256: 20f653a42fb24f42aa40641663070d578678da49af18cc1049dbdd4ed8679f3c
+
+stone-normal-gl.jpg
+Source: https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/rock_boulder_dry/rock_boulder_dry_nor_gl_1k.jpg
+Bytes: 802497
+SHA-256: 5915fea28a97357c78a04fb31c2516f1f7ed1b3a9cef4ae25aa93e4655e6c595
+
+stone-roughness.jpg
+Source: https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/rock_boulder_dry/rock_boulder_dry_rough_1k.jpg
+Bytes: 668127
+SHA-256: cc5229dd6bbdc4e817cb647e60242224b8e4f0237473ac018861ea243f2e8130
+
+stone-ao.jpg
+Source: https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/rock_boulder_dry/rock_boulder_dry_ao_1k.jpg
+Bytes: 532861
+SHA-256: 179abc99b80cbe3727386c7efc8f042191aeaac05319d5b43dd9374bd12e5524
+
+Total transfer size: 2862696 bytes (approximately 2.86 MB).
+Approximate GPU budget if all four maps are RGBA8: 16 MiB before mipmaps, approximately 21.3 MiB with mipmaps. Share these textures between all letter materials.
+
+MAPPING NOTES
+Use repeating wrap. Start around 1.5–2 repeats per visible letter face and maintain consistent world-space texture density between letters.
+The original photographed surface is approximately 1.8 m tall per tile.
+The source has a pale sandy-gray mineral tint. Any artistic brightening/desaturation should happen in the material rather than modifying these source files.
+Add the AO map only when the mesh has the appropriate UV coordinates for the renderer.

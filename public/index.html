@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>HNKL Portfolio</title>
 
     <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
@@ -232,6 +232,9 @@
         .svg-icon {
             width: 20px; height: 20px; display: block;
         }
+        .svg-icon, .svg-main {
+            filter: brightness(0) invert(1);
+        }
         
         .chat-body { 
             flex: 1; padding: 20px; overflow-y: auto; font-size: 0.9rem;
@@ -395,9 +398,14 @@
         .arrow-icon {
             width: 32px; /* Increased Size */
             height: 32px; /* Increased Size */
-            fill: #1a1a1a;
-            transition: fill 0.3s ease;
+            display: block;
+            background-color: #1a1a1a;
+            -webkit-mask: var(--arrow-image) center / contain no-repeat;
+            mask: var(--arrow-image) center / contain no-repeat;
+            transition: background-color 0.3s ease;
         }
+        .arrow-icon--up { --arrow-image: url('assets/Theme_up.svg?v=20261010-1'); }
+        .arrow-icon--down { --arrow-image: url('assets/Theme_down.svg?v=20261010-1'); }
 
         /* Theme 2: full black background + text to white */
         body.theme-dark {
@@ -409,7 +417,7 @@
         }
 
         body.theme-dark .arrow-icon {
-            fill: #ffffff; /* 화살표 색상 반전 */
+            background-color: #ffffff; /* 화살표 색상 반전 */
         }
 
         /* [CRITICAL FIX] Dark theme cursor Color Inversion */
@@ -501,8 +509,9 @@
             }
         }
     </script>
+    <link rel="stylesheet" href="/responsive.css?v=20261007-4">
 </head>
-<body>
+<body class="page-home">
 
     <!-- [NEW] THEME TRANSITION OVERLAY -->
     <div id="theme-transition-overlay"></div>
@@ -525,20 +534,20 @@
 
         <div class="menu-wrapper">
             <!-- 1. ABOUT -->
-            <div class="reveal-container link-item" onclick="triggerPageTransition('about.html')">
+            <a href="about.html?v=20261007-5" class="reveal-container link-item" onclick="event.preventDefault(); triggerPageTransition(this.href)">
                 <div class="menu-text base-layer">ABOUT</div>
                 <div class="overlay-layer">
                     <div class="menu-text overlay-text">ABOUT</div>
                 </div>
-            </div>
+            </a>
 
             <!-- 2. WORKS -->
-            <div class="reveal-container link-item" onclick="triggerPageTransition('works.html')">
+            <a href="works.html" class="reveal-container link-item" onclick="event.preventDefault(); triggerPageTransition(this.href)">
                 <div class="menu-text base-layer">WORKS</div>
                 <div class="overlay-layer">
                     <div class="menu-text overlay-text">WORKS</div>
                 </div>
-            </div>
+            </a>
         </div>
     </div>
 
@@ -546,9 +555,7 @@
     <div id="theme-toggle" aria-label="Theme toggle">
         <!-- Up Arrow -->
         <button class="arrow-btn" onclick="setTheme(1, event)" aria-label="Previous Theme">
-            <svg class="arrow-icon" viewBox="0 0 24 24">
-                <path d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"/>
-            </svg>
+            <span class="arrow-icon arrow-icon--up" aria-hidden="true"></span>
         </button>
         
         <button class="theme-dot active" id="theme-dot-1" onclick="setTheme(1, event)" aria-label="Theme 1"></button>
@@ -556,23 +563,21 @@
         
         <!-- Down Arrow -->
         <button class="arrow-btn" onclick="setTheme(2, event)" aria-label="Next Theme">
-            <svg class="arrow-icon" viewBox="0 0 24 24">
-                <path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z"/>
-            </svg>
+            <span class="arrow-icon arrow-icon--down" aria-hidden="true"></span>
         </button>
     </div>
 
-    <div id="chat-interface" onmouseenter="setCursorDefault()" onmouseleave="setCursorActive()">
+    <div id="chat-interface" role="dialog" aria-label="HNKL AI와 대화" onmouseenter="setCursorDefault()" onmouseleave="setCursorActive()">
         <div class="chat-header">
             <span>HNKL AI</span>
             <div class="chat-controls">
                 <!-- [RESTORED] Replaced inline SVG with original img tags -->
-                <span class="win-btn" onclick="minimizeChat()" title="최소화">
-                    <img src="assets/Min_2.svg" alt="최소화" class="svg-icon">
-                </span>
-                <span class="win-btn" onclick="closeChat()" title="닫기">
-                    <img src="assets/Close_2.svg" alt="닫기" class="svg-icon">
-                </span>
+                <button type="button" class="win-btn" onclick="minimizeChat()" aria-label="최소화">
+                    <img src="assets/Min_2.svg?v=20261010-1" alt="최소화" class="svg-icon">
+                </button>
+                <button type="button" class="win-btn" onclick="closeChat()" aria-label="닫기">
+                    <img src="assets/Close_2.svg?v=20261010-1" alt="닫기" class="svg-icon">
+                </button>
             </div>
         </div>
         <div class="chat-body" id="chat-body">
@@ -586,13 +591,13 @@
         <div class="chat-input-area">
             <input type="text" class="chat-input" id="chat-input" placeholder="질문을 입력하세요..." onkeypress="if(event.key==='Enter') sendMessage()">
             <button class="send-btn" onclick="sendMessage()">
-                <img src="assets/Send_2.svg" alt="보내기" class="svg-icon">
+                <img src="assets/Send_2.svg?v=20261010-3" alt="보내기" class="svg-icon">
             </button>
         </div>
     </div>
 
     <div id="chat-minimized-icon" onclick="restoreChat()">
-        <img src="assets/Chat_1.svg" alt="채팅" class="svg-main">
+        <img src="assets/Chat_1.svg?v=20261010-1" alt="채팅" class="svg-main">
     </div>
 
     <div id="canvas-container"></div>
@@ -602,7 +607,15 @@
 
     <script type="module">
         import * as THREE from 'three';
+        import { stepBall, createTiltInput } from './mobile-motion.mjs?v=20261007-4';
         import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+        const compactQuery = matchMedia('(max-width: 767px), (pointer: coarse) and (max-width: 1023px)');
+        const touchQuery = matchMedia('(hover: none), (pointer: coarse)');
+        const isCompact = () => compactQuery.matches;
+        const mobileBall = { x: 0.58, y: 0.65, vx: 0, vy: 0, ax: 0, ay: 0, radius: 40 };
+        let modelDiameter = 1;
+        let modelCenter = new THREE.Vector3();
 
         /* ============================
             기존 씬 (Theme 1)
@@ -686,12 +699,15 @@
         scene.add(plane);
 
         let character = null;
-        const baseScale = 1.25;
+        let baseScale = 1.25;
         const groundY = -3;
 
         const loader = new GLTFLoader();
         loader.load('model_2.glb', function (gltf) {
             character = gltf.scene;
+            const modelBounds = new THREE.Box3().setFromObject(character);
+            modelDiameter = Math.max(...modelBounds.getSize(new THREE.Vector3()).toArray());
+            modelBounds.getCenter(modelCenter);
             character.scale.set(baseScale, baseScale, baseScale);
             character.position.y = groundY;
             character.traverse(function (node) {
@@ -701,6 +717,7 @@
 
             // theme 적용이 로딩보다 빠를 수 있으니, 현재 상태를 반영
             character.visible = (currentTheme === 1);
+            resizeScenes();
 
         }, undefined, function (error) {
             console.error('An error happened while loading the model:', error);
@@ -807,7 +824,7 @@
         window.addEventListener('load', initIntroAnimation);
 
         window.triggerPageTransition = function(targetUrl) {
-            if (!character) {
+            if (!character || isCompact()) {
                 location.href = targetUrl;
                 return;
             }
@@ -1149,7 +1166,7 @@
         let isThemeTransitioning = false; // 연속 스크롤 방지 쿨다운
 
         window.addEventListener('wheel', (e) => {
-            if (isThemeTransitioning) return;
+            if (isThemeTransitioning || e.target.closest('#chat-interface')) return;
 
             // e.deltaY > 0 : Scroll Down, e.deltaY < 0 : Scroll Up
             scrollAccumulator += e.deltaY;
@@ -1183,84 +1200,89 @@
         /* ============================
             기존 이벤트/커서/채팅 (수정 포함)
             ============================ */
-        window.addEventListener('pointerdown', (event) => {
-            // theme-toggle 클릭은 inline onclick에서 stopPropagation 처리됨
-
+        // UI events must never raycast through to the scene underneath them.
+        const sceneInput = event => event.target instanceof HTMLCanvasElement &&
+            !!event.target.closest('#canvas-container, #hero-sphere-container');
+        let scenePress = null;
+        window.addEventListener('pointerdown', event => {
+            if (!sceneInput(event) || event.button !== 0) return;
+            updateHeroTouch(event);
+            scenePress = { id: event.pointerId, x: event.clientX, y: event.clientY, lastX: event.clientX, lastY: event.clientY, moved: false };
+        });
+        window.addEventListener('pointermove', event => {
+            if (event.pointerType === 'mouse' || scenePress?.id === event.pointerId) {
+                updateHeroTouch(event, event.pointerType === 'mouse' && !isCompact() && !touchQuery.matches);
+            }
+            if (!scenePress || event.pointerId !== scenePress.id) return;
+            if (Math.hypot(event.clientX - scenePress.x, event.clientY - scenePress.y) > 10) scenePress.moved = true;
+            if (currentTheme === 1 && isCompact() && !motionInput.hasData && scenePress.moved) {
+                mobileBall.vx += (event.clientX - scenePress.lastX) * 0.00008;
+                mobileBall.vy += (event.clientY - scenePress.lastY) * 0.00008;
+            }
+            scenePress.lastX = event.clientX;
+            scenePress.lastY = event.clientY;
+        });
+        window.addEventListener('pointercancel', () => { scenePress = null; });
+        window.addEventListener('pointerup', event => {
+            const press = scenePress;
+            scenePress = null;
+            if (!press || press.id !== event.pointerId || press.moved || !sceneInput(event)) return;
             pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
-            pointer.y = - (event.clientY / window.innerHeight) * 2 + 1;
-            raycaster.setFromCamera(pointer, camera);
-
-            let clickedObject = false;
-
-            // 1. Theme 1 Character Click Check
-            if (character && currentTheme === 1) {
-                const intersects = raycaster.intersectObject(character, true);
-                if (intersects.length > 0) { clickedObject = true; }
-            }
-
-            // 2. [NEW] Theme 2 Sphere Click Check
-            else if (currentTheme === 2) {
-                // Pointer for Theme 2 (Needs specific calculation if needed, but standard pointer works here)
-                heroRaycaster.setFromCamera(pointer, heroCamera);
-                const intersects = heroRaycaster.intersectObject(heroSphere);
-                if (intersects.length > 0) { clickedObject = true; }
-            }
-
-            // Common Click Logic
-            if (clickedObject) {
-                const chatUI = document.getElementById('chat-interface');
-                const minIcon = document.getElementById('chat-minimized-icon');
-                if (chatUI.style.display === 'none' && minIcon.style.display === 'none') { toggleChat(true); }
-                else { 
-                    // 이미 열려있거나 최소화된 상태라면 토글/복구
-                    if(chatUI.style.display === 'flex') {
-                         minimizeChat(); // 클릭 시 최소화 (또는 닫기 원하면 closeChat)
-                    } else {
-                         restoreChat();
-                    }
+            pointer.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            const activeCamera = currentTheme === 1 ? camera : heroCamera;
+            const activeObject = currentTheme === 1 ? character : heroSphere;
+            raycaster.setFromCamera(pointer, activeCamera);
+            if (activeObject && raycaster.intersectObject(activeObject, true).length) {
+                if (currentTheme === 1 && isCompact() && (motionInput.needsGesture || motionInput.state === 'requesting')) {
+                    void motionInput.start();
+                    return;
                 }
-            } else {
-                // Clicked Empty Space
-                if (!isJumping && !isSquashing && !isLanding && currentTheme === 1) { isSquashing = true; }
+                const chatUI = document.getElementById('chat-interface');
+                if (getComputedStyle(chatUI).display === 'flex') minimizeChat();
+                else restoreChat();
+            } else if (!isCompact() && currentTheme === 1 && !isJumping && !isSquashing && !isLanding) {
+                isSquashing = true;
+            } else if (currentTheme === 1 && isCompact() && !motionInput.hasData) {
+                mobileBall.vx += (event.clientX / innerWidth - mobileBall.x) * 0.015;
+                mobileBall.vy += (event.clientY / innerHeight - mobileBall.y) * 0.015;
             }
         });
 
         document.addEventListener('mousemove', (event) => {
+            if (isCompact() || touchQuery.matches) return;
             mouseX = (event.clientX / window.innerWidth) * 2 - 1;
             mouseY = -(event.clientY / window.innerHeight) * 2 + 1;
             pixelMouseX = event.clientX;
             pixelMouseY = event.clientY;
 
-            // Theme2: Hero Sphere 인터랙션 (제공한 코드의 로직을 그대로 적용)
-            if (currentTheme === 2) {
-                heroMouse.x = (pixelMouseX / window.innerWidth) * 2 - 1;
-                heroMouse.y = -(pixelMouseY / window.innerHeight) * 2 + 1;
-                heroRaycaster.setFromCamera(heroMouse, heroCamera);
-                const intersects = heroRaycaster.intersectObject(heroSphere);
-
-                if (intersects.length > 0) {
-                    // Update Ripple Trail
-                    const p = intersects[0].point;
-                    const i = heroTrailIndex * 4;
-                    trailData[i] = p.x;
-                    trailData[i + 1] = p.y;
-                    trailData[i + 2] = p.z;
-                    trailData[i + 3] = 1.0;
-                    heroTrailIndex = (heroTrailIndex + 1) % TRAIL_SIZE;
-
-                    // [NEW] Hover State for Cursor
-                    if (!isHoveringBall) {
-                        isHoveringBall = true;
-                        updateCursorState();
-                    }
-                } else {
-                    if (isHoveringBall) {
-                        isHoveringBall = false;
-                        updateCursorState();
-                    }
-                }
-            }
         });
+
+        // The original ripple uses the same hit point and shader trail for mouse,
+        // touch and pen. UI controls never feed into the scene below them.
+        function updateHeroTouch(event, showCursor = false) {
+            if (currentTheme !== 2) return;
+            if (!sceneInput(event)) {
+                if (showCursor && isHoveringBall) { isHoveringBall = false; updateCursorState(); }
+                return;
+            }
+            heroMouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            heroMouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            heroRaycaster.setFromCamera(heroMouse, heroCamera);
+            const intersects = heroRaycaster.intersectObject(heroSphere);
+            if (intersects.length > 0) {
+                const p = intersects[0].point;
+                const i = heroTrailIndex * 4;
+                trailData[i] = p.x;
+                trailData[i + 1] = p.y;
+                trailData[i + 2] = p.z;
+                trailData[i + 3] = 1.0;
+                heroTrailIndex = (heroTrailIndex + 1) % TRAIL_SIZE;
+            }
+            if (showCursor && isHoveringBall !== (intersects.length > 0)) {
+                isHoveringBall = intersects.length > 0;
+                updateCursorState();
+            }
+        }
 
         const linkItems = document.querySelectorAll('.link-item');
         linkItems.forEach(item => {
@@ -1298,9 +1320,10 @@
         window.setCursorDefault = function() { }
         window.setCursorActive = function() { }
 
-        window.closeChat = function() { document.getElementById('chat-interface').style.display = 'none'; document.getElementById('chat-minimized-icon').style.display = 'none'; }
-        window.minimizeChat = function() { document.getElementById('chat-interface').style.display = 'none'; document.getElementById('chat-minimized-icon').style.display = 'flex'; }
+        window.closeChat = function() { document.getElementById('chat-input').blur(); document.getElementById('chat-interface').style.display = 'none'; document.getElementById('chat-minimized-icon').style.display = 'none'; }
+        window.minimizeChat = function() { document.getElementById('chat-input').blur(); document.getElementById('chat-interface').style.display = 'none'; document.getElementById('chat-minimized-icon').style.display = 'flex'; }
         window.restoreChat = function() { document.getElementById('chat-interface').style.display = 'flex'; document.getElementById('chat-minimized-icon').style.display = 'none'; }
+        window.addEventListener('keydown', event => { if (event.key === 'Escape') closeChat(); });
         window.toggleChat = function(show) { if (show) restoreChat(); else closeChat(); }
 
         window.sendMessage = async function() {
@@ -1362,9 +1385,11 @@
 
         function animate() {
             requestAnimationFrame(animate);
-            const delta = clock.getDelta();
+            const delta = Math.min(clock.getDelta(), 0.05);
+            if (isCompact() && currentTheme === 1) updateMobileBall(delta);
 
             // 커서 팔로워(원본 유지)
+            if (!touchQuery.matches && !isCompact()) {
             const ease = 0.2;
             const nextX = cursorX + (pixelMouseX - cursorX) * ease;
             const nextY = cursorY + (pixelMouseY - cursorY) * ease;
@@ -1384,10 +1409,12 @@
             cursorFollower.style.transform = `translate3d(${cursorX}px, ${cursorY}px, 0)`;
             cursorCircle.style.transform = `rotate(${angle}rad) scale(${scaleX}, ${scaleY})`;
 
+            }
+
             // Theme 1 렌더
             if (currentTheme === 1) {
                 // hover ball
-                if (character) {
+                if (character && !isCompact() && !touchQuery.matches) {
                     pointer.x = mouseX; pointer.y = mouseY;
                     raycaster.setFromCamera(pointer, camera);
                     const intersects = raycaster.intersectObject(character, true);
@@ -1410,7 +1437,7 @@
                 depthMaterial.uniforms.uRotY.value = currentRotY;
 
                 // character motion
-                if (character) {
+                if (character && !isCompact()) {
                     if (isSquashing) {
                         character.scale.y = lerp(character.scale.y, baseScale * 0.5, 0.4);
                         character.scale.x = lerp(character.scale.x, baseScale * 1.5, 0.4);
@@ -1504,21 +1531,73 @@
                 heroRenderer.render(heroScene, heroCamera);
             }
         }
-        animate();
+        // Animation starts after responsive scene setup.
 
         // 초기 테마 확정
         applyTheme(1);
 
-        // resize
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
+        // Match the browser's visible height when the keyboard or Safari bars move.
+        function syncVisualViewport() {
+            const viewport = window.visualViewport;
+            document.documentElement.style.setProperty('--visual-height', `${viewport?.height ?? innerHeight}px`);
+            document.documentElement.style.setProperty('--visual-top', `${viewport?.offsetTop ?? 0}px`);
+        }
+        window.visualViewport?.addEventListener('resize', syncVisualViewport);
+        window.visualViewport?.addEventListener('scroll', syncVisualViewport);
+        syncVisualViewport();
 
-            heroCamera.aspect = window.innerWidth / window.innerHeight;
+        function resizeScenes() {
+            const width = innerWidth, height = innerHeight;
+            camera.aspect = heroCamera.aspect = width / height;
+            camera.fov = isCompact() ? 35 : 8;
+            camera.position.set(0, isCompact() ? 18 : 50, isCompact() ? 0.01 : 75);
+            camera.lookAt(0, isCompact() ? groundY : 0, 0);
+            camera.updateProjectionMatrix();
             heroCamera.updateProjectionMatrix();
-            heroRenderer.setSize(window.innerWidth, window.innerHeight);
-        });
+            renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+            renderer.setSize(width, height);
+            heroRenderer.setSize(width, height);
+            const fieldHeight = 2 * Math.tan(THREE.MathUtils.degToRad(35 / 2)) * (18 - groundY);
+            const diameter = Math.min(width * .24, height * .18, 110);
+            baseScale = isCompact() ? diameter / height * fieldHeight / modelDiameter : 1.25;
+            mobileBall.radius = diameter / 2 + 8;
+            if (character) {
+                character.scale.setScalar(baseScale);
+                character.rotation.set(0, 0, 0);
+                character.position.set(0, groundY, 0);
+            }
+            currentX = velocityX = 0;
+            isJumping = isSquashing = isLanding = ignoreFloor = false;
+            syncVisualViewport();
+        }
+
+        const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -groundY);
+        const groundPoint = new THREE.Vector3();
+        const groundRay = new THREE.Raycaster();
+        function updateMobileBall(delta) {
+            if (!character || currentTheme !== 1) return;
+            const step = delta * 60;
+            const radius = mobileBall.radius;
+            const controlsBottom = document.getElementById('theme-toggle').getBoundingClientRect().bottom;
+            const minX = (radius + 16) / innerWidth, maxX = 1 - minX;
+            const maxY = 1 - (radius + 24) / innerHeight;
+            const minY = Math.min((controlsBottom + radius + 16) / innerHeight, maxY);
+            if (!motionInput.hasData) mobileBall.ax = mobileBall.ay = 0;
+            stepBall(mobileBall, { minX, maxX, minY, maxY }, delta);
+            camera.updateMatrixWorld();
+            groundRay.setFromCamera(new THREE.Vector2(mobileBall.x * 2 - 1, 1 - mobileBall.y * 2), camera);
+            groundRay.ray.intersectPlane(groundPlane, groundPoint);
+            character.rotation.x += mobileBall.vy * step * 8;
+            character.rotation.z -= mobileBall.vx * step * 8;
+            character.position.copy(groundPoint).sub(modelCenter.clone().multiplyScalar(baseScale).applyEuler(character.rotation));
+        }
+
+        const motionInput = createTiltInput(window, tilt => Object.assign(mobileBall, tilt), () => isCompact() && currentTheme === 1);
+        if (!motionInput.needsGesture) void motionInput.start();
+        compactQuery.addEventListener('change', resizeScenes);
+        window.addEventListener('resize', resizeScenes);
+        resizeScenes();
+        animate();
     </script>
 </body>
 </html>
