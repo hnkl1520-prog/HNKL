@@ -510,6 +510,8 @@
         }
     </script>
     <link rel="stylesheet" href="/responsive.css?v=20261007-4">
+  <link rel="stylesheet" href="/ai-actions.css?v=20261012-ai">
+  <script src="/ai-client.js?v=20261012-ai" defer></script>
 </head>
 <body class="page-home">
 
@@ -589,7 +591,7 @@
             </div>
         </div>
         <div class="chat-input-area">
-            <input type="text" class="chat-input" id="chat-input" placeholder="질문을 입력하세요..." onkeypress="if(event.key==='Enter') sendMessage()">
+            <input type="text" class="chat-input" id="chat-input" placeholder="질문을 입력하세요..." maxlength="2000" onkeydown="if(event.key==='Enter' && !event.isComposing && event.keyCode!==229) sendMessage()">
             <button class="send-btn" onclick="sendMessage()">
                 <img src="assets/Send_2.svg?v=20261010-3" alt="보내기" class="svg-icon">
             </button>
@@ -1326,53 +1328,40 @@
         window.addEventListener('keydown', event => { if (event.key === 'Escape') closeChat(); });
         window.toggleChat = function(show) { if (show) restoreChat(); else closeChat(); }
 
+        let chatPending = false;
         window.sendMessage = async function() {
             const input = document.getElementById('chat-input');
             const body = document.getElementById('chat-body');
             const text = input.value.trim();
-
-            if (!text) return;
-
-            body.innerHTML += `<div class="message user">${text}</div>`;
-            input.value = '';
-            body.scrollTop = body.scrollHeight;
-
-            const loadingMessage = document.getElementById('loading-message');
-            loadingMessage.style.display = 'block';
-            body.appendChild(loadingMessage);
-            body.scrollTop = body.scrollHeight;
-
-            try {
-                const responseText = await callGeminiAPI(text);
-                loadingMessage.style.display = 'none';
-                body.innerHTML += `<div class="message bot">${responseText}</div>`;
-                body.scrollTop = body.scrollHeight;
-                body.appendChild(loadingMessage);
-
-            } catch (error) {
-                loadingMessage.style.display = 'none';
-                body.appendChild(loadingMessage);
+            if (!text || chatPending) return;
+            chatPending = true;
+            const send = document.querySelector('.send-btn');
+            send.disabled = true;
+            const loading = document.getElementById('loading-message');
+            function append(text, author) {
+                const message = document.createElement('div');
+                message.className = 'message ' + author;
+                message.textContent = text;
+                body.insertBefore(message, loading);
+                return message;
             }
-        }
-
-        async function callGeminiAPI(prompt) {
+            append(text, 'user');
+            input.value = '';
+            loading.style.display = 'block';
+            body.scrollTop = body.scrollHeight;
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 30000);
             try {
-                const apiUrl = 'https://us-central1-hnkl-49a5f.cloudfunctions.net/chat';
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ prompt: prompt })
-                });
-                if (!response.ok) { throw new Error(`HTTP error! status: ${response.status}`); }
-                const data = await response.json();
-                if (data.candidates && data.candidates.length > 0) {
-                    return data.candidates[0].content.parts[0].text;
-                } else {
-                    return "죄송해요, 답변을 못 들었어요.";
-                }
-            } catch (error) {
-                console.error("통신 에러:", error);
-                return `오류가 발생했습니다: ${error.message}. (관리자에게 문의하세요)`;
+                const data = await window.HNKLAI.ask(text, controller.signal);
+                window.HNKLAI.appendActions(append(data.reply, 'bot'), data.actions);
+            } catch {
+                append(document.body.dataset.lang === 'en' ? 'Something went wrong. Please try again shortly.' : '답변을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.', 'bot');
+            } finally {
+                clearTimeout(timeout);
+                loading.style.display = 'none';
+                chatPending = false;
+                send.disabled = false;
+                body.scrollTop = body.scrollHeight;
             }
         }
 

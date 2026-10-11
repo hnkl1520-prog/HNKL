@@ -1,6 +1,6 @@
 # SOON / Under Construction
 
-Standalone local prototype: `/experiments/soon-stone/`.
+Standalone local prototype: `/experiments/page-states/soon-stone/`.
 
 - Four stone meshes balanced edge to edge, with a suspended base and no floor.
 - Actual triangle surfaces determine the three resting contacts. Contact constraints remain joined during the small idle sway and hover rotation.

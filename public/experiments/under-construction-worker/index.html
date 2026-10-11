@@ -10,7 +10,7 @@
     (() => {
       const mobile = matchMedia('(max-width: 767px), (pointer: coarse)');
       const showMobileVersion = () => {
-        if (mobile.matches) location.replace(new URL('../soon-editor/', location.href));
+        if (mobile.matches) location.replace(new URL('../page-states/soon-editor/', location.href));
       };
       mobile.addEventListener('change', showMobileVersion);
       showMobileVersion();
@@ -19,7 +19,7 @@
   <link rel="icon" href="data:,">
   <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.8/dist/web/static/pretendard.css">
   <link rel="stylesheet" href="/tokens.css">
-  <link rel="stylesheet" href="../soon-editor/style.css">
+  <link rel="stylesheet" href="../page-states/soon-editor/style.css">
   <link rel="stylesheet" href="style.css">
   <script type="module" src="app.js"></script>
 </head>

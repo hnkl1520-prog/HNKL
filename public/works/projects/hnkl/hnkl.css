@@ -27,12 +27,12 @@ body.page-hnkl { margin: 0; background: var(--gray-1); color: var(--gray-95); fo
 .case-section { padding: var(--case-section) var(--case-inline); position: relative; background: var(--gray-1); }
 .case-section[id] { scroll-margin-top: 100px; }
 .case-wrap { width: 100%; max-width: var(--case-max); margin-inline: auto; }
-.case-heading { display: flex; align-items: baseline; gap: calc(16px * var(--case-scale)); margin-bottom: var(--case-lead); }
-.case-heading > span { color: var(--accent-color); min-width: calc(32px * var(--case-scale)); font-size: 12px; }
-.case-heading h2 { font-size: calc(28px * var(--case-scale)); font-weight: 500; line-height: 1.3; letter-spacing: -.015em; }
+.case-heading { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 12px; margin-bottom: 40px; }
+.case-heading > span { color: var(--accent-color); font-size: 12px; }
+.case-heading h2 { font-size: calc(40px * var(--case-scale)); font-weight: 600; line-height: 1.3; letter-spacing: -.015em; }
 .case-heading:has(+ .case-lead) { margin-bottom: 12px; }
 .case-body { font-size: calc(18px * var(--case-scale)); line-height: 1.7; color: var(--text-sub); word-break: keep-all; }
-.case-lead { max-width: 60ch; margin-bottom: 24px !important; }
+.page-hnkl .case-lead { max-width: 680px; margin: 0 auto 40px; text-align: center; text-wrap: pretty; }
 .case-grid { display: grid; gap: var(--case-gap); grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .case-grid--three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .case-caption { display: grid; gap: 8px; margin-top: var(--case-caption); }
@@ -53,7 +53,7 @@ body.page-hnkl { margin: 0; background: var(--gray-1); color: var(--gray-95); fo
 .case-keywords .case-grid { gap: var(--case-card-gap); }
 .case-keywords .case-caption { gap: 6px; text-align: center; }
 .case-ai-card { display: grid; grid-template-columns: 3fr 2fr; align-items: stretch; }
-.case-ai-copy { padding: 32px; display: flex; flex-direction: column; justify-content: flex-start; gap: 20px; }
+.case-ai-copy { padding: 32px; display: flex; flex-direction: column; justify-content: flex-start; text-align: left; gap: 20px; }
 .case-ai-copy h3 { font-size: 28px; font-weight: 500; line-height: 1.4; letter-spacing: -.025em; }
 .case-ai-copy small { font-size: 13px; line-height: 1.5; color: var(--text-sub); }
 .case-motion { position: relative; min-width: 0; overflow: hidden; }
@@ -69,7 +69,7 @@ body.page-hnkl { margin: 0; background: var(--gray-1); color: var(--gray-95); fo
 .case-hero { position: sticky; top: 0; height: 100vh; height: 100svh; overflow: hidden; background: #f8f7f4; }
 .case-hero img { width: 100%; height: 100%; object-fit: cover; object-position: center; }
 .case-overview { position: relative; z-index: 5; min-height: 100vh; min-height: 100svh; display: flex; align-items: center; justify-content: center; background: rgb(255 255 255 / .72); backdrop-filter: blur(24px) saturate(1.2); -webkit-backdrop-filter: blur(24px) saturate(1.2); border-top: 1px solid var(--line-color); }
-.case-overview__inner { width: 100%; max-width: calc(820px * var(--case-scale)); padding: clamp(40px, 7vh, 96px) var(--case-inline); margin-inline: auto; text-align: center; }
+.case-overview__inner { width: 100%; max-width: calc(1120px * var(--case-scale)); padding: clamp(40px, 7vh, 96px) var(--case-inline); margin-inline: auto; text-align: center; }
 .case-overview h1 { font-size: calc(33px * var(--case-scale)); font-weight: 700; line-height: 1.4; margin-bottom: 24px; }
 .case-overview p { font-size: calc(27px * var(--case-scale)); font-weight: 500; line-height: 1.6; word-break: keep-all; }
 .case-hero-stage.is-boosted .case-hero { margin-bottom: calc(-1 * var(--hero-shift)); }
@@ -116,3 +116,8 @@ body.page-hnkl { margin: 0; background: var(--gray-1); color: var(--gray-95); fo
 @media (max-width: 480px) { :root { --case-section: 40px; } }
 @media (hover: none), (pointer: coarse) { .page-hnkl #cursor-bg-layer, .page-hnkl #cursor-text-layer { display: none; } .page-hnkl, .page-hnkl * { cursor: auto; } }
 @media (prefers-reduced-motion: reduce) { .case-overview__inner { opacity: 1 !important; transform: none !important; } }
+
+/* Same compact controls as the VIBRA carousels. */
+.preview-nav { display: flex; justify-content: center; align-items: center; gap: 12px; margin-top: 40px; }
+.preview-nav button { width: 44px; height: 44px; padding: 0; border-radius: 50%; border: 1px solid var(--line-color); background: var(--case-panel); color: var(--text-color); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background .2s ease; }
+.preview-nav button:hover { background: var(--line-color); }

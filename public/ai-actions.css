@@ -1,0 +1,4 @@
+.ai-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.ai-action{display:inline-flex;align-items:center;min-height:36px;padding:7px 11px;border:1px solid #c9d7f6;border-radius:12px;background:#eef3ff;color:#2359af!important;font:inherit;font-size:13px;line-height:1.4;text-decoration:none;cursor:pointer;white-space:normal}
+.ai-action:hover{background:#dfe9ff}
+.ai-action:focus-visible{outline:2px solid #3b82f6;outline-offset:3px}

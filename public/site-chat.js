@@ -1,7 +1,7 @@
-/* Home's chat UI, shared only by the About and Works index pages. */
+/* Shared chat for About, Works and project detail pages. */
 (() => {
     'use strict';
-    if (!document.body.matches('.page-about, .page-works') || document.getElementById('site-chat-widget')) return;
+    if (document.getElementById('site-chat-widget')) return;
 
     const widget = document.createElement('div');
     widget.id = 'site-chat-widget';
@@ -12,8 +12,8 @@
             <div class="site-chat-header">
                 <span id="site-chat-title">HNKL AI</span>
                 <div class="site-chat-controls">
-                    <button type="button" class="site-chat-window-button" data-chat-action="minimize" aria-label="최소화"><img src="assets/Min_2.svg?v=20261010-1" alt="" class="site-chat-icon"></button>
-                    <button type="button" class="site-chat-window-button" data-chat-action="close" aria-label="닫기"><img src="assets/Close_2.svg?v=20261010-1" alt="" class="site-chat-icon"></button>
+                    <button type="button" class="site-chat-window-button" data-chat-action="minimize" aria-label="최소화"><img src="/assets/Min_2.svg?v=20261010-1" alt="" class="site-chat-icon"></button>
+                    <button type="button" class="site-chat-window-button" data-chat-action="close" aria-label="닫기"><img src="/assets/Close_2.svg?v=20261010-1" alt="" class="site-chat-icon"></button>
                 </div>
             </div>
             <div class="site-chat-messages" role="log" aria-live="polite" aria-relevant="additions text" aria-label="대화 내용">
@@ -21,11 +21,11 @@
                 <div class="site-chat-message site-chat-message-bot" data-chat-loading role="status" aria-label="답변 작성 중" hidden><div class="site-chat-typing" aria-hidden="true"><span></span><span></span><span></span></div></div>
             </div>
             <form class="site-chat-composer">
-                <input type="text" class="site-chat-input" aria-label="질문" placeholder="질문을 입력하세요..." autocomplete="off" enterkeyhint="send">
-                <button type="submit" class="site-chat-send" aria-label="보내기"><img src="assets/Send_2.svg?v=20261010-3" alt="" class="site-chat-icon"></button>
+                <input type="text" class="site-chat-input" aria-label="질문" placeholder="질문을 입력하세요..." maxlength="2000" autocomplete="off" enterkeyhint="send">
+                <button type="submit" class="site-chat-send" aria-label="보내기"><img src="/assets/Send_2.svg?v=20261010-3" alt="" class="site-chat-icon"></button>
             </form>
         </section>
-        <button type="button" class="site-chat-launcher" aria-label="HNKL AI와 대화" aria-controls="site-chat-panel" aria-expanded="false"><img src="assets/Chat_1.svg?v=20261010-1" alt=""></button>`;
+        <button type="button" class="site-chat-launcher" aria-label="HNKL AI와 대화" aria-controls="site-chat-panel" aria-expanded="false"><img src="/assets/Chat_1.svg?v=20261010-1" alt=""></button>`;
     document.body.appendChild(widget);
 
     const panel = widget.querySelector('.site-chat-panel');
@@ -135,6 +135,7 @@
         message.textContent = text;
         messages.insertBefore(message, loading);
         messages.scrollTop = messages.scrollHeight;
+        return message;
     }
 
     composer.addEventListener('submit', async event => {
@@ -151,16 +152,9 @@
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 30000);
         try {
-            const response = await fetch('https://us-central1-hnkl-49a5f.cloudfunctions.net/chat', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ prompt }),
-                signal: controller.signal
-            });
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
-            const data = await response.json();
-            const reply = data.candidates?.[0]?.content?.parts?.map(part => typeof part.text === 'string' ? part.text : '').join('\n').trim();
-            appendMessage(reply || requestCopy.empty, 'bot');
+            const data = await window.HNKLAI.ask(prompt, controller.signal);
+            const message = appendMessage(data.reply, 'bot');
+            window.HNKLAI.appendActions(message, data.actions);
         } catch {
             appendMessage(requestCopy.error, 'bot');
         } finally {

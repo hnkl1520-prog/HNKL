@@ -65,3 +65,23 @@ document.addEventListener('DOMContentLoaded', () => {
     reduced.addEventListener('change', sync);
   });
 });
+
+// Keep only the selected interaction running.
+(() => {
+  const frame = document.getElementById('state-preview');
+  if (!frame) return;
+  const previews = [
+    { path: 'soon-stone', title: 'SOON — 돌 글자 인터랙션' },
+    { path: 'soon-editor', title: 'WIP — 벡터 글자 편집' },
+    { path: 'legacy-404', title: '404 — 파티클 인터랙션' },
+  ];
+  let current = 0;
+  document.querySelectorAll('[data-preview-step]').forEach(button => {
+    button.addEventListener('click', () => {
+      current = (current + Number(button.dataset.previewStep) + previews.length) % previews.length;
+      const item = previews[current];
+      frame.title = item.title;
+      frame.src = `/experiments/page-states/${item.path}/?embed=1`;
+    });
+  });
+})();

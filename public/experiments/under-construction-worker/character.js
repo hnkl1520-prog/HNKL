@@ -1,84 +1,109 @@
-const NS='http://www.w3.org/2000/svg';
-const C={ink:'#39414B',shirt:'#F5EDDD',blue:'#5878A8',skin:'#E9B79B',yellow:'#E8BD5C',hair:'#584B41'};
-const make=(tag,attrs,parent)=>{const n=document.createElementNS(NS,tag);Object.entries(attrs).forEach(([k,v])=>n.setAttribute(k,v));parent.append(n);return n;};
-const set=(n,attrs)=>Object.entries(attrs).forEach(([k,v])=>n.setAttribute(k,v));
-const coords=p=>`${p.x.toFixed(3)} ${p.y.toFixed(3)}`;
+import { HEAD_PATHS, BOOT_PATHS, HAND_PATHS } from './parts.js';
+
+const NS = 'http://www.w3.org/2000/svg';
+const C = { ink:'#26333B', shirt:'#FFF9EC', pants:'#3F64AD', skin:'#F0B998', yellow:'#F3C64F', vest:'#F49827' };
+const make = (tag,attrs,parent) => {const n=document.createElementNS(NS,tag);Object.entries(attrs).forEach(([k,v])=>n.setAttribute(k,v));parent.append(n);return n;};
+const set = (n,attrs)=>Object.entries(attrs).forEach(([k,v])=>n.setAttribute(k,v));
+const xy = v=>`${v.x.toFixed(3)} ${v.y.toFixed(3)}`;
 const add=(a,b,k=1)=>({x:a.x+b.x*k,y:a.y+b.y*k});
 const unit=(a,b)=>{const d=Math.hypot(b.x-a.x,b.y-a.y)||1;return{x:(b.x-a.x)/d,y:(b.y-a.y)/d};};
+const rotate=(v,a)=>({x:v.x*Math.cos(a)-v.y*Math.sin(a),y:v.x*Math.sin(a)+v.y*Math.cos(a)});
+const radians=degrees=>degrees*Math.PI/180;
 
-// Closed, tapered clothing silhouettes. Ankles end in a horizontal hem inside
-// the boot shaft, rather than a diagonal stroked line poking through the shoe.
-function limbPath(bone,widths,leg){
-  const {root,joint,end}=bone, u=unit(root,joint),v=unit(joint,end);
+// The final cross-section follows the cuff, not the shin/forearm direction.
+// Its overlap is real geometry, so wrists and ankles stay joined when bent.
+function limbOutline(bone,widths,endAxis={x:0,y:1},overlap=0){
+  const {root,joint,end}=bone,u=unit(root,joint),v=unit(joint,end);
   const a={x:-u.y,y:u.x},b={x:-v.y,y:v.x};
-  const m=unit({x:0,y:0},add(a,b));
-  const reach=Math.min(1.5,1/Math.max(.15,m.x*b.x+m.y*b.y));
-  const tip=leg?{x:end.x,y:end.y-6}:add(end,v,-1);
-  const normal=leg?{x:-1,y:0}:b;
-  const points=[add(root,a,widths[0]),add(joint,m,widths[1]*reach),add(tip,normal,widths[2]),add(tip,normal,-widths[2]),add(joint,m,-widths[1]*reach),add(root,a,-widths[0])];
-  const radii=[6,9,0,0,9,6];
-  const rounded=points.map((p,i)=>{
-    const before=points[(i+points.length-1)%points.length],after=points[(i+1)%points.length];
-    const radius=Math.min(radii[i],Math.hypot(p.x-before.x,p.y-before.y)*.3,Math.hypot(p.x-after.x,p.y-after.y)*.3);
-    return {p,start:add(p,unit(p,before),radius),end:add(p,unit(p,after),radius)};
-  });
-  return rounded.map((r,i)=>`${i?'L':'M'}${coords(r.start)}Q${coords(r.p)} ${coords(r.end)}`).join('')+'Z';
+  const normal=unit({x:0,y:0},add(a,b));
+  const miter=Math.min(1.35,1/Math.max(.2,normal.x*b.x+normal.y*b.y));
+  const tip=add(end,endAxis,overlap);
+  let cuff={x:-endAxis.y,y:endAxis.x};
+  if(cuff.x*b.x+cuff.y*b.y<0)cuff={x:-cuff.x,y:-cuff.y};
+  const pts=[add(root,a,widths[0]),add(joint,normal,widths[1]*miter),add(tip,cuff,widths[2]),add(tip,cuff,-widths[2]),add(joint,normal,-widths[1]*miter),add(root,a,-widths[0])];
+  const radii=[12,18,0,0,18,12];
+  return pts.map((p,i)=>{
+    const prev=pts[(i+5)%6],next=pts[(i+1)%6];
+    const radius=Math.min(radii[i],Math.hypot(p.x-prev.x,p.y-prev.y)*.38,Math.hypot(p.x-next.x,p.y-next.y)*.38);
+    return `${i?'L':'M'}${xy(add(p,unit(p,prev),radius))}Q${xy(p)} ${xy(add(p,unit(p,next),radius))}`;
+  }).join('')+'Z';
 }
+function sleeveOutline(bone){
+  const u=unit(bone.root,bone.joint),n={x:-u.y,y:u.x};
+  const root=add(bone.root,u,-3),tip=add(bone.root,u,28);
+  return `M${xy(add(root,n,16))}C${xy(add(add(root,n,16),u,-15))} ${xy(add(add(root,n,-16),u,-15))} ${xy(add(root,n,-16))}L${xy(add(tip,n,-16))}Q${xy(add(tip,u,2))} ${xy(add(tip,n,16))}Z`;
+}
+const handAxis=(mode,angle)=>rotate(mode==='ceiling'?{x:0,y:-1}:mode==='wall'?{x:1,y:0}:{x:0,y:1},radians(angle));
 
 export function createCharacter(parent){
   const figure=make('g',{'data-character':'worker','stroke-linejoin':'round','stroke-linecap':'round'},parent);
-  const graphic=(d,fill,host=figure,extra={})=>make('path',{d,fill,stroke:C.ink,'stroke-width':1.35,...extra},host);
   const group=id=>make('g',{'data-part':id},figure);
-  function limb(id,color,widths,leg=false){
-    const g=group(id),path=graphic('',color,g);
-    return {g,path,widths,leg};
-  }
-  function boot(id){
-    const g=group(id);
-    graphic('M-14-10Q-14-12-11-12H10Q13-12 13-9L14 3Q18 7 28 8Q35 9 35 14V16H-14Z',C.yellow,g);
-    graphic('M-13 12H34','none',g,{'stroke-width':1.1});
-    return g;
-  }
-  function hand(id){
-    const g=group(id);
-    graphic('M-6-2H6L7 6Q10 7 10 11L8 14L7 12V20Q7 25 3 25H-1Q-7 25-7 19L-8 8Z',C.skin,g);
-    graphic('M2 16V22M-2 17V22','none',g,{'stroke-width':.85});
-    return g;
-  }
-  const farArm=limb('far-arm',C.shirt,[13,10,7]);
-  // Boots are drawn beneath the trouser hems; their shafts overlap by 6 units.
-  const farBoot=boot('far-boot');
-  const farLeg=limb('far-leg',C.blue,[19,15,11],true);
-  const nearBoot=boot('near-boot');
-  const nearLeg=limb('near-leg',C.blue,[20,16,11],true);
+  const graphic=(d,fill,host=figure,extra={})=>make('path',{d,fill,stroke:C.ink,'stroke-width':1.15,...extra},host);
+  function artwork(id,paths){const g=group(id);for(const {d,fill,strokeWidth=1.15,...attrs}of paths)graphic(d,fill,g,{'stroke-width':strokeWidth,...attrs});return g;}
+  function arm(id){const g=group(id);return{g,skin:graphic('',C.skin,g),sleeve:graphic('',C.shirt,g)};}
+  function leg(id){const g=group(id);return{g,path:graphic('',C.pants,g)};}
+  function hand(id){const holder=group(id),modes={};for(const[mode,paths]of Object.entries(HAND_PATHS)){
+    const g=make('g',{'data-glove':mode},holder);modes[mode]=g;
+    for(const {d,fill,strokeWidth=1.15,...attrs}of paths)graphic(d,fill,g,{'stroke-width':strokeWidth,...attrs});
+  }return{holder,modes};}
+
+  const farArm=arm('far-arm'),farHand=hand('far-hand');
+  const farBoot=artwork('far-boot',BOOT_PATHS),farLeg=leg('far-leg');
+  const nearBoot=artwork('near-boot',BOOT_PATHS),nearLeg=leg('near-leg');
+  // Two outline passes, followed by both fills, form one trouser silhouette.
+  // This removes the artificial seam where the hip used to cap the thigh.
+  set(nearLeg.path,{'stroke-width':2.3});
+  const pelvisOutline=graphic('',C.pants,nearLeg.g,{'stroke-width':2.3});
+  const legFill=graphic('',C.pants,nearLeg.g,{stroke:'none'});
+  const pelvisFill=graphic('',C.pants,nearLeg.g,{stroke:'none'});
   const torso=group('torso');
-  graphic('M-6-99H10L12-75H-7Z',C.skin,torso);
-  graphic('M-12-84Q-26-82-25-63L-24-22V0Q-24 18-10 18H14Q25 16 25 3L22-36L20-70Q20-82 8-84Z',C.shirt,torso);
-  graphic('M-24-23Q-7-24 7-38L8-58H22L26 3Q26 18 11 18H-10Q-24 18-24 0Z',C.blue,torso);
-  graphic('M0-83L8-82L16-49L8-47Z',C.blue,torso);
-  const nearArm=limb('near-arm',C.shirt,[14,10.5,7]);
-  const farHand=hand('far-hand');
-  const nearHand=hand('near-hand');
-  figure.insertBefore(farHand,torso);
-  const head=group('head');
-  // Small rounded nose, chin, ear and eye give the profile a human reading.
-  graphic('M-17-17H12Q17-11 15-4L20 3Q22 6 16 7L15 14Q13 23 4 23Q-5 22-10 15L-15 9Q-21 6-20 0Q-20-4-16-5Z',C.skin,head);
-  graphic('M-17-17H-9L-11-4L-16-1Q-21-7-17-17Z',C.hair,head,{'stroke-width':0});
-  graphic('M-14-2Q-19-3-17 4L-14 6','none',head,{'stroke-width':1});
-  graphic('M9-5a1.15 1.15 0 1 0 2.3 0a1.15 1.15 0 1 0-2.3 0',C.ink,head,{'stroke-width':0});
-  graphic('M11 12Q13 13 15 12','none',head,{'stroke-width':.9});
-  graphic('M-22-17Q-21-35-3-35H1Q20-35 20-17Z',C.yellow,head);
-  graphic('M-21-19H20Q25-19 25-15V-13H-23Q-24-13-24-16Q-24-19-21-19Z',C.yellow,head);
-  graphic('M-1-33V-22','none',head,{'stroke-width':1.1});
+  const neck=graphic('',C.skin,torso);
+  const shirt=graphic('',C.shirt,torso);
+
+  const vest=graphic('',C.vest,torso);
+  const stripe=graphic('',C.yellow,torso,{'stroke-width':0});
+  const seam=graphic('','none',torso,{'stroke-width':.85});
+  const nearArm=arm('near-arm'),nearHand=hand('near-hand');
+  const head=artwork('head',HEAD_PATHS);
+  const parts={farArm,nearArm,farLeg,nearLeg};
 
   return {figure,render(pose){
-    for(const [nodes,bone] of [[farLeg,pose.legs[0]],[nearLeg,pose.legs[1]],[farArm,pose.arms[0]],[nearArm,pose.arms[1]]]){
-      set(nodes.path,{d:limbPath(bone,nodes.widths,nodes.leg)});
-      nodes.g.dataset.root=coords(bone.root);nodes.g.dataset.joint=coords(bone.joint);nodes.g.dataset.end=coords(bone.end);
+    const hip=pose.torso.hip,angle=pose.torso.angle;
+    const local=point=>rotate({x:point.x-hip.x,y:point.y-hip.y},-angle);
+    const shoulders=pose.arms.map(b=>local(b.root));
+    const top=(shoulders[0].y+shoulders[1].y)/2;
+    const neckPoint=(x,y)=>local(add(pose.head,rotate({x,y},pose.head.angle||0)));
+    const neckL=neckPoint(-8,14),neckR=neckPoint(9,13);
+    set(torso,{transform:`translate(${xy(hip)}) rotate(${angle*180/Math.PI})`});
+    set(neck,{d:`M${xy(neckL)}L${xy(neckR)}L12 ${top-2}L-11 ${top-2}Z`});
+    set(shirt,{d:`M-10 ${top-12}Q-31 ${top-12} -33 ${top+12}L-33-5Q-33 15-10 19H15Q34 15 32-5L29 ${top+12}Q28 ${top-10} 10 ${top-12}Q2 ${top-2} -10 ${top-12}Z`});
+    const pelvisD='M-32-17Q-2-7 30-17L32 0Q34 20 12 20H-13Q-34 20-33 2Z';
+    for(const node of [pelvisOutline,pelvisFill])set(node,{d:pelvisD,transform:`translate(${xy(hip)}) rotate(${angle*180/Math.PI})`});
+    set(vest,{d:`M-17 ${top-11}L-10 ${top-12}Q-5 ${top+3} 13 ${top+13}L16 ${top-10}Q27 ${top-4} 29 ${top+13}L33 7Q29 14 19 10L13 5Q-5 17-32 6L-32 ${top+12}Q-30 ${top-3} -17 ${top-11}Z`});
+    set(stripe,{d:'M-32-30Q-3-19 31-29L32-22Q0-12-32-23Z'});
+    set(seam,{d:`M13 ${top+13}L19 10`});
+
+    [farLeg,nearLeg].forEach((nodes,i)=>{
+      const bone=pose.legs[i],axis=rotate({x:0,y:1},radians(pose.bootAngles[i]));
+      const d=limbOutline(bone,i?[23,20,12]:[22,19,11.5],axis,-7);
+      set(nodes.path,{d});if(i)set(legFill,{d});
+    });
+    [farArm,nearArm].forEach((nodes,i)=>{
+      const bone=pose.arms[i],mode=pose.handModes?.[i]||'rest';
+      set(nodes.skin,{d:limbOutline(bone,[13.5,12,8],handAxis(mode,pose.handAngles[i]),1)});
+      set(nodes.sleeve,{d:sleeveOutline(bone)});
+    });
+    for(const[key,nodes]of Object.entries(parts)){
+      const i=key.startsWith('near')?1:0,bone=key.endsWith('Arm')?pose.arms[i]:pose.legs[i];
+      nodes.g.dataset.root=xy(bone.root);nodes.g.dataset.joint=xy(bone.joint);nodes.g.dataset.end=xy(bone.end);
     }
-    set(torso,{transform:`translate(${coords(pose.torso.hip)}) rotate(${pose.torso.angle*180/Math.PI})`});
-    set(head,{transform:`translate(${coords(pose.head)}) rotate(${(pose.head.angle||0)*180/Math.PI})`});
-    [farBoot,nearBoot].forEach((n,i)=>set(n,{transform:`translate(${coords(pose.legs[i].end)}) rotate(${pose.bootAngles[i]})`}));
-    [farHand,nearHand].forEach((n,i)=>set(n,{transform:`translate(${coords(pose.arms[i].end)}) rotate(${pose.handAngles[i]})`}));
+    set(head,{transform:`translate(${xy(pose.head)}) rotate(${(pose.head.angle||0)*180/Math.PI})`});
+    [farBoot,nearBoot].forEach((g,i)=>set(g,{transform:`translate(${xy(pose.legs[i].end)}) rotate(${pose.bootAngles[i]})`}));
+    [farHand,nearHand].forEach((hand,i)=>{
+      const mode=pose.handModes?.[i]||'rest';
+      for(const[name,g]of Object.entries(hand.modes))g.style.display=name===mode?'':'none';
+      set(hand.holder,{transform:`translate(${xy(pose.arms[i].end)}) rotate(${pose.handAngles[i]})`});
+    });
+    figure.dataset.poseName=pose.name||'';
   }};
 }

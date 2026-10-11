@@ -1,0 +1,80 @@
+[
+  {
+    "id": "home",
+    "label": "Home",
+    "href": "/index.html",
+    "info": "홈 화면. AI와 대화하거나 About, Works로 이동할 수 있다."
+  },
+  {
+    "id": "about",
+    "label": "About",
+    "href": "/about.html",
+    "info": "이한욱 UX·인터랙션 디자이너의 소개, 디자인 접근 방식, 경력과 연락처."
+  },
+  {
+    "id": "works",
+    "label": "Projects",
+    "href": "/works.html",
+    "info": "현재 공개 작업 목록: HNKL 포트폴리오 웹사이트, VIBRA XR 축구 중계 서비스, KORAIL 교육 앱."
+  },
+  {
+    "id": "labs",
+    "label": "Labs",
+    "href": "/works.html?category=labs",
+    "info": "인터랙티브 미디어 실험 목록. Buddha?, Budda in the Window, Goldfish, Dots, Blur, Untitled_01, Untitled_02."
+  },
+  {
+    "id": "hnkl",
+    "label": "HNKL",
+    "href": "/works/projects/hnkl/hnkl.html",
+    "info": "포트폴리오 웹사이트 제작 프로젝트. 로고, 디자인 시스템, 화면 구성과 인터랙션을 설계했다. AI 가이드, 재미, 몰입이 핵심 콘셉트다."
+  },
+  {
+    "id": "vibra",
+    "label": "VIBRA",
+    "href": "/works/projects/vibra/vibra.html",
+    "info": "XR 축구 중계 서비스. Skybox, In Stadium, AI VIVA, 인터랙션을 다룬다. 모바일 768px 이하에서는 상세 페이지 대신 SOON이 열린다."
+  },
+  {
+    "id": "korail",
+    "label": "KORAIL · SOON",
+    "href": "/experiments/page-states/soon-stone/",
+    "info": "열차 부품의 기능·작동 원리·분해와 조립을 다루는 교육 앱. 상세 소개는 준비 중이며 SOON으로 연결된다."
+  },
+  {
+    "id": "hnkl-keywords",
+    "label": "핵심 콘셉트",
+    "href": "/works/projects/hnkl/hnkl.html#keywords",
+    "info": "가이드, 재미, 몰입을 사이트를 탐색하는 과정 전반에서 경험하도록 했다."
+  },
+  {
+    "id": "hnkl-logo",
+    "label": "로고",
+    "href": "/works/projects/hnkl/hnkl.html#logo",
+    "info": "HNKL의 N과 K를 하나의 조형으로 결합하고 전체가 이어지도록 획을 다듬었다."
+  },
+  {
+    "id": "hnkl-design-system",
+    "label": "디자인 시스템",
+    "href": "/works/projects/hnkl/hnkl.html#design-system",
+    "info": "색상, 서체, 아이콘, 움직임에 공통 기준을 적용했다. Foundations와 Interaction으로 구성된다. 젤리 커서는 홈의 AI가 방문자의 여정을 함께한다는 의미를 담고 속도에 따라 변형되고 호버하면 커진다."
+  },
+  {
+    "id": "hnkl-site-structure",
+    "label": "사이트 구조",
+    "href": "/works/projects/hnkl/hnkl.html#site-structure",
+    "info": "Home, About, Works와 Projects·Labs의 연결을 설명한다."
+  },
+  {
+    "id": "hnkl-ai-guide",
+    "label": "AI 가이드",
+    "href": "/works/projects/hnkl/hnkl.html#ai-guide",
+    "info": "현재 페이지와 보고 있는 섹션을 바탕으로 질문에 답하고 관련 페이지·섹션으로 이동하는 버튼을 제공한다."
+  },
+  {
+    "id": "hnkl-not-found",
+    "label": "페이지 인터랙션",
+    "href": "/works/projects/hnkl/hnkl.html#not-found",
+    "info": "SOON 돌 글자, WIP 벡터 편집, 404 파티클을 버튼으로 전환한다. 제작 중이거나 찾을 수 없는 페이지의 안내를 인터랙션으로 표현했다."
+  }
+]

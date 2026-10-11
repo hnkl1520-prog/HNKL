@@ -193,3 +193,8 @@ button:focus-visible {
   .back-btn { transition: none; }
   .back-btn:hover { transform: none; }
 }
+
+.is-embedded-preview .page-header,
+.is-embedded-preview .back-btn { display: none; }
+.is-embedded-preview body { grid-template-rows: minmax(0, 1fr) auto; }
+.is-embedded-preview h1 { margin-bottom: 0; }

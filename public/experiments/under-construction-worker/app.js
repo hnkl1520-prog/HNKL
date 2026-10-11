@@ -14,7 +14,7 @@ const positioner=make('g',{'data-positioner':'worker'},artwork);
 const character=createCharacter(positioner);
 const stageWidth=760;
 const stageHeight=540;
-let rect={left:stageWidth/2-120,top:100,right:stageWidth/2+120,bottom:440};
+let rect={left:stageWidth/2-120,top:70,right:stageWidth/2+120,bottom:440};
 let drag=null,pending=0;
 const history=[];
 const corners=['왼쪽 위','오른쪽 위','오른쪽 아래','왼쪽 아래'].map((name,i)=>{
@@ -42,6 +42,7 @@ function render(){
   positioner.setAttribute('transform',`translate(${rect.left} ${rect.top}) scale(${CHARACTER_SCALE})`);
   svg.dataset.pose=pose.progress.toFixed(4);
   svg.dataset.characterScale=CHARACTER_SCALE;
+  svg.dataset.poseName=pose.name;
 
 }
 function requestRender(){if(!pending)pending=requestAnimationFrame(()=>{pending=0;render();});}

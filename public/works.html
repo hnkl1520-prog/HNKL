@@ -88,7 +88,9 @@
     </style>
     <link rel="stylesheet" href="/responsive.css">
     <link rel="stylesheet" href="site-chat.css?v=20261011-1">
-    <script src="site-chat.js?v=20261011-1" defer></script>
+  <link rel="stylesheet" href="/ai-actions.css?v=20261012-ai">
+  <script src="/ai-client.js?v=20261012-ai" defer></script>
+    <script src="/site-chat.js?v=20261012-ai" defer></script>
 </head>
 <body class="page-works">
 
@@ -193,7 +195,7 @@
         const projectsData = [
             { active: true,  title: "HNKL — PORTFOLIO WEBSITE", cat: "WEB, DESIGN SYSTEM, INTERACTION", img: "works/projects/hnkl/thumb.webp?v=2", url: "works/projects/hnkl/hnkl.html" },
             { active: true,  title: "VIBRA: XR FOOTBALL BROADCASTING SERIVCE", cat: "XR, UX, INTERACTION", img: "works/projects/vibra/thumb.png", url: "works/projects/vibra/vibra.html" },
-            { active: true,  title: "KORAIL EDUCATION APP", cat: "UX, UI, AR, 3D", img: "works/projects/korail/thumb.png", url: "404.html" },
+            { active: true,  title: "KORAIL EDUCATION APP", cat: "UX, UI, AR, 3D", img: "works/projects/korail/thumb.png", url: "experiments/page-states/soon-stone/" },
             { active: false, title: "REST MODE", cat: "Mobility, UX, UI", img: "works/projects/restmode/thumb.png", url: "works/projects/restmode/restmode.html" },
             { active: false, title: "SWIG : a Smart Golf Cart", cat: "Mobility, UX, UI", img: "works/projects/swig/thumb.png", url: "404.html" },
             { active: false, title: "VA PLAY", cat: "AR, Mobile Service", img: "works/projects/vaplay/thumb.png", url: "404.html" },
@@ -210,7 +212,7 @@
             { title: "Untitled_02", cat: "Creative Coding", img: "works/labs/untitled-02/thumb.png", url: "works/labs/untitled-02/untitled-02.html" }
         ];
 
-        let currentCategory = 'projects';
+        let currentCategory = new URLSearchParams(location.search).get('category') === 'labs' ? 'labs' : 'projects';
 
         // ===============================================
         // INITIALIZATION
@@ -218,10 +220,12 @@
         window.addEventListener('load', () => {
             initPreloader(() => {
                 // 로딩이 끝난 후 실행될 콜백
-                renderWorks('projects');
+                renderWorks(currentCategory);
+                document.documentElement.classList.toggle('dark-mode', currentCategory === 'labs');
+                document.querySelectorAll('.dock-btn').forEach(btn => btn.classList.toggle('active', btn.id === 'btn-' + currentCategory));
                 
                 // 독(Dock) 초기 위치 설정
-                const initialBtn = document.getElementById('btn-projects');
+                const initialBtn = document.getElementById('btn-' + currentCategory);
                 if(initialBtn) movePill(initialBtn, true); 
             });
         });

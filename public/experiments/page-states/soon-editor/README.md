@@ -1,6 +1,6 @@
 # WIP — vector editor
 
-Standalone comparison at `/experiments/soon-editor/`. The live 404 uses the stone version; this editor is not selected automatically.
+Standalone comparison at `/experiments/page-states/soon-editor/`. The live 404 uses the stone version; this editor is not selected automatically.
 
 - Drag square anchors to reshape the closed glyph contours.
 - Select an anchor to expose its circular Bézier handles; drag a handle to change the curve. Smooth points keep tangent continuity, and Alt allows independent handles.

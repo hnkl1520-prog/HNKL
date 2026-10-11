@@ -1,34 +1,4 @@
 <!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#e8e8e6">
-  <meta name="robots" content="noindex">
-  <script>if(new URLSearchParams(location.search).get('embed')==='1')document.documentElement.classList.add('is-embedded-preview');</script>
-  <title>SOON — HNKL</title>
-  <link rel="icon" href="data:,">
-  <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.8/dist/web/static/pretendard.css">
-  <link rel="stylesheet" href="/experiments/soon-stone/style.css">
-  <script type="importmap">{"imports":{"three":"/experiments/soon-stone/vendor/three.module.js"}}</script>
-  <script type="module" src="/experiments/soon-stone/app.js"></script>
-</head>
-<body>
-  <a class="brand" href="/index.html" aria-label="HNKL Home">HNKL</a>
-  <main>
-    <div class="stage" id="stage" role="img" aria-label="Four limestone letters, S O O N, balanced on touching edges in midair. Hover or tap a letter to tilt it around its contact point."></div>
-    <div class="letter-controls" aria-label="Turn the stone letters">
-      <button data-letter="S" aria-label="Turn S">S</button>
-      <button data-letter="O1" aria-label="Turn the first O">O</button>
-      <button data-letter="O2" aria-label="Turn the second O">O</button>
-      <button data-letter="N" aria-label="Turn N">N</button>
-    </div>
-    <div class="caption">
-      <h1>UNDER CONSTRUCTION</h1>
-      <p class="status" id="status" aria-live="polite">Loading the sculpture</p>
-      <a href="/index.html" class="back-btn" data-hover-text="Go Back"><span>Go Back</span></a>
-    </div>
-  </main>
-  <noscript><p class="fallback">This page is under construction. Enable JavaScript to view the stone sculpture.</p></noscript>
-</body>
-</html>
+<html lang="ko"><meta charset="utf-8"><title>HNKL Preview</title>
+<script>location.replace("/experiments/page-states/soon-stone/"+location.search+location.hash);</script>
+<a href="/experiments/page-states/soon-stone/">미리보기 열기</a></html>

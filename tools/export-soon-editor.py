@@ -16,7 +16,7 @@ import bpy
 
 
 ROOT = Path(__file__).resolve().parents[1]
-OUTPUT = ROOT / "public/experiments/soon-editor/glyphs.js"
+OUTPUT = ROOT / "public/experiments/page-states/soon-editor/glyphs.js"
 FONT = "/System/Library/Fonts/Supplemental/Arial.ttf"
 GLYPHS = [("W", "w"), ("I", "i"), ("P", "p")]
 TOP, BOTTOM = 50.0, 310.0

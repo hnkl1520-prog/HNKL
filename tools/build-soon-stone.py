@@ -24,7 +24,7 @@ from mathutils import Vector
 
 
 ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_OUT = ROOT / "public/experiments/soon-stone/assets/soon-stone.glb"
+DEFAULT_OUT = ROOT / "public/experiments/page-states/soon-stone/assets/soon-stone.glb"
 FONT = "/System/Library/Fonts/Supplemental/Arial Bold.ttf"
 
 

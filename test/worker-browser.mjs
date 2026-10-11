@@ -4,7 +4,7 @@ import {launch} from './odd-mirror/chrome.mjs';
 
 const workerURL='http://localhost:8000/experiments/under-construction-worker/';
 const workerPath='/experiments/under-construction-worker/';
-const mobilePath='/experiments/soon-editor/';
+const mobilePath='/experiments/page-states/soon-editor/';
 
 // Measure the real paths before clipping, including their transformed strokes.
 // A clipPath hiding a limb outside the box must not count as containment.
@@ -13,7 +13,17 @@ function measureArtwork(root,coordinateSpace) {
  const bounds={left:Infinity,top:Infinity,right:-Infinity,bottom:-Infinity};
  const parts={};let samples=0;
  for(const el of root.querySelectorAll('path')) {
+  // Alternate glove drawings live in the SVG but do not paint. Counting
+  // their geometry would report fictitious overflows and contacts.
+  let hidden=false;
+  for(let n=el;n;n=n.parentElement){
+   const s=getComputedStyle(n);
+   if(s.display==='none'||s.visibility==='hidden'||Number(s.opacity)===0){hidden=true;break;}
+   if(n===root)break;
+  }
+  if(hidden||!el.getAttribute('d')?.trim())continue;
   const length=el.getTotalLength(),matrix=inverse.multiply(el.getCTM()),style=getComputedStyle(el);
+  if(length===0||(style.fill==='none'&&(style.stroke==='none'||parseFloat(style.strokeWidth)===0)))continue;
   const radius=style.stroke==='none'?0:parseFloat(style.strokeWidth)/2;
   const padX=radius*Math.hypot(matrix.a,matrix.c),padY=radius*Math.hypot(matrix.b,matrix.d);
   const part=el.closest('[data-part]')?.dataset.part??'artwork';
@@ -36,7 +46,7 @@ try {
  const page=await browser.open(workerURL,{width:1280,height:900});
  await page.waitFor("document.body?.dataset.ready==='true'");
  await page.eval('document.fonts.ready');
- const config=await page.eval("import('/experiments/under-construction-worker/pose.js').then(m=>({limits:m.SIZE_LIMITS,lengths:m.LENGTHS,scale:m.CHARACTER_SCALE}))");
+ const config=await page.eval("import('/experiments/under-construction-worker/pose.js').then(m=>({limits:m.SIZE_LIMITS,scale:m.CHARACTER_SCALE}))");
  assert.equal(config.scale,1,'the character has a fixed native scale');
  const settle=()=>page.eval('new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)))');
  const point=async i=>page.eval(`(()=>{const e=document.querySelector('[data-corner="${i}"]').getBoundingClientRect();return{x:e.x+e.width/2,y:e.y+e.height/2}})()`);
@@ -67,8 +77,10 @@ try {
  const checkBones=(bones)=>{
   assert.equal(bones.length,4);
   for(const bone of bones) {
-   const expected=bone.part.endsWith('leg')?[config.lengths.thigh,config.lengths.shin]:[config.lengths.upperArm,config.lengths.forearm];
-   assert.ok(Math.abs(bone.a-expected[0])<.002&&Math.abs(bone.b-expected[1])<.002,`${bone.part} keeps both bone lengths: ${bone.a}, ${bone.b}`);
+   assert.ok(Number.isFinite(bone.a)&&Number.isFinite(bone.b),`${bone.part} has finite joints`);
+   // Authored poses bend and turn rather than preserving a rigid front-view
+   // skeleton. Still catch collapsed segments and runaway stretching.
+   assert.ok(bone.a>=10&&bone.b>=10&&bone.a<=150&&bone.b<=150,`${bone.part} has plausible segment lengths: ${bone.a}, ${bone.b}`);
   }
  };
  const check=(state)=>{
@@ -91,7 +103,9 @@ try {
   stage.append(parent);document.body.append(stage);const rig=createCharacter(parent),results=[];
   const series=(a,b)=>Array.from({length:7},(_,i)=>a+(b-a)*i/6);
   try {
-   for(const width of series(SIZE_LIMITS.minWidth,SIZE_LIMITS.maxWidth))for(const height of series(SIZE_LIMITS.minHeight,SIZE_LIMITS.maxHeight)) {
+   const sizes=series(SIZE_LIMITS.minWidth,SIZE_LIMITS.maxWidth).flatMap(width=>series(SIZE_LIMITS.minHeight,SIZE_LIMITS.maxHeight).map(height=>({width,height,grid:true})));
+   sizes.push(...[[240,370,'standing'],[170,370,'wall-contact'],[240,330,'ceiling-contact'],[205,185,'seated'],[330,185,'reclining']].map(([width,height,expectedName])=>({width,height,expectedName,grid:false})));
+   for(const {width,height,expectedName,grid} of sizes) {
     const pose=createPose(width,height);rig.render(pose);
     const measured=(${measureArtwork.toString()})(rig.figure,rig.figure),{bounds}=measured;
     const bones=[...pose.legs,...pose.arms].map((bone,i)=>({
@@ -100,36 +114,52 @@ try {
      b:Math.hypot(bone.end.x-bone.joint.x,bone.end.y-bone.joint.y),
      reach:Math.hypot(bone.end.x-bone.root.x,bone.end.y-bone.root.y),
     }));
-    results.push({width,height,...measured,bones,angle:pose.torso.angle,hip:pose.torso.hip,margin:{left:bounds.left,top:bounds.top,right:width-bounds.right,bottom:height-bounds.bottom}});
+    const matrix=stage.getCTM().inverse().multiply(rig.figure.getCTM());
+    results.push({width,height,grid,expectedName,name:pose.name,contacts:pose.contacts,handModes:pose.handModes,bootAngles:pose.bootAngles,scale:Math.hypot(matrix.a,matrix.b),...measured,bones,angle:pose.torso.angle,hip:pose.torso.hip,margin:{left:bounds.left,top:bounds.top,right:width-bounds.right,bottom:height-bounds.bottom}});
    }
   } finally {stage.remove();}
   return results;
  })()`);
  await writeFile('/tmp/worker-pose-grid.json',JSON.stringify({grid},null,2));
- assert.equal(grid.length,49);
- assert.deepEqual(grid.filter(s=>Object.values(s.margin).some(value=>value<-.2)).map(({width,height,margin})=>({width,height,margin})),[],'all 49 actual outlines fit before clipping');
+ assert.equal(grid.filter(s=>s.grid).length,49);
+ assert.deepEqual(grid.filter(s=>Object.values(s.margin).some(value=>value<-.2)).map(({width,height,margin})=>({width,height,margin})),[],'all 49 grid poses and 5 authored states fit before clipping');
  for(const state of grid) {
   checkBones(state.bones);
-  for(const part of ['far-boot','near-boot']) {
-   const floorGap=state.height-state.parts[part].bottom;
-   assert.ok(floorGap>=-.2&&floorGap<=2.5,`${part} rests on the floor at ${state.width}x${state.height}: gap ${floorGap}`);
+  assert.ok(state.samples>100,'each pose measures actual visible SVG paths');
+  assert.equal(state.scale,1,'authored pose keeps the character at native size');
+  for(const part of ['head','torso','far-arm','near-arm','far-leg','near-leg','far-hand','near-hand','far-boot','near-boot'])assert.ok(state.parts[part],`${state.width}x${state.height} paints ${part}`);
+  const gaps={ceiling:state.parts['far-hand'].top,wall:state.width-state.parts['far-hand'].right,floor:state.height-state.parts['near-hand'].bottom};
+  for(const [edge,active] of Object.entries(state.contacts))if(active) {
+   assert.ok(gaps[edge]>=-.2&&gaps[edge]<=2.5,`${state.name} visibly touches ${edge} at ${state.width}x${state.height}: gap ${gaps[edge]}`);
   }
-  assert.ok(Math.abs(state.parts['far-boot'].bottom-state.parts['near-boot'].bottom)<.25,'both boot soles share a floor');
+  const floorGap=state.height-state.parts['near-boot'].bottom;
+  assert.ok(floorGap>=-.2&&floorGap<=2.5,`the supporting boot stays on the floor at ${state.width}x${state.height}: gap ${floorGap}`);
+  if(state.expectedName)assert.equal(state.name,state.expectedName,`authored pose at ${state.width}x${state.height}`);
  }
  const standing=grid.filter(state=>state.height===config.limits.maxHeight);
  for(const state of standing) {
   assert.ok(Math.abs(state.angle)<.5*Math.PI/180,'tall boxes keep the torso upright');
   for(const leg of state.bones.slice(0,2))assert.ok(leg.reach/(leg.a+leg.b)>=.97,`standing ${leg.part} is nearly straight`);
  }
- const compact=grid.find(state=>state.width===config.limits.minWidth&&state.height===config.limits.minHeight);
- assert.ok(compact.parts.torso.left>=-.2&&compact.parts.torso.left<=4,'the smallest seated pose rests its back and seat at the left wall');
- for(const leg of compact.bones.slice(0,2))assert.ok(leg.joint.y<leg.root.y-15,'the smallest pose folds its knees upward');
+ const compact=grid.find(state=>state.expectedName==='seated');
+ assert.equal(compact.contacts.ceiling,true,'the compact pose braces a hand against the ceiling');
+ assert.equal(compact.contacts.floor,true,'the compact pose supports the other hand on the floor');
+ for(const leg of compact.bones.slice(0,2))assert.ok(leg.joint.y<leg.root.y-15,'the compact pose folds its knees upward');
+ const reclining=grid.find(state=>state.expectedName==='reclining');
+ assert.ok(reclining.angle<-25*Math.PI/180,'the wide low pose reclines');
+ assert.ok(Math.abs(reclining.width-reclining.parts['far-boot'].right)<=2.5,'the reclining raised boot braces against the right wall');
 
  const initial=await inspect();check(initial);
  await drag(2,40,-50);const changed=await inspect();check(changed);
  assert.notDeepEqual(changed.rect,initial.rect,'mouse drag changes the frame');
  await undo();const restored=await inspect();check(restored);
  assert.deepEqual(restored.rect,initial.rect,'desktop undo restores the previous frame');
+ await page.eval("document.querySelector('[data-corner=\"2\"]').focus()");
+ await page.send('Input.dispatchKeyEvent',{type:'keyDown',key:'ArrowRight',code:'ArrowRight'});
+ await page.send('Input.dispatchKeyEvent',{type:'keyUp',key:'ArrowRight',code:'ArrowRight'});
+ await settle();const keyboard=await inspect();check(keyboard);
+ assert.ok(Math.abs(keyboard.rect.w-initial.rect.w-6)<.01,'focused corner responds to keyboard resize');
+ await undo();assert.deepEqual((await inspect()).rect,initial.rect,'undo also restores keyboard resize');
  const results=[initial];
  for(const [corner,dx,dy] of [[2,1000,1000],[0,1000,1000],[0,-1000,-1000],[1,1000,1000],[3,1000,-1000]]) {
   await drag(corner,dx,dy);const state=await inspect();check(state);results.push(state);
@@ -160,5 +190,5 @@ try {
  routes.push({width:1024,path:await coarsePage.eval('location.pathname'),pointer:'coarse'});
  assert.equal(await coarsePage.eval('document.documentElement.scrollWidth>innerWidth'),false,'mobile fallback does not overflow');
  await coarsePage.close();
- console.log(JSON.stringify({gridPoses:grid.length,minimumGridMargin:Math.min(...grid.flatMap(s=>Object.values(s.margin))),desktopPoses:results.map(s=>s.pose),frames:results.map(s=>s.rect),constantScale:config.scale,rigidLimbs:true,contained:true,standing:true,seated:true,desktopUndo:true,routes}));
+ console.log(JSON.stringify({gridPoses:grid.filter(s=>s.grid).length,authoredPoses:grid.filter(s=>s.expectedName).map(s=>s.name),minimumGridMargin:Math.min(...grid.flatMap(s=>Object.values(s.margin))),desktopPoses:results.map(s=>s.pose),frames:results.map(s=>s.rect),constantScale:config.scale,contained:true,visibleContacts:true,standing:true,seated:true,desktopUndo:true,keyboardResize:true,routes}));
 } finally {await browser.close();}

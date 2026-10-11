@@ -3,6 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script>
+        (() => {
+            const mobile = matchMedia('(max-width: 768px)');
+            const showSoon = () => {
+                if (mobile.matches) location.replace('/experiments/page-states/soon-stone/');
+            };
+            mobile.addEventListener('change', showSoon);
+            showSoon();
+        })();
+    </script>
     <title>VIBRA — XR Football Broadcasting Platform</title>
 
     <!-- Pretendard Font -->
@@ -1518,6 +1528,10 @@
 
 
     </style>
+  <link rel="stylesheet" href="/site-chat.css?v=20261012-ai">
+  <link rel="stylesheet" href="/ai-actions.css?v=20261012-ai">
+  <script src="/ai-client.js?v=20261012-ai" defer></script>
+  <script src="/site-chat.js?v=20261012-ai" defer></script>
 </head>
 <body>
 

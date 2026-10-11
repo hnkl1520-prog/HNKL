@@ -11,15 +11,19 @@
   <link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
   <link rel="stylesheet" href="../../../tokens.css">
   <link rel="stylesheet" href="../../../common.css">
-  <link rel="stylesheet" href="hnkl.css">
+  <link rel="stylesheet" href="hnkl.css?v=20261012-mobile-copy">
   <link rel="stylesheet" href="core-motions.css">
-  <link rel="stylesheet" href="design-system.css">
+  <link rel="stylesheet" href="design-system.css?v=20261012-mobile-copy">
   <link rel="preload" as="image" href="media/hero.webp?v=2" fetchpriority="high">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js" defer></script>
   <script src="../../../common.js" defer></script>
   <script src="core-motions.js" defer></script>
   <script src="design-system.js" defer></script>
-  <script src="hnkl.js" defer></script>
+  <script src="hnkl.js?v=20261011-previews-2" defer></script>
+  <link rel="stylesheet" href="/site-chat.css?v=20261012-ai">
+  <link rel="stylesheet" href="/ai-actions.css?v=20261012-ai">
+  <script src="/ai-client.js?v=20261012-ai" defer></script>
+  <script src="/site-chat.js?v=20261012-ai" defer></script>
 </head>
 <body class="page-project page-hnkl">
   <header id="global-header" class="at-top">
@@ -28,7 +32,11 @@
         <a href="../../../index.html" class="header-logo hover-trigger" aria-label="HNKL Home"><img src="../../../assets/logo.svg" alt="HNKL"></a>
         <nav class="header-nav" aria-label="주 메뉴"><a href="../../../about.html" class="nav-link hover-trigger">About</a><a href="../../../works.html" class="nav-link active hover-trigger" aria-current="page">Works</a></nav>
       </div>
-      <div class="header-right"><a href="../../../works.html" class="nav-link hover-trigger">All works</a></div>
+      <div class="header-right">
+        <button class="lang-btn active hover-trigger">KR</button>
+        <span class="lang-divider">/</span>
+        <button class="lang-btn hover-trigger">EN</button>
+      </div>
     </div>
   </header>
   <div id="cursor-bg-layer" aria-hidden="true"><div id="cursor-circle"></div></div>
@@ -36,76 +44,81 @@
   <main>
     <div class="case-hero-stage">
       <div class="case-hero"><img src="media/hero.webp?v=2" width="2560" height="1440" alt="파랑, 보라, 틸 소재로 표현한 HNKL 로고" fetchpriority="high"></div>
-      <div class="case-overview"><div class="case-overview__inner"><h1>Overview</h1><p>HNKL은 디자이너 이한욱의 포트폴리오 웹사이트입니다. 작업물과 인터랙티브 미디어를 소개하고, 로고부터 화면 구성과 움직임까지 하나의 디자인 시스템으로 정리했습니다.</p></div></div>
+      <div class="case-overview"><div class="case-overview__inner"><h1>Overview</h1><p>작업을 소개할 포트폴리오 웹사이트를 기획하고 제작했습니다.<br>로고와 디자인 시스템부터 페이지 구성, 인터랙션까지 설계하며,<br>콘텐츠와 탐색 경험이 어우러지는 사이트를 만들고자 했습니다.</p></div></div>
     </div>
     <section class="case-section case-keywords" id="keywords" aria-labelledby="keywords-title">
       <div class="case-wrap">
         <header class="case-heading"><span>01</span><h2 id="keywords-title">Keywords</h2></header>
+        <p class="case-body case-lead">아래 세 가지 가치를 사이트의 핵심 콘셉트로 정하고,<br>탐색하는 과정 전반에서 경험할 수 있도록 했습니다.</p>
         <div class="case-grid case-grid--three">
-          <figure><div data-core-motion="guide"></div><figcaption class="case-caption"><h3>가이드</h3><p>작업과 프로필을 안내하는 AI 가이드</p></figcaption></figure>
-          <figure><div data-core-motion="fun"></div><figcaption class="case-caption"><h3>재미</h3><p>젤리 커서와 로고의 움직임</p></figcaption></figure>
-          <figure><div data-core-motion="immerse"></div><figcaption class="case-caption"><h3>몰입</h3><p>화면을 이어주는 전환과 반응</p></figcaption></figure>
+          <figure><div data-core-motion="guide"></div><figcaption class="case-caption"><h3>가이드</h3><p>대화형 챗봇으로 탐색을 돕는 AI 가이드</p></figcaption></figure>
+          <figure><div data-core-motion="fun"></div><figcaption class="case-caption"><h3>재미</h3><p>사이트를 탐색하는 과정에서 느끼는 재미</p></figcaption></figure>
+          <figure><div data-core-motion="immerse"></div><figcaption class="case-caption"><h3>몰입</h3><p>불편함 없이 콘텐츠에 집중하는 몰입</p></figcaption></figure>
         </div>
       </div>
     </section>
     <section class="case-section" id="logo" aria-labelledby="logo-title">
       <div class="case-wrap">
         <header class="case-heading"><span>02</span><h2 id="logo-title">Logo</h2></header>
+        <p class="case-body case-lead">HNKL의 N과 K를 하나의 조형으로 결합하고,<br>전체가 자연스럽게 이어지도록 획을 다듬었습니다.</p>
         <figure class="case-media"><img src="media/logo-construction.webp" width="2048" height="1280" alt="HNKL 로고의 비례, 곡률, 각도를 정리한 제작 가이드" loading="lazy"></figure>
         <div class="case-grid case-logo-pair">
-          <figure><div class="case-media case-logo-mark"><img src="media/figma/d689b.svg" alt="HNKL 기본 로고" loading="lazy"></div><figcaption class="case-caption"><p>기본 로고</p></figcaption></figure>
-          <figure><div class="case-media case-media--half case-motion case-motion--inflating" data-media-slot="inflating-logo" data-motion-demo><video id="inflating-logo-video" width="1920" height="1080" loop muted playsinline preload="none" poster="media/inflating-logo-poster.webp?v=2" aria-label="서로 다른 소재의 HNKL 로고가 부풀어 오르는 애니메이션"><source src="media/inflating-logo.mp4?v=2" type="video/mp4"></video></div><figcaption class="case-caption"><p>인플레이팅 로고</p></figcaption></figure>
+          <figure><div class="case-media case-logo-mark"><img src="media/figma/d689b.svg" alt="HNKL 기본 로고" loading="lazy"></div></figure>
+          <figure><div class="case-media case-media--half case-motion case-motion--inflating" data-media-slot="inflating-logo" data-motion-demo><video id="inflating-logo-video" width="1920" height="1080" loop muted playsinline preload="none" poster="media/inflating-logo-poster.webp?v=2" aria-label="서로 다른 소재의 HNKL 로고가 부풀어 오르는 애니메이션"><source src="media/inflating-logo.mp4?v=2" type="video/mp4"></video></div></figure>
         </div>
       </div>
     </section>
     <section class="case-section hnkl-ds" id="design-system" aria-labelledby="design-system-title">
   <div class="case-wrap">
-    <header class="hnkl-ds__section-heading"><span>03</span><h2 id="design-system-title">Design system</h2></header>
+    <header class="case-heading"><span>03</span><h2 id="design-system-title">Design system</h2></header>
+        <p class="case-body case-lead">색상, 서체, 아이콘과 움직임의 기준을 정리해 페이지 전반에 일관성을 유지했습니다.<br>화면이 달라져도 하나의 사이트를 탐색하는 경험이 이어지도록 구성했습니다.</p>
     <div class="hnkl-ds__foundations">
+      <h3 class="hnkl-ds__subsection-title">Foundations</h3>
       <div class="hnkl-ds__row hnkl-ds__row--palette">
         <article class="hnkl-ds__card hnkl-ds__palette">
-          <header class="hnkl-ds__card-heading"><h3>Color palette</h3><span>01.1</span></header>
+          <header class="hnkl-ds__card-heading"><h4>Color palette</h4></header>
           <div class="hnkl-ds__palette-main"><div class="hnkl-ds__ramps"><div class="hnkl-ds__ramp hnkl-ds__ramp--primary"><div class="hnkl-ds__ramp-label"><strong>Primary</strong><span>#3B82F6</span></div><div class="hnkl-ds__ramp-steps" aria-hidden="true"><i style="background:var(--primary-10)"></i><i style="background:var(--primary-20)"></i><i style="background:var(--primary-30)"></i><i style="background:var(--primary-40)"></i><i style="background:var(--primary-50)"></i><i style="background:var(--primary-60)"></i><i style="background:var(--primary-70)"></i><i style="background:var(--primary-80)"></i><i style="background:var(--primary-90)"></i><i style="background:var(--primary-100)"></i></div></div><div class="hnkl-ds__ramp hnkl-ds__ramp--purple"><div class="hnkl-ds__ramp-label"><strong>Sub 1</strong><span>#9C6DFF</span></div><div class="hnkl-ds__ramp-steps" aria-hidden="true"><i style="background:var(--purple-10)"></i><i style="background:var(--purple-30)"></i><i style="background:var(--purple-50)"></i><i style="background:var(--purple-70)"></i><i style="background:var(--purple-90)"></i></div></div><div class="hnkl-ds__ramp hnkl-ds__ramp--teal"><div class="hnkl-ds__ramp-label"><strong>Sub 2</strong><span>#4FD1C5</span></div><div class="hnkl-ds__ramp-steps" aria-hidden="true"><i style="background:var(--teal-10)"></i><i style="background:var(--teal-30)"></i><i style="background:var(--teal-50)"></i><i style="background:var(--teal-70)"></i><i style="background:var(--teal-90)"></i></div></div></div><div class="hnkl-ds__gradient"><strong>Gradient</strong><span>Primary · Sub 1 · Sub 2</span></div></div>
           <div class="hnkl-ds__neutral"><div class="hnkl-ds__neutral-ramp" aria-label="Neutral color scale"><i style="background:var(--gray-1)"></i><i style="background:var(--gray-5)"></i><i style="background:var(--gray-10)"></i><i style="background:var(--gray-15)"></i><i style="background:var(--gray-20)"></i><i style="background:var(--gray-30)"></i><i style="background:var(--gray-40)"></i><i style="background:var(--gray-50)"></i><i style="background:var(--gray-60)"></i><i style="background:var(--gray-70)"></i><i style="background:var(--gray-80)"></i><i style="background:var(--gray-90)"></i><i style="background:var(--gray-95)"></i><i style="background:var(--gray-100)"></i></div><div class="hnkl-ds__neutral-labels"><span>Light · #FCFCFF</span><span>Dark · #010102</span></div></div>
         </article>
         <article class="hnkl-ds__card hnkl-ds__font">
-          <header class="hnkl-ds__card-heading"><h3>Font family</h3><span>01.2</span></header>
+          <header class="hnkl-ds__card-heading"><h4>Font family</h4></header>
           <div class="hnkl-ds__font-specimen"><p class="hnkl-ds__font-large">Aa 가</p><p class="hnkl-ds__alphabet">ABCDEFGHIJKLMNOPQRSTUVWXYZ<br>abcdefghijklmnopqrstuvwxyz<br>0123456789</p><p class="hnkl-ds__font-details">Pretendard<br>Light 300 · Regular 400 · Medium 500<br>Semibold 600 · Bold 700</p></div>
         </article>
       </div>
       <div class="hnkl-ds__row hnkl-ds__row--type">
         <div class="hnkl-ds__supporting">
-          <article class="hnkl-ds__card hnkl-ds__roles"><header class="hnkl-ds__card-heading"><h3>Color roles</h3><span>LIGHT → DARK</span></header><div class="hnkl-ds__role-list"><div class="hnkl-ds__role"><span>Background</span><span><i style="background:var(--gray-5)"></i>#F1F1F3</span><span><i style="background:var(--gray-100)"></i>#010102</span></div><div class="hnkl-ds__role"><span>Surface</span><span><i style="background:var(--gray-1)"></i>#FCFCFF</span><span><i style="background:var(--gray-95)"></i>#17171A</span></div><div class="hnkl-ds__role"><span>Text</span><span><i style="background:var(--gray-95)"></i>#17171A</span><span><i style="background:var(--gray-5)"></i>#F1F1F3</span></div><div class="hnkl-ds__role"><span>Border</span><span><i style="background:var(--gray-15)"></i>#E4E4E7</span><span><i style="background:var(--gray-80)"></i>#3A3A3D</span></div></div></article>
-          <article class="hnkl-ds__card hnkl-ds__icons"><header class="hnkl-ds__card-heading"><h3>Icons</h3><span>01.5</span></header><div class="hnkl-ds__icon-grid"><div class="hnkl-ds__icon" title="Chat"><img src="media/figma/e40bc.svg" alt="Chat" loading="lazy"></div><div class="hnkl-ds__icon" title="Close"><img src="media/figma/d3766.svg" alt="Close" loading="lazy"></div><div class="hnkl-ds__icon" title="Labs"><img src="media/figma/012b3.svg" alt="Labs" loading="lazy"></div><div class="hnkl-ds__icon" title="Minimize"><img src="media/figma/87a09.svg" alt="Minimize" loading="lazy"></div><div class="hnkl-ds__icon" title="Projects"><img src="media/figma/8e293.svg" alt="Projects" loading="lazy"></div><div class="hnkl-ds__icon" title="Send"><img src="media/figma/6ad82.svg" alt="Send" loading="lazy"></div></div></article>
+          <article class="hnkl-ds__card hnkl-ds__roles"><header class="hnkl-ds__card-heading"><h4>Color roles</h4><span>LIGHT → DARK</span></header><div class="hnkl-ds__role-list"><div class="hnkl-ds__role"><span>Background</span><span><i style="background:var(--gray-5)"></i>#F1F1F3</span><span><i style="background:var(--gray-100)"></i>#010102</span></div><div class="hnkl-ds__role"><span>Surface</span><span><i style="background:var(--gray-1)"></i>#FCFCFF</span><span><i style="background:var(--gray-95)"></i>#17171A</span></div><div class="hnkl-ds__role"><span>Text</span><span><i style="background:var(--gray-95)"></i>#17171A</span><span><i style="background:var(--gray-5)"></i>#F1F1F3</span></div><div class="hnkl-ds__role"><span>Border</span><span><i style="background:var(--gray-15)"></i>#E4E4E7</span><span><i style="background:var(--gray-80)"></i>#3A3A3D</span></div></div></article>
+          <article class="hnkl-ds__card hnkl-ds__icons"><header class="hnkl-ds__card-heading"><h4>Icons</h4></header><div class="hnkl-ds__icon-grid"><div class="hnkl-ds__icon" title="Chat"><img src="media/figma/e40bc.svg" alt="Chat" loading="lazy"></div><div class="hnkl-ds__icon" title="Close"><img src="media/figma/d3766.svg" alt="Close" loading="lazy"></div><div class="hnkl-ds__icon" title="Labs"><img src="media/figma/012b3.svg" alt="Labs" loading="lazy"></div><div class="hnkl-ds__icon" title="Minimize"><img src="media/figma/87a09.svg" alt="Minimize" loading="lazy"></div><div class="hnkl-ds__icon" title="Projects"><img src="media/figma/8e293.svg" alt="Projects" loading="lazy"></div><div class="hnkl-ds__icon" title="Send"><img src="media/figma/6ad82.svg" alt="Send" loading="lazy"></div></div></article>
         </div>
-        <article class="hnkl-ds__card hnkl-ds__type"><header class="hnkl-ds__card-heading"><h3>Type scale</h3><span>01.3</span></header><div class="hnkl-ds__type-list"><div class="hnkl-ds__type-row"><p class="hnkl-ds__type-sample hnkl-ds__type-sample--display">Aa 가나다</p><div class="hnkl-ds__metrics"><span>Display</span><span>64 px / 600 / 1.2</span></div></div><div class="hnkl-ds__type-row"><p class="hnkl-ds__type-sample hnkl-ds__type-sample--h1">큰 제목</p><div class="hnkl-ds__metrics"><span>Heading 1</span><span>40 px / 600 / 1.25</span></div></div><div class="hnkl-ds__type-row"><p class="hnkl-ds__type-sample hnkl-ds__type-sample--h2">섹션 제목</p><div class="hnkl-ds__metrics"><span>Heading 2</span><span>28 px / 600 / 1.3</span></div></div><div class="hnkl-ds__type-row"><p class="hnkl-ds__type-sample hnkl-ds__type-sample--h3">콘텐츠를 나누는 소제목</p><div class="hnkl-ds__metrics"><span>Heading 3</span><span>22 px / 600 / 1.4</span></div></div><div class="hnkl-ds__type-row"><p class="hnkl-ds__type-sample hnkl-ds__type-sample--body">읽기 편한 본문을 만듭니다.</p><div class="hnkl-ds__metrics"><span>Body</span><span>18 px / 400 / 1.7</span></div></div><div class="hnkl-ds__type-row"><p class="hnkl-ds__type-sample hnkl-ds__type-sample--small">설명을 보조하는 작은 글씨</p><div class="hnkl-ds__metrics"><span>Small</span><span>15 px / 400 / 1.5</span></div></div><div class="hnkl-ds__type-row"><p class="hnkl-ds__type-sample hnkl-ds__type-sample--caption">이미지와 정보를 설명하는 캡션</p><div class="hnkl-ds__metrics"><span>Caption</span><span>12 px / 400 / 1.5</span></div></div></div><p class="hnkl-ds__type-note">Base scale · 1440 px desktop ×0.8</p></article>
+        <article class="hnkl-ds__card hnkl-ds__type"><header class="hnkl-ds__card-heading"><h4>Type scale</h4></header><div class="hnkl-ds__type-list"><div class="hnkl-ds__type-row"><p class="hnkl-ds__type-sample hnkl-ds__type-sample--display">Aa 가나다</p><div class="hnkl-ds__metrics"><span>Display</span><span>64 px / 600 / 1.2</span></div></div><div class="hnkl-ds__type-row"><p class="hnkl-ds__type-sample hnkl-ds__type-sample--h1">큰 제목</p><div class="hnkl-ds__metrics"><span>Heading 1</span><span>40 px / 600 / 1.25</span></div></div><div class="hnkl-ds__type-row"><p class="hnkl-ds__type-sample hnkl-ds__type-sample--h2">섹션 제목</p><div class="hnkl-ds__metrics"><span>Heading 2</span><span>28 px / 600 / 1.3</span></div></div><div class="hnkl-ds__type-row"><p class="hnkl-ds__type-sample hnkl-ds__type-sample--h3">콘텐츠를 나누는 소제목</p><div class="hnkl-ds__metrics"><span>Heading 3</span><span>22 px / 600 / 1.4</span></div></div><div class="hnkl-ds__type-row"><p class="hnkl-ds__type-sample hnkl-ds__type-sample--body">읽기 편한 본문을 만듭니다.</p><div class="hnkl-ds__metrics"><span>Body</span><span>18 px / 400 / 1.7</span></div></div><div class="hnkl-ds__type-row"><p class="hnkl-ds__type-sample hnkl-ds__type-sample--small">설명을 보조하는 작은 글씨</p><div class="hnkl-ds__metrics"><span>Small</span><span>15 px / 400 / 1.5</span></div></div><div class="hnkl-ds__type-row"><p class="hnkl-ds__type-sample hnkl-ds__type-sample--caption">이미지와 정보를 설명하는 캡션</p><div class="hnkl-ds__metrics"><span>Caption</span><span>12 px / 400 / 1.5</span></div></div></div><p class="hnkl-ds__type-note">Base scale · 1440 px desktop ×0.8</p></article>
       </div>
     </div>
     <div class="hnkl-ds__interaction">
-      <h3 class="hnkl-ds__interaction-title">Interaction</h3>
+      <h3 class="hnkl-ds__subsection-title">Interaction</h3>
       <article class="hnkl-ds__card hnkl-ds__cursor-card">
         <div class="case-motion case-motion--cursor" data-motion-demo data-motion-label="젤리 커서 호버">
-          <video width="1008" height="600" id="cursor-hover-video" loop muted playsinline preload="none" poster="media/cursor-hover-poster.webp?v=4" aria-label="컬러 커서가 원형 화살표 버튼 위에서 커지며 겹친 색을 반전시키고, 벗어나면 원래 모습으로 돌아오는 영상">
-            <source src="media/cursor-hover-loop.mp4?v=4" type="video/mp4">
+          <video width="1008" height="600" id="cursor-hover-video" loop muted playsinline preload="none" poster="media/cursor-hover-poster.webp?v=5" aria-label="컬러 커서가 원형 화살표 버튼 위에서 커지며 겹친 색을 반전시키고, 벗어나면 원래 모습으로 돌아오는 영상">
+            <source src="media/cursor-hover-loop.mp4?v=5" type="video/mp4">
           </video>
         </div>
         <div class="hnkl-ds__cursor-copy">
           <h4>Jelly cursor</h4>
-          <p>클릭할 수 있는 요소 위에서는 커서가 커지고, 겹친 부분의 색이 반전됩니다.</p>
-          <p>이동할 때는 방향과 속도에 따라 늘어났다가 멈추면 원형으로 돌아옵니다.</p>
+          <p>홈 화면의 AI가 다른 페이지에서는 마우스를 따라다니는<br class="desktop-break"> 커서가 되어 방문자의 탐색 여정을 함께합니다.</p>
+          <p>이동 속도와 방향에 따라 유연하게 늘어나고,<br class="desktop-break"> 멈추면 다시 원형으로 돌아옵니다.</p>
+          <p>인터랙션이 가능한 오브젝트 위에 마우스를 올리면<br class="desktop-break"> 커서가 커져 반응할 수 있는 요소임을 알려줍니다.</p>
         </div>
       </article>
       <div class="hnkl-ds__motion-row hnkl-ds__motion-row--switch">
         <div class="hnkl-ds__card hnkl-ds__switch-demo" data-switch-demo>
-          <div class="hnkl-ds__card-heading"><h4>Projects / Labs</h4><span data-demo-theme>Light</span></div>
+          <div class="hnkl-ds__card-heading"><h4>Toggle</h4><span data-demo-theme>Light</span></div>
           <div class="hnkl-ds__switch-area">
             <div class="hnkl-ds__switcher" role="group" aria-label="Projects와 Labs 전환 데모"><span class="hnkl-ds__pill" aria-hidden="true"></span><button class="hnkl-ds__switch-btn is-active" data-demo-mode="projects" aria-pressed="true"><img src="../../../assets/Projects.svg" alt=""><span>Projects</span></button><button class="hnkl-ds__switch-btn" data-demo-mode="labs" aria-pressed="false"><img src="../../../assets/Labs.svg" alt=""><span>Labs</span></button></div>
           </div>
           <p class="hnkl-ds__switch-hint">Projects / Labs를 눌러 전환</p>
         </div>
-        <article class="hnkl-ds__card hnkl-ds__elastic"><header class="hnkl-ds__card-heading"><h4>Elastic motion</h4><span>01 → 02</span></header>
+        <article class="hnkl-ds__card hnkl-ds__elastic"><header class="hnkl-ds__card-heading"><h4>Elastic motion</h4></header>
           <div class="hnkl-ds__graph" role="img" aria-label="선택 영역이 목표 위치를 넘어섰다가 진동을 줄이며 안착하는 탄성 곡선"><div class="hnkl-ds__graph-art"><span class="hnkl-ds__graph-100">100%</span><span class="hnkl-ds__graph-0">0%</span><img class="hnkl-ds__graph-asset" src="media/figma/e6c95.svg" alt="" style="left:19.68px;top:17.68px" loading="lazy"><img class="hnkl-ds__graph-asset" src="media/figma/e6c95.svg" alt="" style="left:39.68px;top:17.68px" loading="lazy"><img class="hnkl-ds__graph-asset" src="media/figma/e6c95.svg" alt="" style="left:59.68px;top:17.68px" loading="lazy"><img class="hnkl-ds__graph-asset" src="media/figma/e6c95.svg" alt="" style="left:79.68px;top:17.68px" loading="lazy"><img class="hnkl-ds__graph-asset" src="media/figma/e6c95.svg" alt="" style="left:99.68px;top:17.68px" loading="lazy"><img class="hnkl-ds__graph-asset" src="media/figma/e6c95.svg" alt="" style="left:119.68px;top:17.68px" loading="lazy"><img class="hnkl-ds__graph-asset" src="media/figma/e6c95.svg" alt="" style="left:139.68px;top:17.68px" loading="lazy"><img class="hnkl-ds__graph-asset" src="media/figma/e6c95.svg" alt="" style="left:159.68px;top:17.68px" loading="lazy"><img class="hnkl-ds__graph-asset" src="media/figma/e6c95.svg" alt="" style="left:179.68px;top:17.68px" loading="lazy"><img class="hnkl-ds__graph-asset" src="media/figma/e6c95.svg" alt="" style="left:199.68px;top:17.68px" loading="lazy"><img class="hnkl-ds__graph-asset" src="media/figma/e6c95.svg" alt="" style="left:219.68px;top:17.68px" loading="lazy"><img class="hnkl-ds__graph-asset" src="media/figma/e6c95.svg" alt="" style="left:239.68px;top:17.68px" loading="lazy"><img class="hnkl-ds__graph-asset" src="media/figma/e6c95.svg" alt="" style="left:259.68px;top:17.68px" loading="lazy"><img class="hnkl-ds__graph-asset" src="media/figma/e6c95.svg" alt="" style="left:279.68px;top:17.68px" loading="lazy"><img class="hnkl-ds__graph-asset" src="media/figma/e6c95.svg" alt="" style="left:299.68px;top:17.68px" loading="lazy"><img class="hnkl-ds__graph-asset" src="media/figma/e6c95.svg" alt="" style="left:319.68px;top:17.68px" loading="lazy"><img class="hnkl-ds__graph-asset" src="media/figma/e6c95.svg" alt="" style="left:339.68px;top:17.68px" loading="lazy"><img class="hnkl-ds__graph-asset" src="media/figma/e6c95.svg" alt="" style="left:359.68px;top:17.68px" loading="lazy"><img class="hnkl-ds__graph-asset" src="media/figma/e6c95.svg" alt="" style="left:379.68px;top:17.68px" loading="lazy"><img class="hnkl-ds__graph-asset" src="media/figma/e6c95.svg" alt="" style="left:399.68px;top:17.68px" loading="lazy"><img class="hnkl-ds__graph-asset" src="media/figma/e6c95.svg" alt="" style="left:419.68px;top:17.68px" loading="lazy"><img class="hnkl-ds__graph-asset" src="media/figma/7df20.svg" alt="" style="left:20px;top:17.68px" loading="lazy"><img class="hnkl-ds__graph-asset" src="media/figma/7df20.svg" alt="" style="left:20px;top:37.68px" loading="lazy"><img class="hnkl-ds__graph-asset" src="media/figma/7df20.svg" alt="" style="left:20px;top:57.68px" loading="lazy"><img class="hnkl-ds__graph-asset" src="media/figma/7df20.svg" alt="" style="left:20px;top:77.68px" loading="lazy"><img class="hnkl-ds__graph-asset" src="media/figma/7df20.svg" alt="" style="left:20px;top:97.68px" loading="lazy"><img class="hnkl-ds__graph-asset" src="media/figma/7df20.svg" alt="" style="left:20px;top:117.68px" loading="lazy"><img class="hnkl-ds__graph-asset" src="media/figma/7df20.svg" alt="" style="left:20px;top:137.68px" loading="lazy"><img class="hnkl-ds__graph-asset" src="media/figma/7df20.svg" alt="" style="left:20px;top:157.68px" loading="lazy"><img class="hnkl-ds__graph-asset" src="media/figma/7df20.svg" alt="" style="left:20px;top:177.68px" loading="lazy"><img class="hnkl-ds__graph-asset" src="media/figma/7a5f1.svg" alt="" style="left:19.376px;top:28.946px" loading="lazy"><img class="hnkl-ds__graph-asset" src="media/figma/bd65f.svg" alt="" style="left:19.5px;top:64.5px" loading="lazy"><img class="hnkl-ds__graph-asset" src="media/figma/bd65f.svg" alt="" style="left:19.5px;top:193.5px" loading="lazy"><img class="hnkl-ds__graph-asset" src="media/figma/40ef4.svg" alt="" style="left:17px;top:62px" loading="lazy"><img class="hnkl-ds__graph-asset" src="media/figma/40ef4.svg" alt="" style="left:17px;top:191px" loading="lazy"><img class="hnkl-ds__graph-asset" src="media/figma/40ef4.svg" alt="" style="left:433px;top:62px" loading="lazy"></div></div>
-          <h5>탄성 있는 전환 · 1,000 ms</h5><p>빠르게 이동한 선택 영역이 목표를 살짝 넘어선 뒤,<br>반동을 줄이며 안착해 전환에 탄성을 더합니다.</p>
+          <h5>살짝 튕기는 움직임</h5><p>선택 영역이 목표 위치를 조금 지나친 뒤,<br>작게 흔들리며 제자리에 멈춥니다.</p>
         </article>
       </div>
     </div>
@@ -156,18 +169,21 @@
           </div>
           <div class="case-ai-copy">
             <h3>둘러보던 화면에서<br>바로 질문하기</h3>
-            <p class="case-body">Home, About, Works에서 작업과 디자이너에 대해 질문할 수 있습니다. About과 Works에서는 우하단 채팅 버튼으로 대화창을 엽니다.</p>
-            <p class="case-body">현재 화면 위에 반투명 대화창이 열려, 페이지를 이동하지 않고도 안내를 받을 수 있습니다. 창을 최소화하거나 닫으면 바로 탐색을 이어갈 수 있습니다.</p>
-            <small>Home · About · Works</small>
+            <p class="case-body">작업의 배경이나 제작 과정이 궁금할 때, AI 가이드와 대화하며 필요한 정보를 찾을 수 있습니다.</p>
+            <p class="case-body">콘텐츠 위에 가볍게 열리는 대화창으로, 보던 화면을 벗어나지 않고 질문과 탐색을 이어갑니다.</p>
           </div>
         </article>
       </div>
     </section>
     <section class="case-section" id="not-found" aria-labelledby="not-found-title">
       <div class="case-wrap">
-        <header class="case-heading"><span>06</span><h2 id="not-found-title">404</h2></header>
-        <p class="case-body case-lead">모서리를 맞댄 돌 글자가 포인터에 반응해 기울고, 반동과 함께 제자리로 돌아옵니다.</p>
-        <div class="case-media case-404" data-media-slot="not-found"><iframe src="../../../404.html?embed=1" title="포인터와 터치에 반응하는 SOON 돌 글자 인터랙션" loading="lazy"></iframe></div>
+        <header class="case-heading"><span>06</span><h2 id="not-found-title">페이지 인터랙션</h2></header>
+        <p class="case-body case-lead">제작 중인 페이지나 잘못 들어온 화면에서 필요한 안내를 인터랙션으로 풀었습니다.<br>잠시 멈추는 순간에도 작은 재미를 느낄 수 있도록 했습니다.</p>
+        <div class="case-media case-404" data-media-slot="not-found"><iframe id="state-preview" src="/experiments/page-states/soon-stone/?embed=1" title="SOON — 돌 글자 인터랙션" loading="lazy"></iframe></div>
+        <div class="preview-nav" role="group" aria-label="페이지 인터랙션 전환">
+          <button type="button" data-preview-step="-1" aria-label="이전" aria-controls="state-preview"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M18 18L9.5 12L18 6V18ZM8 6V18H6V6H8Z"/></svg></button>
+          <button type="button" data-preview-step="1" aria-label="다음" aria-controls="state-preview"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M6 18L14.5 12L6 6V18ZM16 6V18H18V6H16Z"/></svg></button>
+        </div>
       </div>
     </section>
   </main>
