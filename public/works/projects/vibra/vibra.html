@@ -19,7 +19,7 @@
     <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
 
     <!-- 디자인 토큰 → 공통 스타일 (tokens.css 가 먼저) -->
-    <link rel="stylesheet" href="../../../tokens.css">
+    <link rel="stylesheet" href="../../../tokens.css?v=20261012-scale-1">
     <link rel="stylesheet" href="../../../common.css">
 
     <!-- GSAP (스크롤 등장 애니메이션) + ScrollTrigger 플러그인 -->
@@ -44,17 +44,8 @@
             --accent-color: #3B82F6;          /* 메인 블루 포인트 컬러 */
             --qr2-accent: #3B82F6;            /* 차트 블루 컬러 */
 
-            /* ---------------------------------------------------------
-               전역 축소 배율 --vb-s
-               2560px 이상(32" 데스크탑): 1.0  — 현재 크기가 기준
-               1536px 이하(1920×1080@125%, 맥북): 0.8 — 브라우저 80% 보기와 동일
-               그 사이는 폭에 따라 매끄럽게 보간.
-               식: 0.5 + 화면폭/5120  (1536→0.8, 2560→1.0)
-
-               기본값을 1로 두고 아래 @supports에서만 덮어씀
-               → 길이÷길이 계산을 지원하지 않는 브라우저는 현재(100%) 크기로 안전하게 유지
-               --------------------------------------------------------- */
-            --vb-s: 1;
+            /* Use the shared scale; automatic viewport downscaling is disabled. */
+            --vb-s: var(--s);
 
             /* 페이지 고유 레이아웃 리듬 (반응형 대비 clamp)
                vw 항은 그대로 두고 상·하한만 배율을 곱함 = 브라우저 축소와 같은 결과 */
@@ -80,15 +71,8 @@
             --vb-track:   var(--gray-20);   /* 차트 트랙·구분선·다크 구간 보조 글자 */
             --vb-lead-gap: clamp(calc(44px * var(--vb-s)), 5vw, calc(72px * var(--vb-s))); /* 설명 문단 ↔ 그 아래 미디어/그리드 간격 */
 
-            /* 타이포 스케일 — common.css 기본값보다 페이지 전역에서 살짝 키움 */
-            --fs-caption: calc(15px * var(--vb-s));   /* 13 → 15 (작은 라벨·에셋 캡션) */
-            --fs-cap: calc(17px * var(--vb-s));       /* 이미지 아래 설명 캡션 — 너무 작지 않게 별도 스케일 */
-            --fs-body: calc(18px * var(--vb-s));      /* 17 → 18 (본문·설명) */
-            --fs-h3: calc(22px * var(--vb-s));        /* 20 → 22 (소제목·카드 제목) */
+            /* Typography comes from tokens.css; only layout spacing is local. */
             /* common.css 토큰도 같은 배율로 (제목·여백) */
-            --fs-h2: calc(28px * var(--vb-s));
-            --fs-h1: calc(40px * var(--vb-s));
-            --fs-display: calc(64px * var(--vb-s));
             --space-xs: calc(8px * var(--vb-s));
             --space-sm: calc(16px * var(--vb-s));
             --space-md: calc(32px * var(--vb-s));
@@ -104,12 +88,6 @@
             --vb-track:    var(--gray-80);
         }
 
-        /* 노트북 구간에서만 배율을 실제로 적용. 태블릿·모바일(1024px 미만)은 기존 반응형 규칙이 담당 */
-        @media (min-width: 1024px) {
-            @supports (width: calc(1px * clamp(0.8, calc(0.5 + 100vw / 5120px), 1))) {
-                :root { --vb-s: clamp(0.8, calc(0.5 + 100vw / 5120px), 1); }
-            }
-        }
         /* rem으로 쓰인 값(약 70곳)은 루트 폰트 크기로 한 번에 따라오게 함 */
         html { font-size: calc(16px * var(--vb-s)); }
 
@@ -1360,13 +1338,6 @@
         @media (max-width: 768px) {
             /* 타입 스케일을 폰에 맞게 비례 축소 (데스크탑 clamp 축소와 같은 결) */
             :root {
-                --fs-display: 42px;
-                --fs-h1:      30px;
-                --fs-h2:      24px;
-                --fs-h3:      20px;
-                --fs-body:    16px;
-                --fs-cap:     15px;
-                --fs-caption: 13px;
             }
             /* 가로로 삐져나가지 않게 (모바일에서 좌우로 밀리는 것 방지) */
             html, body { overflow-x: hidden; }
@@ -1451,12 +1422,6 @@
         }
         @media (max-width: 480px) {
             :root {
-                --fs-display: 34px;
-                --fs-h1:      26px;
-                --fs-h2:      21px;
-                --fs-h3:      18px;
-                --fs-body:    15px;
-                --fs-caption: 12px;
             }
             .vb-section { padding-block: clamp(44px, 11vw, 72px); }
             .vb-logo { max-height: 46px; }
@@ -1532,8 +1497,9 @@
   <link rel="stylesheet" href="/ai-actions.css?v=20261012-guide-v2">
   <script src="/ai-client.js?v=20261012-guide-v2" defer></script>
   <script src="/site-chat.js?v=20261012-guide-v2" defer></script>
+    <link rel="stylesheet" href="typography.css?v=20261012-release-1">
 </head>
-<body>
+<body class="page-vibra">
 
     <!-- 커스텀 젤리 커서 (common.js에서 작동) -->
     <div id="cursor-bg-layer"><div id="cursor-circle"></div></div>
@@ -1571,8 +1537,8 @@
             <!-- 아래에서 위로 덮는 반투명 텍스트 레이어 (Overview 만) -->
             <div class="vb-cover">
                 <div class="vb-cover__inner">
-                    <h3 class="vb-subtitle">Overview</h3>
-                    <p class="vb-body" data-en="VIBRA is a football broadcasting service that combines XR and interactive AI. It goes beyond simply watching matches — connecting viewers in real time, deepening their understanding of the game, and creating a tailored, immersive experience for every fan.">VIBRA는 XR과 인터랙티브 AI를 결합한 축구 중계 서비스입니다.<br>단순히 경기를 보는 것을 넘어, 시청자를 실시간으로 연결하고 경기에 대한<br>이해를 넓히며, 모든 팬에게 맞춤화된 몰입 경험을 제공합니다.</p>
+                    <h3 class="vb-subtitle" data-vb-type="h1">Overview</h3>
+                    <p class="vb-body" data-en="VIBRA is a football broadcasting service that combines XR and interactive AI. It goes beyond simply watching matches — connecting viewers in real time, deepening their understanding of the game, and creating a tailored, immersive experience for every fan." data-vb-type="intro">VIBRA는 XR과 인터랙티브 AI를 결합한 축구 중계 서비스입니다.<br>시청자를 실시간으로 연결하고 경기에 대한 이해를 넓히며,<br>모든 팬에게 맞춤화된 몰입 경험을 제공합니다.</p>
                 </div>
             </div>
         </div>
@@ -1588,23 +1554,23 @@
                 <div class="vb-info-grid">
                     <!-- 좌: PROJECT INFO 라벨 + 메타 + Role -->
                     <div class="vb-info-col reveal">
-                        <span class="vb-info-label">Project Info</span>
+                        <span class="vb-info-label" data-vb-type="small">Project Info</span>
                         <div class="vb-meta">
                         <div class="vb-meta__row">
-                            <span class="vb-meta__key">Type</span>
-                            <span class="vb-meta__val">Team Project</span>
+                            <span class="vb-meta__key" data-vb-type="caption">Type</span>
+                            <span class="vb-meta__val" data-vb-type="small">Team Project</span>
                         </div>
                         <div class="vb-meta__row">
-                            <span class="vb-meta__key">Duration</span>
-                            <span class="vb-meta__val">2024.03 – 2024.11</span>
+                            <span class="vb-meta__key" data-vb-type="caption">Duration</span>
+                            <span class="vb-meta__val" data-vb-type="small">2024.03 – 2024.11</span>
                         </div>
                         <div class="vb-meta__row">
-                            <span class="vb-meta__key">Members</span>
-                            <span class="vb-meta__val">2</span>
+                            <span class="vb-meta__key" data-vb-type="caption">Members</span>
+                            <span class="vb-meta__val" data-vb-type="small">2</span>
                         </div>
                         <div class="vb-meta__row">
-                            <span class="vb-meta__key">Contribution</span>
-                            <span class="vb-meta__val">70%
+                            <span class="vb-meta__key" data-vb-type="caption">Contribution</span>
+                            <span class="vb-meta__val" data-vb-type="small">70%
                                 <button type="button" class="vb-toggle-btn hover-trigger"
                                         id="vb-contrib-toggle" aria-expanded="false" aria-controls="vb-roles"
                                         aria-label="역할별 기여도 보기">
@@ -1617,27 +1583,27 @@
                             <div class="vb-roles-inner">
                                 <div class="vb-roles">
                                     <div class="vb-role">
-                                        <div class="vb-role__head"><span class="vb-role__name">Research</span><span class="vb-role__pct">50%</span></div>
+                                        <div class="vb-role__head"><span class="vb-role__name" data-vb-type="small">Research</span><span class="vb-role__pct" data-vb-type="small">50%</span></div>
                                         <div class="vb-bar"><div class="vb-bar__fill" data-pct="50"></div></div>
                                     </div>
                                     <div class="vb-role">
-                                        <div class="vb-role__head"><span class="vb-role__name">UX · UI</span><span class="vb-role__pct">70%</span></div>
+                                        <div class="vb-role__head"><span class="vb-role__name" data-vb-type="small">UX · UI</span><span class="vb-role__pct" data-vb-type="small">70%</span></div>
                                         <div class="vb-bar"><div class="vb-bar__fill" data-pct="70"></div></div>
                                     </div>
                                     <div class="vb-role">
-                                        <div class="vb-role__head"><span class="vb-role__name">Interaction</span><span class="vb-role__pct">70%</span></div>
+                                        <div class="vb-role__head"><span class="vb-role__name" data-vb-type="small">Interaction</span><span class="vb-role__pct" data-vb-type="small">70%</span></div>
                                         <div class="vb-bar"><div class="vb-bar__fill" data-pct="70"></div></div>
                                     </div>
                                     <div class="vb-role">
-                                        <div class="vb-role__head"><span class="vb-role__name">Modeling</span><span class="vb-role__pct">90%</span></div>
+                                        <div class="vb-role__head"><span class="vb-role__name" data-vb-type="small">Modeling</span><span class="vb-role__pct" data-vb-type="small">90%</span></div>
                                         <div class="vb-bar"><div class="vb-bar__fill" data-pct="90"></div></div>
                                     </div>
                                     <div class="vb-role">
-                                        <div class="vb-role__head"><span class="vb-role__name">Rendering</span><span class="vb-role__pct">90%</span></div>
+                                        <div class="vb-role__head"><span class="vb-role__name" data-vb-type="small">Rendering</span><span class="vb-role__pct" data-vb-type="small">90%</span></div>
                                         <div class="vb-bar"><div class="vb-bar__fill" data-pct="90"></div></div>
                                     </div>
                                     <div class="vb-role">
-                                        <div class="vb-role__head"><span class="vb-role__name">Prototyping</span><span class="vb-role__pct">100%</span></div>
+                                        <div class="vb-role__head"><span class="vb-role__name" data-vb-type="small">Prototyping</span><span class="vb-role__pct" data-vb-type="small">100%</span></div>
                                         <div class="vb-bar"><div class="vb-bar__fill" data-pct="100"></div></div>
                                     </div>
                                 </div>
@@ -1649,7 +1615,7 @@
                     <!-- 우: 크레딧 (Produced with / Featured by) — 로고 PNG -->
                     <div class="vb-credits reveal">
                         <div class="vb-credit">
-                            <div class="vb-credit__label">Produced with</div>
+                            <div class="vb-credit__label" data-vb-type="caption">Produced with</div>
                             <div class="vb-logos">
                                 <img class="vb-logo" src="media/logos/gangwonfc.png" alt="강원 FC"
                                      onerror="this.outerHTML='<span class=&quot;vb-chip&quot;>강원 FC</span>'">
@@ -1658,7 +1624,7 @@
                             </div>
                         </div>
                         <div class="vb-credit">
-                            <div class="vb-credit__label">Featured by</div>
+                            <div class="vb-credit__label" data-vb-type="caption">Featured by</div>
                             <div class="vb-logos">
                                 <img class="vb-logo" src="media/logos/designboom.png" alt="designboom"
                                      onerror="this.outerHTML='<span class=&quot;vb-chip&quot;>designboom</span>'">
@@ -1689,36 +1655,36 @@
             <div class="vb-wrap">
                 <!-- 타이틀 → 설명 → 타임라인 (전부 가운데 정렬) -->
                 <div class="bg-head">
-                    <span class="vb-eyebrow reveal">Background</span>
-                    <h2 class="vb-title reveal">축구 중계, 그 다음은?</h2>
-                    <p class="bg-desc reveal">신문에서 라디오, 흑백 TV에서 컬러 TV. 축구 중계는 늘 더 깊은 몰입을 향해<br>진화해 왔습니다. 우리는 그 다음 단계가 <strong>XR</strong>이라고 봤습니다.</p>
+                    <span class="vb-eyebrow reveal" data-vb-type="small">Background</span>
+                    <h2 class="vb-title reveal" data-vb-type="h1">축구 중계, 그 다음은?</h2>
+                    <p class="bg-desc reveal" data-vb-type="body">신문에서 라디오, 흑백 TV에서 컬러 TV. 축구 중계는 늘 더 깊은 몰입을 향해<br>진화해 왔습니다. 우리는 그 다음 단계가 <strong>XR</strong>이라고 봤습니다.</p>
                 </div>
 
                 <!-- Print → Radio → TV → XR (몰입도 진화 라인) -->
                 <div class="bg-flow reveal">
                     <div class="bg-step">
-                        <span class="bg-step__year">1862</span>
+                        <span class="bg-step__year" data-vb-type="small">1862</span>
                         <span class="bg-step__icon"><img src="media/icons/print.png" alt="Print"></span>
-                        <span class="bg-step__label">신문</span>
+                        <span class="bg-step__label" data-vb-type="small">신문</span>
                     </div>
                     <span class="bg-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
                     <div class="bg-step">
-                        <span class="bg-step__year">1927</span>
+                        <span class="bg-step__year" data-vb-type="small">1927</span>
                         <span class="bg-step__icon"><img src="media/icons/radio.png" alt="Radio"></span>
-                        <span class="bg-step__label">라디오</span>
+                        <span class="bg-step__label" data-vb-type="small">라디오</span>
                     </div>
                     <span class="bg-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
                     <div class="bg-step">
-                        <span class="bg-step__year">1937</span>
+                        <span class="bg-step__year" data-vb-type="small">1937</span>
                         <span class="bg-step__icon"><img src="media/icons/tv.png" alt="TV"></span>
-                        <span class="bg-step__label">TV</span>
+                        <span class="bg-step__label" data-vb-type="small">TV</span>
                     </div>
                     <span class="bg-arrow bg-arrow--key" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
                     <!-- XR — 클라이맥스 (2배 크기 · 키컬러 그라데이션) -->
                     <div class="bg-xr">
-                        <span class="bg-xr__year">Next</span>
+                        <span class="bg-xr__year" data-vb-type="h2">Next</span>
                         <span class="bg-xr__icon"><img src="media/icons/xr.png" alt="XR"></span>
-                        <span class="bg-xr__label">XR</span>
+                        <span class="bg-xr__label" data-vb-type="h2">XR</span>
                     </div>
                 </div>
             </div>
@@ -1730,9 +1696,9 @@
         <section class="vb-section tg-section">
             <div class="vb-wrap">
                 <div class="tg-head">
-                    <span class="vb-eyebrow reveal">Task &amp; Project Goal</span>
-                    <h2 class="vb-title reveal">그렇다면, 무엇을 제공해야 하는가?</h2>
-                    <p class="tg-desc reveal">XR 기반 중계는 압도적인 현장감과 몰입을 약속합니다. 하지만 경쟁력 있고 지속 가능한 서비스가 되려면 그 이상이 필요합니다. 이 프로젝트는 미래의 XR 축구 중계 플랫폼이 제공해야 할 가치와 기능을 사용자 니즈 중심으로 탐구했습니다.</p>
+                    <span class="vb-eyebrow reveal" data-vb-type="small">Task &amp; Project Goal</span>
+                    <h2 class="vb-title reveal" data-vb-type="h1">그렇다면, 무엇을 제공해야 하는가?</h2>
+                    <p class="tg-desc reveal" data-vb-type="body">XR 기반 중계는 압도적인 현장감과 몰입을 약속합니다. 하지만 경쟁력 있고 지속 가능한 서비스가 되려면 그 이상이 필요합니다. 이 프로젝트는 미래의 XR 축구 중계 플랫폼이 제공해야 할 가치와 기능을 사용자 니즈 중심으로 탐구했습니다.</p>
                 </div>
             </div>
         </section>
@@ -1743,104 +1709,104 @@
         <section class="vb-section">
             <div class="vb-wrap">
                 <div class="tl-head">
-                    <span class="vb-eyebrow reveal">Process</span>
-                    <h2 class="vb-title reveal">프로젝트 진행 과정</h2>
+                    <span class="vb-eyebrow reveal" data-vb-type="small">Process</span>
+                    <h2 class="vb-title reveal" data-vb-type="h1">프로젝트 진행 과정</h2>
                 </div>
 
                 <div class="tl-grid reveal">
                     <!-- 1. PRE-RESEARCH -->
                     <div class="tl-col">
                         <div class="tl-col__head">
-                            <span class="tl-col__title">Pre-Research</span>
+                            <span class="tl-col__title" data-vb-type="caption">Pre-Research</span>
                             <span class="tl-col__rule" aria-hidden="true"><span class="tl-col__line"><svg width="100%" height="12" viewBox="0 0 100 12" preserveAspectRatio="none"><line x1="0" y1="6" x2="100" y2="6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" vector-effect="non-scaling-stroke"/></svg></span><span class="tl-col__tip"><svg width="10" height="12" viewBox="0 0 10 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"><path d="M0 6h8.5M5.5 3 8.5 6 5.5 9"/></svg></span></span>
                         </div>
                         <div class="tl-item">
-                            <div class="tl-item__name">Market Research</div>
-                            <div class="tl-item__desc">Trend &amp; Competitor Analysis · Positioning Map</div>
+                            <div class="tl-item__name" data-vb-type="h3">Market Research</div>
+                            <div class="tl-item__desc" data-vb-type="small">Trend &amp; Competitor Analysis · Positioning Map</div>
                         </div>
                         <div class="tl-item">
-                            <div class="tl-item__name">Research Design</div>
-                            <div class="tl-item__desc">Questionnaire Design<br>Interview Methods Design<br>Interviewee Recruitment</div>
+                            <div class="tl-item__name" data-vb-type="h3">Research Design</div>
+                            <div class="tl-item__desc" data-vb-type="small">Questionnaire Design<br>Interview Methods Design<br>Interviewee Recruitment</div>
                         </div>
                     </div>
 
                     <!-- 2. USER RESEARCH -->
                     <div class="tl-col">
                         <div class="tl-col__head">
-                            <span class="tl-col__title">User Research</span>
+                            <span class="tl-col__title" data-vb-type="caption">User Research</span>
                             <span class="tl-col__rule" aria-hidden="true"><span class="tl-col__line"><svg width="100%" height="12" viewBox="0 0 100 12" preserveAspectRatio="none"><line x1="0" y1="6" x2="100" y2="6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" vector-effect="non-scaling-stroke"/></svg></span><span class="tl-col__tip"><svg width="10" height="12" viewBox="0 0 10 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"><path d="M0 6h8.5M5.5 3 8.5 6 5.5 9"/></svg></span></span>
                         </div>
                         <div class="tl-item">
-                            <div class="tl-item__name">Questionnaire</div>
-                            <div class="tl-item__desc">Conducted with 102 participants</div>
+                            <div class="tl-item__name" data-vb-type="h3">Questionnaire</div>
+                            <div class="tl-item__desc" data-vb-type="small">Conducted with 102 participants</div>
                         </div>
                         <div class="tl-item">
-                            <div class="tl-item__name">Interview</div>
-                            <div class="tl-item__desc">8 Users · 2 Experts</div>
+                            <div class="tl-item__name" data-vb-type="h3">Interview</div>
+                            <div class="tl-item__desc" data-vb-type="small">8 Users · 2 Experts</div>
                         </div>
                         <div class="tl-item">
-                            <div class="tl-item__name">Participant Observation</div>
-                            <div class="tl-item__desc">Fly on the Wall · Shadowing</div>
+                            <div class="tl-item__name" data-vb-type="h3">Participant Observation</div>
+                            <div class="tl-item__desc" data-vb-type="small">Fly on the Wall · Shadowing</div>
                         </div>
                         <div class="tl-item">
-                            <div class="tl-item__name">Deriving Insight</div>
-                            <div class="tl-item__desc">How Might We? · Affinity Diagram</div>
+                            <div class="tl-item__name" data-vb-type="h3">Deriving Insight</div>
+                            <div class="tl-item__desc" data-vb-type="small">How Might We? · Affinity Diagram</div>
                         </div>
                     </div>
 
                     <!-- 3. IDEATION -->
                     <div class="tl-col">
                         <div class="tl-col__head">
-                            <span class="tl-col__title">Ideation</span>
+                            <span class="tl-col__title" data-vb-type="caption">Ideation</span>
                             <span class="tl-col__rule" aria-hidden="true"><span class="tl-col__line"><svg width="100%" height="12" viewBox="0 0 100 12" preserveAspectRatio="none"><line x1="0" y1="6" x2="100" y2="6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" vector-effect="non-scaling-stroke"/></svg></span><span class="tl-col__tip"><svg width="10" height="12" viewBox="0 0 10 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"><path d="M0 6h8.5M5.5 3 8.5 6 5.5 9"/></svg></span></span>
                         </div>
                         <div class="tl-item">
-                            <div class="tl-item__name">Ideation</div>
-                            <div class="tl-item__desc">Idea Grouping · 6 Concept Keywords</div>
+                            <div class="tl-item__name" data-vb-type="h3">Ideation</div>
+                            <div class="tl-item__desc" data-vb-type="small">Idea Grouping · 6 Concept Keywords</div>
                         </div>
                     </div>
 
                     <!-- 4. PRODUCTION -->
                     <div class="tl-col">
                         <div class="tl-col__head">
-                            <span class="tl-col__title">Production</span>
+                            <span class="tl-col__title" data-vb-type="caption">Production</span>
                             <span class="tl-col__rule" aria-hidden="true"><span class="tl-col__line"><svg width="100%" height="12" viewBox="0 0 100 12" preserveAspectRatio="none"><line x1="0" y1="6" x2="100" y2="6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" vector-effect="non-scaling-stroke"/></svg></span><span class="tl-col__tip"><svg width="10" height="12" viewBox="0 0 10 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"><path d="M0 6h8.5M5.5 3 8.5 6 5.5 9"/></svg></span></span>
                         </div>
                         <div class="tl-item">
-                            <div class="tl-item__name">Match Filming</div>
-                            <div class="tl-item__desc">On-site Multi-cam Shooting</div>
+                            <div class="tl-item__name" data-vb-type="h3">Match Filming</div>
+                            <div class="tl-item__desc" data-vb-type="small">On-site Multi-cam Shooting</div>
                         </div>
                         <div class="tl-item">
-                            <div class="tl-item__name">Screen Design</div>
-                            <div class="tl-item__desc">UX Flow · Wireframe</div>
+                            <div class="tl-item__name" data-vb-type="h3">Screen Design</div>
+                            <div class="tl-item__desc" data-vb-type="small">UX Flow · Wireframe</div>
                         </div>
                     </div>
 
                     <!-- 5. VISUALIZATION (마지막 — 화살표 없음) -->
                     <div class="tl-col">
                         <div class="tl-col__head">
-                            <span class="tl-col__title">Visualization</span>
+                            <span class="tl-col__title" data-vb-type="caption">Visualization</span>
                             <span class="tl-col__rule" aria-hidden="true"><span class="tl-col__line"><svg width="100%" height="12" viewBox="0 0 100 12" preserveAspectRatio="none"><line x1="0" y1="6" x2="100" y2="6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" vector-effect="non-scaling-stroke"/></svg></span><span class="tl-col__tip"><svg width="10" height="12" viewBox="0 0 10 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"><path d="M0 6h8.5M5.5 3 8.5 6 5.5 9"/></svg></span></span>
                         </div>
                         <div class="tl-item">
-                            <div class="tl-item__name">UI Design</div>
-                            <div class="tl-item__desc">UI · Icon · Screen</div>
+                            <div class="tl-item__name" data-vb-type="h3">UI Design</div>
+                            <div class="tl-item__desc" data-vb-type="small">UI · Icon · Screen</div>
                         </div>
                         <div class="tl-item">
-                            <div class="tl-item__name">Interaction Design</div>
-                            <div class="tl-item__desc">Gesture · Controller · AI</div>
+                            <div class="tl-item__name" data-vb-type="h3">Interaction Design</div>
+                            <div class="tl-item__desc" data-vb-type="small">Gesture · Controller · AI</div>
                         </div>
                         <div class="tl-item">
-                            <div class="tl-item__name">3D Production</div>
-                            <div class="tl-item__desc">Modeling · Rendering</div>
+                            <div class="tl-item__name" data-vb-type="h3">3D Production</div>
+                            <div class="tl-item__desc" data-vb-type="small">Modeling · Rendering</div>
                         </div>
                         <div class="tl-item">
-                            <div class="tl-item__name">Prototype</div>
-                            <div class="tl-item__desc">Unity Development</div>
+                            <div class="tl-item__name" data-vb-type="h3">Prototype</div>
+                            <div class="tl-item__desc" data-vb-type="small">Unity Development</div>
                         </div>
                         <div class="tl-item">
-                            <div class="tl-item__name">Concept Film</div>
-                            <div class="tl-item__desc">Editing · Motion Graphics</div>
+                            <div class="tl-item__name" data-vb-type="h3">Concept Film</div>
+                            <div class="tl-item__desc" data-vb-type="small">Editing · Motion Graphics</div>
                         </div>
                     </div>
                 </div>
@@ -1852,14 +1818,14 @@
              ==================================================== -->
         <section class="vb-section" style="text-align: center;">
             <div class="vb-wrap">
-                <p class="vb-eyebrow reveal" style="color: var(--vb-muted); font-weight: 600; font-size: 0.75rem; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 1rem;">01 — RESEARCH</p>
-                <h2 class="vb-title reveal" style="font-size: 2.5rem; font-weight: 800; margin-bottom: 4rem; color: var(--vb-text);">Quantitative Research</h2>
+                <p class="vb-eyebrow reveal" style="color: var(--vb-muted); font-weight: 600; font-size: 0.75rem; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 1rem;" data-vb-type="small">01 — RESEARCH</p>
+                <h2 class="vb-title reveal" style="font-size: 2.5rem; font-weight: 800; margin-bottom: 4rem; color: var(--vb-text);" data-vb-type="h1">Quantitative Research</h2>
                 
-                <h3 class="reveal" style="font-size: 1.25rem; font-weight: 800; color: var(--vb-text); margin-bottom: 1rem;">Desk Research</h3>
-                <p class="vb-body reveal" style="margin: 0 auto 0.5rem; max-width: 32rem; color: var(--vb-body); font-size: 1rem; line-height: 1.6;">
+                <h3 class="reveal" style="font-size: 1.25rem; font-weight: 800; color: var(--vb-text); margin-bottom: 1rem;" data-vb-type="h3">Desk Research</h3>
+                <p class="vb-body reveal" style="margin: 0 auto 0.5rem; max-width: 32rem; color: var(--vb-body); font-size: 1rem; line-height: 1.6;" data-vb-type="body">
                     기존 자료를 통해, 현재 팬들의 시청 트렌드를 관통하는<br class="hidden md:block"> <strong style="color: var(--vb-text);">2가지 핵심 니즈</strong>를 도출했습니다.
                 </p>
-                <p class="reveal" style="font-size: 0.75rem; color: var(--vb-muted); margin-bottom: 2rem;">*한국프로스포츠협회, 2022, 2022 KOREA PROSPORTS FAN SURVEY: 프로 스포츠 관람객 성향조사 - 프로축구 <br>Chiliz, 2024,The Global Fan Report </p>
+                <p class="reveal" style="font-size: 0.75rem; color: var(--vb-muted); margin-bottom: 2rem;" data-vb-type="caption">*한국프로스포츠협회, 2022, 2022 KOREA PROSPORTS FAN SURVEY: 프로 스포츠 관람객 성향조사 - 프로축구 <br>Chiliz, 2024,The Global Fan Report </p>
 
                 <!-- 한 줄(1-Row)로 배치된 데스크 리서치 카드 -->
                 <div class="vb-grid vb-grid--2 reveal text-left" style="margin-bottom: 4rem; max-width: calc(900px * var(--vb-s)); margin-inline: auto;">
@@ -1867,18 +1833,18 @@
                     <!-- Keyword 01: Live Experience -->
                     <div style="display: flex; flex-direction: column; background-color: var(--surface); border: 1px solid var(--vb-line); border-radius: 1.5rem; overflow: hidden; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);">
                         <div style="padding: 2.5rem; background-color: var(--panel); flex: 1;">
-                            <span style="font-size: 0.75rem; font-weight: 700; color: var(--vb-muted); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 0.75rem; display: block;">Keyword 01</span>
-                            <h4 style="font-size: 1.875rem; font-weight: 900; color: var(--vb-text); margin-bottom: 1rem; line-height: 1.25;">Live<br>Experience</h4>
-                            <p style="font-size: 0.875rem; color: var(--vb-body); line-height: 1.6; margin: 0;">시간 부족이나 시차라는 물리적 제약에도 불구하고,<br>팬들은 하이라이트보다 <strong style="color: var(--vb-text);">라이브 중계 시청을 고집</strong>합니다.</p>
+                            <span style="font-size: 0.75rem; font-weight: 700; color: var(--vb-muted); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 0.75rem; display: block;" data-vb-type="caption">Keyword 01</span>
+                            <h4 style="font-size: 1.875rem; font-weight: 900; color: var(--vb-text); margin-bottom: 1rem; line-height: 1.25;" data-vb-type="h2">Live<br>Experience</h4>
+                            <p class="vb-research-copy" style="font-size: 0.875rem; color: var(--vb-body); line-height: 1.6; margin: 0;" data-vb-type="body">시간과 시차의 제약에도 팬들은<br>하이라이트보다 <strong style="color: var(--vb-text);">라이브 중계를 선호</strong>합니다.</p>
                         </div>
                         <div style="padding: 2rem; display: flex; align-items: center; justify-content: space-between; background-color: var(--surface); border-top: 1px solid var(--vb-divider);">
                             <div style="text-align: center; width: 50%; border-right: 1px solid var(--vb-divider); padding-right: 1rem;">
-                                <div style="font-size: 2.25rem; font-weight: 900; color: var(--vb-text); margin-bottom: 0.5rem;">46%</div>
-                                <div style="font-size: 0.75rem; font-weight: 700; color: var(--vb-muted); word-break: keep-all;">직관 갈증 달래는 중계 시청</div>
+                                <div style="font-size: 2.25rem; font-weight: 900; color: var(--vb-text); margin-bottom: 0.5rem;" data-vb-type="h1">46%</div>
+                                <div style="font-size: 0.75rem; font-weight: 700; color: var(--vb-muted); word-break: keep-all;" data-vb-type="caption">직관 갈증 달래는 중계 시청</div>
                             </div>
                             <div style="text-align: center; width: 50%; padding-left: 1rem;">
-                                <div style="font-size: 2.25rem; font-weight: 900; color: var(--vb-text); margin-bottom: 0.5rem;">57%</div>
-                                <div style="font-size: 0.75rem; font-weight: 700; color: var(--vb-muted); word-break: keep-all;">해외 응원 구단 라이브 시청 고집</div>
+                                <div style="font-size: 2.25rem; font-weight: 900; color: var(--vb-text); margin-bottom: 0.5rem;" data-vb-type="h1">57%</div>
+                                <div style="font-size: 0.75rem; font-weight: 700; color: var(--vb-muted); word-break: keep-all;" data-vb-type="caption">해외 응원 구단 라이브 시청 고집</div>
                             </div>
                         </div>
                     </div>
@@ -1886,20 +1852,20 @@
                     <!-- Keyword 02: Understanding & Analysis -->
                     <div style="display: flex; flex-direction: column; background-color: var(--surface); border: 1px solid var(--vb-line); border-radius: 1.5rem; overflow: hidden; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);">
                         <div style="padding: 2.5rem; background-color: var(--panel); flex: 1;">
-                            <span style="font-size: 0.75rem; font-weight: 700; color: var(--vb-muted); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 0.75rem; display: block;">Keyword 02</span>
-                            <h4 style="font-size: 1.875rem; font-weight: 900; color: var(--vb-text); margin-bottom: 1rem; line-height: 1.25;">Understanding<br>&amp; Analysis</h4>
-                            <p style="font-size: 0.875rem; color: var(--vb-body); line-height: 1.6; margin: 0;">단순히 경기를 감상하는 것을 넘어, 전문가처럼 <strong style="color: var(--vb-text);">경기를 분석하고 이해하려는 갈증</strong>이 뚜렷하게 나타납니다.</p>
+                            <span style="font-size: 0.75rem; font-weight: 700; color: var(--vb-muted); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 0.75rem; display: block;" data-vb-type="caption">Keyword 02</span>
+                            <h4 style="font-size: 1.875rem; font-weight: 900; color: var(--vb-text); margin-bottom: 1rem; line-height: 1.25;" data-vb-type="h2">Understanding<br>&amp; Analysis</h4>
+                            <p class="vb-research-copy" style="font-size: 0.875rem; color: var(--vb-body); line-height: 1.6; margin: 0;" data-vb-type="body">단순히 보는 것을 넘어, 팬들은<br><strong style="color: var(--vb-text);">경기를 분석하고 이해하길 원합니다.</strong></p>
                         </div>
                         <div style="padding: 2rem; display: flex; flex-direction: column; justify-content: center; gap: 1.25rem; background-color: var(--surface); border-top: 1px solid var(--vb-divider);">
                             <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 1rem; border-bottom: 1px solid var(--vb-divider);">
-                                <span style="font-size: 0.75rem; font-weight: 700; color: var(--vb-muted);">관련 검색어 2위</span>
-                                <span style="font-size: 1.5rem; font-weight: 900; color: var(--vb-text);">'분석하다'</span>
+                                <span style="font-size: 0.75rem; font-weight: 700; color: var(--vb-muted);" data-vb-type="caption">관련 검색어 2위</span>
+                                <span style="font-size: 1.5rem; font-weight: 900; color: var(--vb-text);" data-vb-type="h2">'분석하다'</span>
                             </div>
                             <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <span style="font-size: 0.75rem; font-weight: 700; color: var(--vb-muted);">가장 필요한 콘텐츠</span>
+                                <span style="font-size: 0.75rem; font-weight: 700; color: var(--vb-muted);" data-vb-type="caption">가장 필요한 콘텐츠</span>
                                 <div style="text-align: right;">
-                                    <span style="font-size: 1.125rem; font-weight: 900; color: var(--vb-text); display: block;">경기 분석 영상</span>
-                                    <span style="font-size: 0.625rem; font-weight: 700; color: var(--vb-muted); display: block; margin-top: 0.25rem; text-transform: uppercase; letter-spacing: 0.1em;">남성 1위 / 여성 2위</span>
+                                    <span style="font-size: 1.125rem; font-weight: 900; color: var(--vb-text); display: block;" data-vb-type="body">경기 분석 영상</span>
+                                    <span style="font-size: 0.625rem; font-weight: 700; color: var(--vb-muted); display: block; margin-top: 0.25rem; text-transform: uppercase; letter-spacing: 0.1em;" data-vb-type="caption">남성 1위 / 여성 2위</span>
                                 </div>
                             </div>
                         </div>
@@ -1910,22 +1876,22 @@
                 <div class="vertical-line reveal"></div>
 
                 <div class="reveal" style="margin-bottom: 5rem;">
-                    <h4 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 1rem; color: var(--vb-text);">"자료에서 드러난 이 니즈, 실제 시청자도 똑같이 느끼고 있을까?"</h4>
-                    <p style="color: var(--vb-body); font-size: 0.875rem;">그래서 경기를 주기적으로 챙겨보는 시청자를 대상으로 직접 설문을 진행했어요.</p>
+                    <h4 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 1rem; color: var(--vb-text);" data-vb-type="h2">"자료에서 드러난 이 니즈, 실제 시청자도 똑같이 느끼고 있을까?"</h4>
+                    <p style="color: var(--vb-body); font-size: 0.875rem;" data-vb-type="body">그래서 경기를 주기적으로 챙겨보는 시청자를 대상으로 직접 설문을 진행했어요.</p>
                 </div>
                 
                 <div class="vertical-line reveal"></div>
 
                 <!-- FIELD RESEARCH -->
-                <h3 class="reveal" style="font-size: 1.25rem; font-weight: 800; color: var(--vb-text); margin-bottom: 1.5rem;">Field Research</h3>
+                <h3 class="reveal" style="font-size: 1.25rem; font-weight: 800; color: var(--vb-text); margin-bottom: 1.5rem;" data-vb-type="h3">Field Research</h3>
                 <div class="reveal" style="margin-bottom: 3rem;">
-                    <p class="vb-body" style="margin: 0 auto; max-width: 36rem; font-size: 0.875rem; line-height: 1.6;">
-                        축구 경기를 주기적으로 보는 사람을 대상으로 설문 조사를 진행해, 경기 관람 방식과 <br>시청 태도, 경기 이해 수준, 부가 서비스 이용 현황 등을 물었습니다.
+                    <p class="vb-body vb-field-intro" style="margin: 0 auto; max-width: 760px; font-size: 0.875rem; line-height: 1.6;" data-vb-type="body">
+                        축구 경기를 주기적으로 보는 사람들을 대상으로 설문을 진행했습니다.<br>관람 방식과 시청 태도, 경기 이해 수준, 부가 서비스 이용 현황을 물었습니다.
                     </p>
-                    <p style="font-size: 0.75rem; color: var(--vb-muted); margin-top: 1rem;">*자체 설문조사 : 온·오프라인 축구 커뮤니티 회원 102명</p>
+                    <p style="font-size: 0.75rem; color: var(--vb-muted); margin-top: 1rem;" data-vb-type="caption">*자체 설문조사 : 온·오프라인 축구 커뮤니티 회원 102명</p>
                 </div>
                 <div class="reveal" style="margin-bottom: 4rem;">
-                    <h4 style="font-size: 1.875rem; font-weight: 700; color: var(--vb-text);">
+                    <h4 style="font-size: 1.875rem; font-weight: 700; color: var(--vb-text);" data-vb-type="h2">
                         아는 만큼 보이니까, 더 알고싶어져요
                     </h4>
                 </div>
@@ -1934,33 +1900,33 @@
                 <div class="vb-grid vb-grid--2 text-left reveal" style="margin-bottom: 8rem; gap: 1.5rem; max-width: calc(900px * var(--vb-s)); margin-inline: auto;">
                     
                     <div class="info-card flex flex-col items-center text-center">
-                        <h4 style="font-size: 1.125rem; line-height: 1.5; font-weight: 700; margin-top: 0; margin-bottom: 56px; color: var(--vb-text);">대부분 능동적으로,<br>경기를 이해하면서 보려고 해요.</h4>
-                        <div class="circle-chart chart-63" style="margin-bottom: 2rem;"><span>63%</span></div>
-                        <p style="font-size: 0.75rem; color: var(--vb-muted); margin: 0;">분석적인 관점에서 경기를 본다고 답했어요.</p>
+                        <h4 style="font-size: 1.125rem; line-height: 1.5; font-weight: 700; margin-top: 0; margin-bottom: 56px; color: var(--vb-text);" data-vb-type="h3">대부분 능동적으로,<br>경기를 이해하면서 보려고 해요.</h4>
+                        <div class="circle-chart chart-63" style="margin-bottom: 2rem;"><span data-vb-type="h1">63%</span></div>
+                        <p style="font-size: 0.75rem; color: var(--vb-muted); margin: 0;" data-vb-type="caption">분석적인 관점에서 경기를 본다고 답했어요.</p>
                     </div>
 
                     <div class="info-card flex flex-col justify-center">
-                        <h4 style="font-size: 1.125rem; line-height: 1.5; font-weight: 700; margin-top: 0; margin-bottom: 6px; color: var(--vb-text);">이렇게 이해하면서 볼수록,<br>경기의 재미가 커져요.</h4>
-                        <p style="font-size: 0.75rem; color: var(--vb-muted); margin-top: 0; margin-bottom: 70px;">분석적으로 시청하는 이유 (복수 응답)</p>
+                        <h4 style="font-size: 1.125rem; line-height: 1.5; font-weight: 700; margin-top: 0; margin-bottom: 6px; color: var(--vb-text);" data-vb-type="h3">이렇게 이해하면서 볼수록,<br>경기의 재미가 커져요.</h4>
+                        <p style="font-size: 0.75rem; color: var(--vb-muted); margin-top: 0; margin-bottom: 70px;" data-vb-type="caption">분석적으로 시청하는 이유 (복수 응답)</p>
                         <div style="display: flex; flex-direction: column; gap: 1.5rem;">
                             <div>
-                                <div style="display: flex; justify-content: space-between; font-size: 0.875rem; margin-bottom: 0.5rem;">
-                                    <span style="color: var(--vb-text);">경기 재미</span>
-                                    <span class="chart-text-blue font-bold">69%</span>
+                                <div style="display: flex; justify-content: space-between; font-size: 0.875rem; margin-bottom: 0.5rem;" data-vb-type="small">
+                                    <span style="color: var(--vb-text);" data-vb-type="small">경기 재미</span>
+                                    <span class="chart-text-blue font-bold" data-vb-type="small">69%</span>
                                 </div>
                                 <div style="width: 100%; background-color: var(--vb-track); height: 0.5rem; border-radius: 9999px;"><div class="chart-blue" style="height: 0.5rem; border-radius: 9999px; width: 69%"></div></div>
                             </div>
                             <div>
-                                <div style="display: flex; justify-content: space-between; font-size: 0.875rem; margin-bottom: 0.5rem;">
-                                    <span style="color: var(--vb-muted);">팬심</span>
-                                    <span style="color: var(--vb-muted);">41%</span>
+                                <div style="display: flex; justify-content: space-between; font-size: 0.875rem; margin-bottom: 0.5rem;" data-vb-type="small">
+                                    <span style="color: var(--vb-muted);" data-vb-type="small">팬심</span>
+                                    <span style="color: var(--vb-muted);" data-vb-type="small">41%</span>
                                 </div>
                                 <div style="width: 100%; background-color: var(--vb-track); height: 0.5rem; border-radius: 9999px;"><div style="background-color: var(--vb-muted); height: 0.5rem; border-radius: 9999px; width: 41%"></div></div>
                             </div>
                             <div>
-                                <div style="display: flex; justify-content: space-between; font-size: 0.875rem; margin-bottom: 0.5rem;">
-                                    <span style="color: var(--vb-muted);">지식 습득</span>
-                                    <span style="color: var(--vb-muted);">28%</span>
+                                <div style="display: flex; justify-content: space-between; font-size: 0.875rem; margin-bottom: 0.5rem;" data-vb-type="small">
+                                    <span style="color: var(--vb-muted);" data-vb-type="small">지식 습득</span>
+                                    <span style="color: var(--vb-muted);" data-vb-type="small">28%</span>
                                 </div>
                                 <div style="width: 100%; background-color: var(--vb-track); height: 0.5rem; border-radius: 9999px;"><div style="background-color: var(--vb-muted); height: 0.5rem; border-radius: 9999px; width: 28%"></div></div>
                             </div>
@@ -1968,33 +1934,33 @@
                     </div>
 
                     <div class="info-card flex flex-col items-center text-center">
-                        <h4 style="font-size: 1.125rem; line-height: 1.5; font-weight: 700; margin-top: 0; margin-bottom: 56px; color: var(--vb-text);">경기를 보면서, 경기 관련 정보를<br> 찾기 위해 다른 서비스를 켜요.</h4>
-                        <div class="circle-chart chart-64" style="margin-bottom: 2rem;"><span>64%</span></div>
-                        <p style="font-size: 0.75rem; color: var(--vb-muted); margin: 0;">경기 시청 중 부가 서비스를 이용한다고 답했어요.</p>
+                        <h4 style="font-size: 1.125rem; line-height: 1.5; font-weight: 700; margin-top: 0; margin-bottom: 56px; color: var(--vb-text);" data-vb-type="h3">경기를 보면서, 경기 관련 정보를<br> 찾기 위해 다른 서비스를 켜요.</h4>
+                        <div class="circle-chart chart-64" style="margin-bottom: 2rem;"><span data-vb-type="h1">64%</span></div>
+                        <p style="font-size: 0.75rem; color: var(--vb-muted); margin: 0;" data-vb-type="caption">경기 시청 중 부가 서비스를 이용한다고 답했어요.</p>
                     </div>
 
                     <div class="info-card flex flex-col justify-center">
-                        <h4 style="font-size: 1.125rem; font-weight: 700; margin-top: 0; margin-bottom: 6px; color: var(--vb-text);">하나로는 부족해요</h4>
-                        <p style="font-size: 0.75rem; color: var(--vb-muted); margin-top: 0; margin-bottom: 70px;">커뮤니티, 분석 사이트 등 2개 이상의 서비스 이용 (복수 응답)</p>
+                        <h4 style="font-size: 1.125rem; font-weight: 700; margin-top: 0; margin-bottom: 6px; color: var(--vb-text);" data-vb-type="h3">하나로는 부족해요</h4>
+                        <p style="font-size: 0.75rem; color: var(--vb-muted); margin-top: 0; margin-bottom: 70px;" data-vb-type="caption">커뮤니티, 분석 사이트 등 2개 이상의 서비스 이용 (복수 응답)</p>
                         <div style="display: flex; flex-direction: column; gap: 1.5rem;">
                             <div>
-                                <div style="display: flex; justify-content: space-between; font-size: 0.875rem; margin-bottom: 0.5rem;">
-                                    <span style="color: var(--vb-text);">축구 관련 커뮤니티</span>
-                                    <span class="chart-text-blue font-bold">62%</span>
+                                <div style="display: flex; justify-content: space-between; font-size: 0.875rem; margin-bottom: 0.5rem;" data-vb-type="small">
+                                    <span style="color: var(--vb-text);" data-vb-type="small">축구 관련 커뮤니티</span>
+                                    <span class="chart-text-blue font-bold" data-vb-type="small">62%</span>
                                 </div>
                                 <div style="width: 100%; background-color: var(--vb-track); height: 0.5rem; border-radius: 9999px;"><div class="chart-blue" style="height: 0.5rem; border-radius: 9999px; width: 62%"></div></div>
                             </div>
                             <div>
-                                <div style="display: flex; justify-content: space-between; font-size: 0.875rem; margin-bottom: 0.5rem;">
-                                    <span style="color: var(--vb-muted);">데이터 분석 사이트</span>
-                                    <span style="color: var(--vb-muted);">49%</span>
+                                <div style="display: flex; justify-content: space-between; font-size: 0.875rem; margin-bottom: 0.5rem;" data-vb-type="small">
+                                    <span style="color: var(--vb-muted);" data-vb-type="small">데이터 분석 사이트</span>
+                                    <span style="color: var(--vb-muted);" data-vb-type="small">49%</span>
                                 </div>
                                 <div style="width: 100%; background-color: var(--vb-track); height: 0.5rem; border-radius: 9999px;"><div style="background-color: var(--vb-muted); height: 0.5rem; border-radius: 9999px; width: 49%"></div></div>
                             </div>
                             <div>
-                                <div style="display: flex; justify-content: space-between; font-size: 0.875rem; margin-bottom: 0.5rem;">
-                                    <span style="color: var(--vb-muted);">SNS</span>
-                                    <span style="color: var(--vb-muted);">41%</span>
+                                <div style="display: flex; justify-content: space-between; font-size: 0.875rem; margin-bottom: 0.5rem;" data-vb-type="small">
+                                    <span style="color: var(--vb-muted);" data-vb-type="small">SNS</span>
+                                    <span style="color: var(--vb-muted);" data-vb-type="small">41%</span>
                                 </div>
                                 <div style="width: 100%; background-color: var(--vb-track); height: 0.5rem; border-radius: 9999px;"><div style="background-color: var(--vb-muted); height: 0.5rem; border-radius: 9999px; width: 41%"></div></div>
                             </div>
@@ -2006,9 +1972,9 @@
                 <div class="vertical-line reveal"></div>
 
                 <div class="reveal" style="margin-bottom: 5rem;">
-                    <p style="font-size: 0.75rem; font-weight: 700; color: var(--vb-muted); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 1rem;">Next Step</p>
-                    <h4 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 1rem; color: var(--vb-text);">"아는 만큼 재밌다'는 팬들, 정말 데이터를 가장 원하고 필요해 할까요?"</h4>
-                    <p style="color: var(--vb-body); font-size: 0.875rem;">설문을 통해 확인된 분명한 '정보 니즈'가 실제 시청 환경에서도 유효한지 궁금했습니다.</p>
+                    <p style="font-size: 0.75rem; font-weight: 700; color: var(--vb-muted); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 1rem;" data-vb-type="caption">Next Step</p>
+                    <h4 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 1rem; color: var(--vb-text);" data-vb-type="h2">"아는 만큼 재밌다'는 팬들, 정말 데이터를 가장 원하고 필요해 할까요?"</h4>
+                    <p style="color: var(--vb-body); font-size: 0.875rem;" data-vb-type="body">설문을 통해 확인된 분명한 '정보 니즈'가 실제 시청 환경에서도 유효한지 궁금했습니다.</p>
                 </div>
                 
                 <div class="vertical-line reveal"></div>
@@ -2022,9 +1988,9 @@
         <section class="vb-section" id="qualitative">
             <div class="vb-wrap">
                 <div class="ql-head">
-                    <span class="vb-eyebrow reveal">02 — Research</span>
-                    <h2 class="vb-title reveal">Qualitative Research</h2>
-                    <p class="vb-body ql-intro reveal">설문을 기반으로 세운 가설을 인터뷰, 참여 관찰(섀도잉), 그리고 온라인 행태 관찰을 통해 검증·수정·재확인하며 인사이트를 도출했습니다.</p>
+                    <span class="vb-eyebrow reveal" data-vb-type="small">02 — Research</span>
+                    <h2 class="vb-title reveal" data-vb-type="h1">Qualitative Research</h2>
+                    <p class="vb-body ql-intro reveal" data-vb-type="body">설문을 기반으로 세운 가설을 인터뷰, 참여 관찰(섀도잉), 그리고 온라인 행태 관찰을 통해 검증·수정·재확인하며 인사이트를 도출했습니다.</p>
                 </div>
 
                 <!-- 리서치 방법 3개 (라벨 없이, 인트로 바로 아래) -->
@@ -2033,25 +1999,25 @@
                         <div class="ql-method-card reveal">
                             <img class="ql-method-card__img" src="media/qualitative/interview.jpg" alt="심층 인터뷰">
                             <div class="ql-method-card__body">
-                                <span class="ql-method-card__tag">In-depth Interview</span>
-                                <h3 class="ql-method-card__title">심층 인터뷰</h3>
-                                <p class="ql-method-card__desc">축구 전문가 2명, 일반 유저 8명</p>
+                                <span class="ql-method-card__tag" data-vb-type="caption">In-depth Interview</span>
+                                <h3 class="ql-method-card__title" data-vb-type="h3">심층 인터뷰</h3>
+                                <p class="ql-method-card__desc" data-vb-type="small">축구 전문가 2명, 일반 유저 8명</p>
                             </div>
                         </div>
                         <div class="ql-method-card reveal">
                             <img class="ql-method-card__img" src="media/qualitative/observation.jpg" alt="참여 관찰">
                             <div class="ql-method-card__body">
-                                <span class="ql-method-card__tag">In-Situ Observation</span>
-                                <h3 class="ql-method-card__title">참여 관찰 (섀도잉)</h3>
-                                <p class="ql-method-card__desc">경기장 현장 관람 유저 1명, 중계 방송 시청 유저 1명</p>
+                                <span class="ql-method-card__tag" data-vb-type="caption">In-Situ Observation</span>
+                                <h3 class="ql-method-card__title" data-vb-type="h3">참여 관찰 (섀도잉)</h3>
+                                <p class="ql-method-card__desc" data-vb-type="small">현장 관람자 1명, 중계 시청자 1명</p>
                             </div>
                         </div>
                         <div class="ql-method-card reveal">
                             <img class="ql-method-card__img" src="media/qualitative/ethnography.jpg" alt="온라인 행태 관찰">
                             <div class="ql-method-card__body">
-                                <span class="ql-method-card__tag">Online Ethnography</span>
-                                <h3 class="ql-method-card__title">온라인 행태 관찰</h3>
-                                <p class="ql-method-card__desc">경기 중 구단 팬 커뮤니티에 올라온 실시간 댓글 약 4,000건</p>
+                                <span class="ql-method-card__tag" data-vb-type="caption">Online Ethnography</span>
+                                <h3 class="ql-method-card__title" data-vb-type="h3">온라인 행태 관찰</h3>
+                                <p class="ql-method-card__desc" data-vb-type="small">경기 중 팬 커뮤니티의 실시간 댓글 약 4,000건</p>
                             </div>
                         </div>
                     </div>
@@ -2061,8 +2027,8 @@
             <div class="vb-group">
                 <!-- 섹션 타이틀 -->
                 <div class="vb-group__head reveal justify-center text-center">
-                    <span class="vb-group__num">A</span>
-                    <span class="vb-group__name">가설 수정 및 인사이트 도출</span>
+                    <span class="vb-group__num" data-vb-type="small">A</span>
+                    <span class="vb-group__name" data-vb-type="h3">가설 수정 및 인사이트 도출</span>
                 </div>
                 
                 <!-- 카드 그리드 영역 -->
@@ -2071,29 +2037,29 @@
                     <!-- 가설 1 -->
                     <div class="info-card" style="text-align: center;"> <!-- left에서 center로 변경 -->
                         <!-- 간격을 0.75rem으로 통일 -->
-                        <span style="font-size: 0.75rem; font-weight: 700; color: var(--vb-body); margin-bottom: 0.75rem; display: block;">초기 가설 01</span>
+                        <span style="font-size: 0.75rem; font-weight: 700; color: var(--vb-body); margin-bottom: 0.75rem; display: block;" data-vb-type="caption">초기 가설 01</span>
                         
-                        <p style="font-size: 1.25rem; font-weight: 700; color: var(--vb-text); margin: 0;">재미를 위한 최우선 니즈는 경기 관련 심층 정보일 것이다.</p>
+                        <p style="font-size: 1.25rem; font-weight: 700; color: var(--vb-text); margin: 0;" data-vb-type="h3">재미를 위한 최우선 니즈는 경기 관련 심층 정보일 것이다.</p>
                         
                         <!-- 중앙 구분선 -->
                         <div style="border-top: 1px solid var(--vb-track); margin: 1.5rem 0;"></div>
                         
-                        <span style="font-size: 0.75rem; font-weight: 700; color: var(--vb-body); margin-bottom: 0.75rem; display: block;">검증 결과</span>
+                        <span style="font-size: 0.75rem; font-weight: 700; color: var(--vb-body); margin-bottom: 0.75rem; display: block;" data-vb-type="caption">검증 결과</span>
                         
-                        <p style="font-size: 1.25rem; font-weight: 700; color: var(--vb-text); margin: 0;">정보 확인이 오히려 경기 몰입을 방해하는 요소로 작용한다.</p>
+                        <p style="font-size: 1.25rem; font-weight: 700; color: var(--vb-text); margin: 0;" data-vb-type="h3">정보 확인이 오히려 경기 몰입을 방해하는 요소로 작용한다.</p>
                     </div>
                     
                     <!-- 가설 2 -->
                     <div class="info-card" style="text-align: center;"> <!-- left에서 center로 변경 -->
-                        <span style="font-size: 0.75rem; font-weight: 700; color: var(--vb-body); margin-bottom: 0.75rem; display: block;">수정 가설 02</span>
+                        <span style="font-size: 0.75rem; font-weight: 700; color: var(--vb-body); margin-bottom: 0.75rem; display: block;" data-vb-type="caption">수정 가설 02</span>
                         
-                        <p style="font-size: 1.25rem; font-weight: 700; color: var(--vb-text); margin: 0;">온전히 몰입해 보는 니즈가 가장 클 것이다.</p>
+                        <p style="font-size: 1.25rem; font-weight: 700; color: var(--vb-text); margin: 0;" data-vb-type="h3">온전히 몰입해 보는 니즈가 가장 클 것이다.</p>
                         
                         <div style="border-top: 1px solid var(--vb-track); margin: 1.5rem 0;"></div>
                         
-                        <span style="font-size: 0.75rem; font-weight: 700; color: var(--vb-body); margin-bottom: 0.75rem; display: block;">검증 결과</span>
+                        <span style="font-size: 0.75rem; font-weight: 700; color: var(--vb-body); margin-bottom: 0.75rem; display: block;" data-vb-type="caption">검증 결과</span>
                         
-                        <p style="font-size: 1.25rem; font-weight: 700; color: var(--vb-text); margin: 0;">실제 온전히 몰입하는 시간은 짧고, 지속적으로 멀티 태스킹을 한다.</p>
+                        <p style="font-size: 1.25rem; font-weight: 700; color: var(--vb-text); margin: 0;" data-vb-type="h3">몰입하는 시간은 짧고, 여러 활동을 병행한다.</p>
                     </div>
                     
                 </div>
@@ -2101,9 +2067,9 @@
                 <!-- 최종 결론 영역 -->
                 <div class="info-card reveal" style="background-color: var(--surface); border: 2px solid var(--line-color); text-align: center; margin-top: 2rem; margin-bottom: 4rem; display: flex; flex-direction: column; justify-content: center; align-items: center;">
                     
-                    <h4 style="font-size: 1.125rem; font-weight: 700; margin-top: 0; margin-bottom: 0.75rem; color: var(--vb-text);">실제 관찰된 가장 큰 니즈</h4>
+                    <h4 style="font-size: 1.125rem; font-weight: 700; margin-top: 0; margin-bottom: 0.75rem; color: var(--vb-text);" data-vb-type="h3">실제 관찰된 가장 큰 니즈</h4>
                     
-                    <p style="font-size: 1.5rem; font-weight: 700; color: var(--vb-text); margin: 0;">
+                    <p style="font-size: 1.5rem; font-weight: 700; color: var(--vb-text); margin: 0;" data-vb-type="h2">
                         경기를 함께 시청하는 사람들과의 <span style="background-color: var(--vb-mark); padding: 0.25rem 0.5rem; border-radius: 0.25rem;">소통과 감정 공유</span>
                     </p>
                     
@@ -2113,30 +2079,30 @@
             <!-- B. XR 디바이스 환경에서 생기는 추가 문제 -->
             <div class="vb-group">
                 <div class="vb-group__head reveal justify-center text-center">
-                    <span class="vb-group__num">B</span>
-                    <span class="vb-group__name">추가 문제 정의 (XR Context)</span>
+                    <span class="vb-group__num" data-vb-type="small">B</span>
+                    <span class="vb-group__name" data-vb-type="h3">추가 문제 정의 (XR Context)</span>
                 </div>
                 <div class="vb-grid vb-grid--2 reveal" style="gap: 1.5rem; margin-bottom: 4rem;">
                     
                     <!-- Problem -->
                     <!-- 중앙 정렬(text-align: center) 및 세로 균형을 위해 flex 추가 -->
                     <div class="info-card" style="text-align: center; display: flex; flex-direction: column; justify-content: center;">
-                        <span style="font-size: 0.75rem; font-weight: 700; color: var(--vb-muted); margin-bottom: 0.75rem; display: block;">Problem</span>
+                        <span style="font-size: 0.75rem; font-weight: 700; color: var(--vb-muted); margin-bottom: 0.75rem; display: block;" data-vb-type="caption">Problem</span>
                         
                         <!-- 태그를 p로 변경하고 A파트와 동일하게 사이즈 1.25rem으로 확대 -->
-                        <p style="font-size: 1.25rem; font-weight: 700; color: var(--vb-text); margin-top: 0; margin-bottom: 0.75rem;">XR 디바이스의 외부 채널 차단</p>
+                        <p style="font-size: 1.25rem; font-weight: 700; color: var(--vb-text); margin-top: 0; margin-bottom: 0.75rem;" data-vb-type="h3">XR 디바이스의 외부 채널 차단</p>
                         
                         <!-- 부연 설명 사이즈도 0.875rem에서 1rem으로 확대 -->
-                        <p style="font-size: 1rem; color: var(--vb-body); margin: 0;">고글 형태의 한계로 인해, 정보 확인이나 소통을 위해서는 반드시 기기를 벗어야 함.</p>
+                        <p style="font-size: 1rem; color: var(--vb-body); margin: 0;" data-vb-type="body">고글을 벗어야 외부 정보를 확인하거나 소통할 수 있음.</p>
                     </div>
                     
                     <!-- Desired Experience -->
                     <div class="info-card" style="text-align: center; background-color: #1F2937; border: none; display: flex; flex-direction: column; justify-content: center;">
-                        <span style="font-size: 0.75rem; font-weight: 700; color: var(--vb-muted); margin-bottom: 0.75rem; display: block;">Desired Experience</span>
+                        <span style="font-size: 0.75rem; font-weight: 700; color: var(--vb-muted); margin-bottom: 0.75rem; display: block;" data-vb-type="caption">Desired Experience</span>
                         
-                        <p style="font-size: 1.25rem; font-weight: 700; color: var(--surface); margin-top: 0; margin-bottom: 0.75rem;">단절 없는 경험</p>
+                        <p style="font-size: 1.25rem; font-weight: 700; color: var(--surface); margin-top: 0; margin-bottom: 0.75rem;" data-vb-type="h3">단절 없는 경험</p>
                         
-                        <p style="font-size: 1rem; color: var(--vb-track); margin: 0;">디바이스를 벗지 않고도 소통 등 다른 활동이 XR 환경 내에서 자연스럽게 이어져야 함.</p>
+                        <p style="font-size: 1rem; color: var(--vb-track); margin: 0;" data-vb-type="body">기기를 벗지 않고도 XR 안에서 소통과 다른 활동이 이어져야 함.</p>
                     </div>
                     
                 </div>
@@ -2150,35 +2116,35 @@
                         <div class="vb-affinity__overlay"></div>
                         <div class="vb-affinity__inner">
                             <div class="vb-group__head reveal">
-                                <span class="vb-group__num">C</span>
-                                <span class="vb-group__name">UX Direction</span>
+                                <span class="vb-group__num" data-vb-type="small">C</span>
+                                <span class="vb-group__name" data-vb-type="h3">UX Direction</span>
                             </div>
-                            <p class="aff-desc reveal">리서치 과정에서 확인한 여러 페인 포인트와 인사이트를 종합해,<br>
+                            <p class="aff-desc reveal" data-vb-type="body">리서치 과정에서 확인한 여러 페인 포인트와 인사이트를 종합해,<br>
 서비스의 6가지 컨셉 키워드를 도출했어요.</p>
                             <div class="aff-kw-row reveal">
                                 <div class="aff-kw-card">
-                                    <span class="aff-kw-card__en">Immersion</span>
-                                    <span class="aff-kw-card__ko">경기에 더 깊이 몰입해서 볼 수 있도록</span>
+                                    <span class="aff-kw-card__en" data-vb-type="h3">Immersion</span>
+                                    <span class="aff-kw-card__ko" data-vb-type="small">경기에 더 깊이 몰입해서 볼 수 있도록</span>
                                 </div>
                                 <div class="aff-kw-card">
-                                    <span class="aff-kw-card__en">Understanding</span>
-                                    <span class="aff-kw-card__ko">아는 만큼 더 잘 보이니까, 더 잘 알게</span>
+                                    <span class="aff-kw-card__en" data-vb-type="h3">Understanding</span>
+                                    <span class="aff-kw-card__ko" data-vb-type="small">아는 만큼 더 잘 보이니까, 더 잘 알게</span>
                                 </div>
                                 <div class="aff-kw-card">
-                                    <span class="aff-kw-card__en">Social Experience</span>
-                                    <span class="aff-kw-card__ko">함께 보는 사람들과 소통하며 즐기도록</span>
+                                    <span class="aff-kw-card__en" data-vb-type="h3">Social Experience</span>
+                                    <span class="aff-kw-card__ko" data-vb-type="small">함께 보는 사람들과 소통하며 즐기도록</span>
                                 </div>
                                 <div class="aff-kw-card">
-                                    <span class="aff-kw-card__en">Multi-tasking</span>
-                                    <span class="aff-kw-card__ko">경기를 보며 하던 다른 일들도 동시에</span>
+                                    <span class="aff-kw-card__en" data-vb-type="h3">Multi-tasking</span>
+                                    <span class="aff-kw-card__ko" data-vb-type="small">경기를 보며 하던 다른 일들도 동시에</span>
                                 </div>
                                 <div class="aff-kw-card">
-                                    <span class="aff-kw-card__en">Customizable</span>
-                                    <span class="aff-kw-card__ko">정해진 중계 화면 대신<br>내 방식대로</span>
+                                    <span class="aff-kw-card__en" data-vb-type="h3">Customizable</span>
+                                    <span class="aff-kw-card__ko" data-vb-type="small">정해진 중계 화면 대신<br>내 방식대로</span>
                                 </div>
                                 <div class="aff-kw-card">
-                                    <span class="aff-kw-card__en">Fandom</span>
-                                    <span class="aff-kw-card__ko">업적으로 공간을 꾸미며 팬경험 극대화</span>
+                                    <span class="aff-kw-card__en" data-vb-type="h3">Fandom</span>
+                                    <span class="aff-kw-card__ko" data-vb-type="small">업적으로 공간을 꾸미며 팬경험 극대화</span>
                                 </div>
                             </div>
                         </div>
@@ -2188,51 +2154,51 @@
                 <!-- Service Flow: Pre / In / Post-Match -->
                 <div class="vb-group vb-group--lg">
                     <div class="vb-group__head reveal">
-                        <span class="vb-group__num">D</span>
-                        <span class="vb-group__name">Service Flow</span>
+                        <span class="vb-group__num" data-vb-type="small">D</span>
+                        <span class="vb-group__name" data-vb-type="h3">Service Flow</span>
                     </div>
-                    <span class="sf-ai-pill reveal">
+                    <span class="sf-ai-pill reveal" data-vb-type="small">
                         <span class="sf-ai-pill__icon" aria-hidden="true">✦</span>
                         AI Assistant VIVA — 전 과정을 매끄럽게 연결합니다
                     </span>
 
                     <div class="sf-scroll reveal">
                         <div class="sf-track">
-                            <div class="sf-xr-box"><span class="sf-xr-box__label">In XR Device</span></div>
+                            <div class="sf-xr-box"><span class="sf-xr-box__label" data-vb-type="caption">In XR Device</span></div>
 
                             <div class="sf-circle-row">
-                                <span class="sf-circle">Pre-Match</span>
-                                <span class="sf-circle sf-circle--accent">Pre-Match</span>
-                                <span class="sf-circle sf-circle--accent">In-Game</span>
-                                <span class="sf-circle sf-circle--accent">Post-Match</span>
-                                <span class="sf-circle">Post-Match</span>
+                                <span class="sf-circle" data-vb-type="small">Pre-Match</span>
+                                <span class="sf-circle sf-circle--accent" data-vb-type="small">Pre-Match</span>
+                                <span class="sf-circle sf-circle--accent" data-vb-type="small">In-Game</span>
+                                <span class="sf-circle sf-circle--accent" data-vb-type="small">Post-Match</span>
+                                <span class="sf-circle" data-vb-type="small">Post-Match</span>
                             </div>
 
                             <div class="sf-labels-row">
                                 <div class="sf-label">
-                                    <div class="sf-label__meta">Mobile App</div>
-                                    <div class="sf-label__title">Information</div>
-                                    <div class="sf-label__desc">경기 알림<br>사전 정보 제공</div>
+                                    <div class="sf-label__meta" data-vb-type="caption">Mobile App</div>
+                                    <div class="sf-label__title" data-vb-type="h3">Information</div>
+                                    <div class="sf-label__desc" data-vb-type="small">경기 알림<br>사전 정보 제공</div>
                                 </div>
                                 <div class="sf-label">
-                                    <div class="sf-label__meta">Personal Space</div>
-                                    <div class="sf-label__title sf-label__title--accent">Skybox</div>
-                                    <div class="sf-label__desc">타 사용자와 네트워킹<br>실시간 경기 브라우징<br>Skybox 커스터마이징</div>
+                                    <div class="sf-label__meta" data-vb-type="caption">Personal Space</div>
+                                    <div class="sf-label__title sf-label__title--accent" data-vb-type="h3">Skybox</div>
+                                    <div class="sf-label__desc" data-vb-type="small">타 사용자와 네트워킹<br>실시간 경기 브라우징<br>Skybox 커스터마이징</div>
                                 </div>
                                 <div class="sf-label">
-                                    <div class="sf-label__meta">Live Match</div>
-                                    <div class="sf-label__title sf-label__title--accent">Stadium</div>
-                                    <div class="sf-label__desc">실시간 경기 시청<br>실시간 보조 정보 확인<br>타 사용자·AI와 인터랙션<br>멀티 채널 미디어 시청</div>
+                                    <div class="sf-label__meta" data-vb-type="caption">Live Match</div>
+                                    <div class="sf-label__title sf-label__title--accent" data-vb-type="h3">Stadium</div>
+                                    <div class="sf-label__desc" data-vb-type="small">실시간 경기 시청<br>실시간 보조 정보 확인<br>타 사용자·AI와 인터랙션<br>멀티 채널 미디어 시청</div>
                                 </div>
                                 <div class="sf-label">
-                                    <div class="sf-label__meta">Personal Space</div>
-                                    <div class="sf-label__title sf-label__title--accent">Skybox</div>
-                                    <div class="sf-label__desc">하이라이트 시청<br>'찐'한 순간 다시 보기<br>나의 업적 확인</div>
+                                    <div class="sf-label__meta" data-vb-type="caption">Personal Space</div>
+                                    <div class="sf-label__title sf-label__title--accent" data-vb-type="h3">Skybox</div>
+                                    <div class="sf-label__desc" data-vb-type="small">하이라이트 시청<br>'찐'한 순간 다시 보기<br>나의 업적 확인</div>
                                 </div>
                                 <div class="sf-label">
-                                    <div class="sf-label__meta">Mobile App</div>
-                                    <div class="sf-label__title">Review</div>
-                                    <div class="sf-label__desc">요청한 세부 정보 확인</div>
+                                    <div class="sf-label__meta" data-vb-type="caption">Mobile App</div>
+                                    <div class="sf-label__title" data-vb-type="h3">Review</div>
+                                    <div class="sf-label__desc" data-vb-type="small">요청한 세부 정보 확인</div>
                                 </div>
                             </div>
                         </div>
@@ -2253,10 +2219,10 @@
 
         <section class="vb-section sec-dark sec-centered">
             <div class="vb-wrap">
-                <span class="vb-eyebrow reveal">03 — Solution</span>
-                <h2 class="vb-title reveal">Skybox<br><span style="color:var(--vb-muted);font-weight:500;">나만의 로비 공간</span></h2>
+                <span class="vb-eyebrow reveal" data-vb-type="small">03 — Solution</span>
+                <h2 class="vb-title reveal" data-vb-type="h1">Skybox<br><span style="color:var(--vb-muted);font-weight:500;">나만의 로비 공간</span></h2>
 
-                <p class="vb-body reveal" style="margin-bottom:var(--vb-lead-gap);">서비스에 접속했을 때 나오는 개인 공간입니다. 경기장의 스카이 박스를 모티브로 만들어진 공간으로,<br>각각의 유저는 이 공간에서 <span class="sky-lead__n">1.</span> <span class="sky-lead__k">시청할 경기, 하이라이트 등을 찾아보거나</span> <span class="sky-lead__n">2.</span> <span class="sky-lead__k">친구와 소통</span>할 수 있고,<br><span class="sky-lead__n">3.</span> <span class="sky-lead__k">업적을 통해 획득한 토큰으로 자신의 팬심을 시각화하고 공간을 커스터마이징</span> 할 수 있습니다.</p>
+                <p class="vb-body reveal" style="margin-bottom:var(--vb-lead-gap);" data-vb-type="body">서비스에 접속했을 때 나오는 개인 공간입니다. 경기장의 스카이 박스를 모티브로 만들어진 공간으로,<br>각각의 유저는 이 공간에서 <span class="sky-lead__n">1.</span> <span class="sky-lead__k">시청할 경기, 하이라이트 등을 찾아보거나</span> <span class="sky-lead__n">2.</span> <span class="sky-lead__k">친구와 소통</span>할 수 있고,<br><span class="sky-lead__n">3.</span> <span class="sky-lead__k">업적을 통해 획득한 토큰으로 자신의 팬심을 시각화하고 공간을 커스터마이징</span> 할 수 있습니다.</p>
 
                 <div class="reveal">
                     <img src="media/skybox/hero.jpg" alt="Skybox" loading="lazy" style="width:100%;height:auto;display:block;border-radius:16px;border:1px solid var(--vb-line);">
@@ -2265,8 +2231,8 @@
                 <!-- Key Features 3개 (GIF 독립 박스 + 텍스트 박스 밖) -->
                 <div class="vb-group">
                     <div class="vb-group__head vb-group__head--lead reveal">
-                        <span class="vb-group__num">A</span>
-                        <span class="vb-group__name">Key Features</span>
+                        <span class="vb-group__num" data-vb-type="small">A</span>
+                        <span class="vb-group__name" data-vb-type="h3">Key Features</span>
                     </div>
                     <div class="sky-features" id="sky-features">
                         <div class="sky-feature reveal">
@@ -2275,7 +2241,7 @@
                                     <source src="media/skybox/feature-01.mp4" type="video/mp4">
                                 </video>
                             </div>
-                            <p class="sky-feature__caption"><span class="sky-feature__num">1.</span>시청할 경기 브라우징</p>
+                            <p class="sky-feature__caption" data-vb-type="h3"><span class="sky-feature__num">1.</span>시청할 경기 브라우징</p>
                         </div>
                         <div class="sky-feature reveal">
                             <div class="sky-feature__media">
@@ -2283,7 +2249,7 @@
                                     <source src="media/skybox/feature-02.mp4" type="video/mp4">
                                 </video>
                             </div>
-                            <p class="sky-feature__caption"><span class="sky-feature__num">2.</span>친구와 소통</p>
+                            <p class="sky-feature__caption" data-vb-type="h3"><span class="sky-feature__num">2.</span>친구와 소통</p>
                         </div>
                         <div class="sky-feature reveal">
                             <div class="sky-feature__media">
@@ -2291,7 +2257,7 @@
                                     <source src="media/skybox/feature-03.mp4" type="video/mp4">
                                 </video>
                             </div>
-                            <p class="sky-feature__caption"><span class="sky-feature__num">3.</span>업적 토큰 - 공간 커스터마이징</p>
+                            <p class="sky-feature__caption" data-vb-type="h3"><span class="sky-feature__num">3.</span>업적 토큰으로 공간 꾸미기</p>
                         </div>
                     </div>
                 </div>
@@ -2299,41 +2265,41 @@
                 <!-- 3D Asset: 좌 공간 렌더 + 우 에셋 6종 -->
                 <div class="vb-group vb-group--lg">
                     <div class="vb-group__head reveal">
-                        <span class="vb-group__num">B</span>
-                        <span class="vb-group__name">3D Asset</span>
+                        <span class="vb-group__num" data-vb-type="small">B</span>
+                        <span class="vb-group__name" data-vb-type="h3">3D Asset</span>
                     </div>
-                    <p class="vb-body reveal" style="margin-bottom:var(--vb-lead-gap);">SKYBOX 공간과, 업적 기반 3D 토큰 에셋 6종 등을 제작하였습니다.<br>모든 토큰은 클릭외에도 옮기고 던지는 등 인터랙션이 가능합니다.</p>
+                    <p class="vb-body reveal" style="margin-bottom:var(--vb-lead-gap);" data-vb-type="body">SKYBOX 공간과, 업적 기반 3D 토큰 에셋 6종 등을 제작하였습니다.<br>모든 토큰은 클릭외에도 옮기고 던지는 등 인터랙션이 가능합니다.</p>
 
                     <div class="sky-asset">
                         <div class="sky-asset__hero-col reveal">
                             <div class="sky-asset__hero-media"><img src="media/skybox/asset-scene.png" alt="스카이박스"></div>
-                            <p class="sky-asset__hero-cap">스카이박스</p>
+                            <p class="sky-asset__hero-cap" data-vb-type="small">스카이박스</p>
                         </div>
 
                         <div class="sky-asset__grid">
                             <div class="reveal">
                                 <div class="sky-asset__item-media"><img src="media/skybox/asset-uniform-box.png" alt="기념 유니폼"></div>
-                                <p class="sky-asset__item-cap">기념 유니폼</p>
+                                <p class="sky-asset__item-cap" data-vb-type="small">기념 유니폼</p>
                             </div>
                             <div class="reveal">
                                 <div class="sky-asset__item-media"><img src="media/skybox/asset-pennant.png" alt="강원FC 페넌트"></div>
-                                <p class="sky-asset__item-cap">강원FC 페넌트</p>
+                                <p class="sky-asset__item-cap" data-vb-type="small">강원FC 페넌트</p>
                             </div>
                             <div class="reveal">
                                 <div class="sky-asset__item-media"><img src="media/skybox/asset-emblem.png" alt="강원FC 엠블럼"></div>
-                                <p class="sky-asset__item-cap">강원FC 엠블럼</p>
+                                <p class="sky-asset__item-cap" data-vb-type="small">강원FC 엠블럼</p>
                             </div>
                             <div class="reveal">
                                 <div class="sky-asset__item-media"><img src="media/skybox/asset-uniforms-grid.png" alt="시즌별, 구단별 유니폼"></div>
-                                <p class="sky-asset__item-cap">시즌별, 구단별 유니폼</p>
+                                <p class="sky-asset__item-cap" data-vb-type="small">시즌별, 구단별 유니폼</p>
                             </div>
                             <div class="reveal">
                                 <div class="sky-asset__item-media"><img src="media/skybox/asset-trophy.png" alt="K리그 트로피"></div>
-                                <p class="sky-asset__item-cap">K리그 트로피</p>
+                                <p class="sky-asset__item-cap" data-vb-type="small">K리그 트로피</p>
                             </div>
                             <div class="reveal">
                                 <div class="sky-asset__item-media"><img src="media/skybox/asset-hearts.png" alt="강원FC 응원심볼"></div>
-                                <p class="sky-asset__item-cap">강원FC 응원하트</p>
+                                <p class="sky-asset__item-cap" data-vb-type="small">강원FC 응원하트</p>
                             </div>
                         </div>
                     </div>
@@ -2342,15 +2308,15 @@
                 <!-- 인터랙션: 좌 와이어프레임 스케치 + 우 플레이 영상(자동재생) -->
                 <div class="vb-group vb-group--lg">
                     <div class="vb-group__head vb-group__head--lead reveal">
-                        <span class="vb-group__num">C</span>
-                        <span class="vb-group__name">인터랙션</span>
+                        <span class="vb-group__num" data-vb-type="small">C</span>
+                        <span class="vb-group__name" data-vb-type="h3">인터랙션</span>
                     </div>
                     <div class="sky-inter">
                         <div class="reveal">
                             <div class="sky-inter__media">
                                 <img src="media/skybox/interaction-guide.jpg" alt="인터랙션 와이어프레임 스케치" loading="lazy">
                             </div>
-                            <p class="sky-inter__caption">VR 공간의 거리·시야각을 고려한 배치 스케치</p>
+                            <p class="sky-inter__caption" data-vb-type="small">VR 공간의 거리·시야각을 고려한 배치 스케치</p>
                         </div>
                         <div class="reveal">
                             <div class="sky-inter__media">
@@ -2359,7 +2325,7 @@
                                 </video>
                                 <button type="button" class="vb-carousel__play" aria-label="재생"><svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><polygon points="5,3 5,13 13,8"></polygon></svg></button>
                             </div>
-                            <p class="sky-inter__caption">3D 오브젝트 인터랙션</p>
+                            <p class="sky-inter__caption" data-vb-type="small">3D 오브젝트 인터랙션</p>
                         </div>
                     </div>
                 </div>
@@ -2371,15 +2337,15 @@
              ==================================================== -->
         <section class="vb-section sec-dark sec-centered">
             <div class="vb-wrap">
-                <span class="vb-eyebrow reveal">04 — Solution</span>
-                <h2 class="vb-title reveal">In Stadium<br><span style="color:var(--vb-muted);font-weight:500;">원하는 위치에서, 원하는 방식으로</span></h2>
-                <p class="vb-body reveal" style="margin-bottom:var(--vb-lead-gap);">중계 환경을 사용자 본인의 취향에 맞게 조정하고, 경기를 더 재미있게 즐길 수 있도록 돕습니다.</p>
+                <span class="vb-eyebrow reveal" data-vb-type="small">04 — Solution</span>
+                <h2 class="vb-title reveal" data-vb-type="h1">In Stadium<br><span style="color:var(--vb-muted);font-weight:500;">원하는 위치에서, 원하는 방식으로</span></h2>
+                <p class="vb-body reveal" style="margin-bottom:var(--vb-lead-gap);" data-vb-type="body">중계 환경을 사용자 본인의 취향에 맞게 조정하고, 경기를 더 재미있게 즐길 수 있도록 돕습니다.</p>
 
                 <!-- 360 VR 경기장 -->
                 <div class="vb-fullbleed reveal">
                     <img src="media/stadium/stadium-360.jpg" alt="360도 VR 경기장 뷰">
                 </div>
-                <p class="vb-caption"><strong style="color:var(--vb-text);font-weight:700;">360° 완전한 VR 경기장</strong> — 실제 경기장 관객 사이에 있는 것처럼, 현장의 분위기 느끼며 경기 시청</p>
+                <p class="vb-caption" data-vb-type="small"><strong style="color:var(--vb-text);font-weight:700;">360° 완전한 VR 경기장</strong> — 실제 경기장 관객 사이에 있는 것처럼, 현장의 분위기 느끼며 경기 시청</p>
 
                 <!-- Key Features 캐러셀 (Apple Vision Pro 엔터테인먼트 캐러셀 레이아웃)
                      세로 스택: eyebrow → 캐러셀(전체 폭) → 화살표(가운데)
@@ -2388,8 +2354,8 @@
                 <div class="vb-group">
                     <div class="vb-carousel-block reveal">
                         <div class="vb-group__head vb-group__head--lead vb-carousel-block__eyebrow" style="margin-top:0;">
-                            <span class="vb-group__num">A</span>
-                            <span class="vb-group__name">Key Features</span>
+                            <span class="vb-group__num" data-vb-type="small">A</span>
+                            <span class="vb-group__name" data-vb-type="h3">Key Features</span>
                         </div>
                         <div class="vb-carousel">
                             <div class="vb-carousel__track" id="stadium-carousel">
@@ -2397,7 +2363,7 @@
                                     <div class="vb-carousel__media">
                                         <img src="media/stadium/stadium-view-2.jpg" alt="스타디움뷰" loading="lazy">
                                     </div>
-                                    <p class="vb-carousel__caption"><span class="vb-carousel__num">1.</span><strong>자유로운 시청 환경</strong><br>원하는 위치에서 원하는 방식으로. 초개인화된 시청 환경</p>
+                                    <p class="vb-carousel__caption" data-vb-type="small"><span class="vb-carousel__num">1.</span><strong data-vb-type="h3">자유로운 시청 환경</strong><br>원하는 위치에서 원하는 방식으로. 초개인화된 시청 환경</p>
                                 </div>
                                 <div class="vb-carousel__item">
                                     <div class="vb-carousel__media">
@@ -2406,7 +2372,7 @@
                                         </video>
                                         <button type="button" class="vb-carousel__play" aria-label="재생"><svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><polygon points="5,3 5,13 13,8"></polygon></svg></button>
                                     </div>
-                                    <p class="vb-carousel__caption"><span class="vb-carousel__num">2.</span><strong>손쉬운 경기 정보 탐색</strong><br>디바이스를 벗지 않고도 손쉽게. 리그, 팀 , 선수 정보, 경기 전술 등 다양한 정보 실시간 확인</p>
+                                    <p class="vb-carousel__caption" data-vb-type="small"><span class="vb-carousel__num">2.</span><strong data-vb-type="h3">손쉬운 경기 정보 탐색</strong><br>디바이스를 벗지 않고도 손쉽게. 리그, 팀 , 선수 정보, 경기 전술 등 다양한 정보 실시간 확인</p>
                                 </div>
                                 <div class="vb-carousel__item">
                                     <div class="vb-carousel__media">
@@ -2415,7 +2381,7 @@
                                         </video>
                                         <button type="button" class="vb-carousel__play" aria-label="재생"><svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><polygon points="5,3 5,13 13,8"></polygon></svg></button>
                                     </div>
-                                    <p class="vb-carousel__caption"><span class="vb-carousel__num">3.</span><strong>소셜 : 친구와 함께 보기</strong><br>원하는 친구와 음성 대화하며 경기 함께 시청</p>
+                                    <p class="vb-carousel__caption" data-vb-type="small"><span class="vb-carousel__num">3.</span><strong data-vb-type="h3">소셜 : 친구와 함께 보기</strong><br>원하는 친구와 음성 대화하며 경기 함께 시청</p>
                                 </div>
                                 <div class="vb-carousel__item">
                                     <div class="vb-carousel__media">
@@ -2424,13 +2390,13 @@
                                         </video>
                                         <button type="button" class="vb-carousel__play" aria-label="재생"><svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><polygon points="5,3 5,13 13,8"></polygon></svg></button>
                                     </div>
-                                    <p class="vb-carousel__caption"><span class="vb-carousel__num">4.</span><strong>소셜 : AI 기반 통합 메신저</strong><br>디바이스를 벗을 필요 없이, 연동된 계정 기반으로 가족, 친구들과 소통</p>
+                                    <p class="vb-carousel__caption" data-vb-type="small"><span class="vb-carousel__num">4.</span><strong data-vb-type="h3">소셜 : AI 기반 통합 메신저</strong><br>디바이스를 벗을 필요 없이, 연동된 계정 기반으로 가족, 친구들과 소통</p>
                                 </div>
                                 <div class="vb-carousel__item">
                                     <div class="vb-carousel__media">
                                         <img src="media/stadium/quick-menu.png" alt="퀵리모트" loading="lazy">
                                     </div>
-                                    <p class="vb-carousel__caption"><span class="vb-carousel__num">5.</span><strong>퀵리모트</strong><br>경기 중 자주 사용되는 기능 5가지를 숏컷으로 설정</p>
+                                    <p class="vb-carousel__caption" data-vb-type="small"><span class="vb-carousel__num">5.</span><strong data-vb-type="h3">퀵리모트</strong><br>경기 중 자주 사용되는 기능 5가지를 숏컷으로 설정</p>
                                 </div>
                             </div>
                         </div>
@@ -2458,9 +2424,9 @@
                     <p class="ai-sec__desc reveal">VIVA is a friendly AI assistant designed with themes of <strong>VIBRANCY</strong>, <strong>VIVIDNESS</strong> and <strong>BOUNCE</strong> to enhance the football viewing experience. Its multimodal interface recognizes voice, text, and gestures, enabling natural, friend-like interactions.</p>
                     -->
                     <div class="ai-sec__text">
-                        <span class="ai-sec__eyebrow reveal">VIBRA의 풋볼 어시스턴트</span>
-                        <h2 class="ai-sec__title reveal">VIVA AI</h2>
-                        <p class="ai-sec__desc reveal"><strong>VIVA</strong>는 <strong>최초의 축구공을 모티브</strong>로 디자인된 AI 어시스턴트입니다. 축구 시청 경험을 한층 끌어올리기 위해 <strong>생동감(Vibrancy)</strong>, <strong>선명함(Vividness)</strong>, <strong>경쾌함(Bounce)</strong>을 핵심 컨셉으로 삼았으며, 음성·텍스트·제스처를 아우르는 멀티모달 인터페이스를 통해 마치 친구처럼 자연스러운 상호작용을 제공합니다.</p>
+                        <span class="ai-sec__eyebrow reveal" data-vb-type="small">VIBRA의 풋볼 어시스턴트</span>
+                        <h2 class="ai-sec__title reveal" data-vb-type="h1">VIVA AI</h2>
+                        <p class="ai-sec__desc reveal" data-vb-type="body"><strong>VIVA</strong>는 <strong>최초의 축구공을 모티브</strong>로 디자인된 AI 어시스턴트입니다. 축구 시청 경험을 한층 끌어올리기 위해 <strong>생동감(Vibrancy)</strong>, <strong>선명함(Vividness)</strong>, <strong>경쾌함(Bounce)</strong>을 핵심 컨셉으로 삼았으며, <span class="vb-keep-phrase">음성·텍스트·제스처</span>를 아우르는 멀티모달 인터페이스를 통해 마치 친구처럼 자연스러운 상호작용을 제공합니다.</p>
                     </div>
 
                     <div class="ai-sec__grid">
@@ -2470,7 +2436,7 @@
                                     <source src="media/ai/viva-01.mp4" type="video/mp4">
                                 </video>
                             </div>
-                            <p class="ai-sec__cap">음성 인식</p>
+                            <p class="ai-sec__cap" data-vb-type="small">음성 인식</p>
                         </div>
                         <div class="ai-sec__item reveal">
                             <div class="ai-sec__media ai-sec__media--scale">
@@ -2478,7 +2444,7 @@
                                     <source src="media/ai/viva-02.mp4" type="video/mp4">
                                 </video>
                             </div>
-                            <p class="ai-sec__cap">알림</p>
+                            <p class="ai-sec__cap" data-vb-type="small">알림</p>
                         </div>
                         <div class="ai-sec__item reveal">
                             <div class="ai-sec__media">
@@ -2486,7 +2452,7 @@
                                     <source src="media/ai/viva-03.mp4" type="video/mp4">
                                 </video>
                             </div>
-                            <p class="ai-sec__cap">감정 공유</p>
+                            <p class="ai-sec__cap" data-vb-type="small">감정 공유</p>
                         </div>
                     </div>
                 </div>
@@ -2498,7 +2464,7 @@
                     <div class="ai-sec__below-media reveal">
                         <img src="media/ai/viva-detail.jpg" alt="VIVA AI 상세" loading="lazy">
                     </div>
-                    <p class="ai-sec__below-desc reveal">경기와 관련된 실시간 정보뿐만 아니라, "47번 선수가 신고 있는 축구화 뭐야?"와 같은 사소한 호기심까지. VIVA AI가 명쾌하게 해결해줍니다.</p>
+                    <p class="ai-sec__below-desc reveal" data-vb-type="body">실시간 경기 정보부터 “47번 선수가 신은 축구화는 뭐야?” 같은 사소한 궁금증까지,<br>VIVA AI에게 자연스럽게 물어보고 답을 얻을 수 있습니다.</p>
                 </div>
             </div>
         </section>
@@ -2508,16 +2474,16 @@
              ==================================================== -->
         <section class="vb-section sec-dark sec-centered" style="padding-top: clamp(140px, 18vh, 240px); padding-bottom: clamp(140px, 18vh, 240px);">
             <div class="vb-wrap">
-                <span class="vb-eyebrow reveal">05 — Interaction</span>
-                <h2 class="vb-title reveal">Interaction<br><span style="color:var(--vb-muted);font-weight:500;">사용자의 행동을 인터랙션으로</span></h2>
-                <p class="vb-body reveal" style="margin-bottom: clamp(calc(56px * var(--vb-s)), 8vw, calc(110px * var(--vb-s)));">세밀한 관찰을 통해 <strong>실제 축구 관람 중 공통적으로 자주 나타나는 행동과 포즈</strong>를 파악했습니다.<br> 이를 서비스 속 <strong>제스처·컨트롤러 인터랙션</strong>으로 전환해, 자연스럽고 직관적인 경험을 구현했습니다.</p>
+                <span class="vb-eyebrow reveal" data-vb-type="small">05 — Interaction</span>
+                <h2 class="vb-title reveal" data-vb-type="h1">Interaction<br><span style="color:var(--vb-muted);font-weight:500;">사용자의 행동을 인터랙션으로</span></h2>
+                <p class="vb-body reveal" style="margin-bottom: clamp(calc(56px * var(--vb-s)), 8vw, calc(110px * var(--vb-s)));" data-vb-type="body">세밀한 관찰을 통해 <strong>실제 축구 관람 중 공통적으로 자주 나타나는 행동과 포즈</strong>를 파악했습니다.<br> 이를 서비스 속 <strong>제스처·컨트롤러 인터랙션</strong>으로 전환해, 자연스럽고 직관적인 경험을 구현했습니다.</p>
 
                 <!-- 캐러셀 (In Stadium Key Features와 동일 구조) -->
                 <div class="vb-group">
                     <div class="vb-carousel-block reveal">
                         <div class="vb-group__head vb-group__head--lead vb-carousel-block__eyebrow" style="margin-top:0;">
-                            <span class="vb-group__num">A</span>
-                            <span class="vb-group__name">Key Interactions</span>
+                            <span class="vb-group__num" data-vb-type="small">A</span>
+                            <span class="vb-group__name" data-vb-type="h3">Key Interactions</span>
                         </div>
                         <div class="vb-carousel">
                             <div class="vb-carousel__track" id="interaction-carousel">
@@ -2528,7 +2494,7 @@
                                         </video>
                                         <button type="button" class="vb-carousel__play" aria-label="재생"><svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><polygon points="5,3 5,13 13,8"></polygon></svg></button>
                                     </div>
-                                    <p class="vb-carousel__caption"><span class="vb-carousel__num">1.</span><strong>캡처</strong><br>손가락으로 카메라 모양을 만들어 보고 있는 장면 그대로 캡쳐합니다.<br> 캡쳐 후 연동된 소셜 네트워크에 바로 업로드할 수 있습니다.</p>
+                                    <p class="vb-carousel__caption" data-vb-type="small"><span class="vb-carousel__num">1.</span><strong data-vb-type="h3">캡처</strong><br>손가락으로 카메라 모양을 만들어 보고 있는 장면 그대로 캡쳐합니다.<br> 캡쳐 후 연동된 소셜 네트워크에 바로 업로드할 수 있습니다.</p>
                                 </div>
                                 <div class="vb-carousel__item">
                                     <div class="vb-carousel__media">
@@ -2537,7 +2503,7 @@
                                         </video>
                                         <button type="button" class="vb-carousel__play" aria-label="재생"><svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><polygon points="5,3 5,13 13,8"></polygon></svg></button>
                                     </div>
-                                    <p class="vb-carousel__caption"><span class="vb-carousel__num">2.</span><strong>이모지</strong><br>손가락을 총 모양으로 만들어서 이모지를 발사합니다.<br>좋아요, 웃겨요, 화나요 등 다양한 감정을 재밌는 방식으로 표현할 수 있습니다.</p>
+                                    <p class="vb-carousel__caption" data-vb-type="small"><span class="vb-carousel__num">2.</span><strong data-vb-type="h3">이모지</strong><br>손가락을 총 모양으로 만들어서 이모지를 발사합니다.<br>좋아요, 웃겨요, 화나요 등 다양한 감정을 재밌는 방식으로 표현할 수 있습니다.</p>
                                 </div>
                                 <!-- 바이브: 추후 영상 교체 예정 -->
                                 <div class="vb-carousel__item">
@@ -2547,7 +2513,7 @@
                                         </video>
                                         <button type="button" class="vb-carousel__play" aria-label="재생"><svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><polygon points="5,3 5,13 13,8"></polygon></svg></button>
                                     </div>
-                                    <p class="vb-carousel__caption"><span class="vb-carousel__num">3.</span><strong>다이나믹 햅틱</strong><br>득점 찬스, 실점 위기 등 중요한 순간.<br> 컨트롤러의 진동을 통해 긴장감을 극대화합니다.</p>
+                                    <p class="vb-carousel__caption" data-vb-type="small"><span class="vb-carousel__num">3.</span><strong data-vb-type="h3">다이나믹 햅틱</strong><br>득점 찬스, 실점 위기 등 중요한 순간.<br> 컨트롤러의 진동을 통해 긴장감을 극대화합니다.</p>
                                 </div>
                                 <div class="vb-carousel__item">
                                     <div class="vb-carousel__media">
@@ -2556,7 +2522,7 @@
                                         </video>
                                         <button type="button" class="vb-carousel__play" aria-label="재생"><svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><polygon points="5,3 5,13 13,8"></polygon></svg></button>
                                     </div>
-                                    <p class="vb-carousel__caption"><span class="vb-carousel__num">4.</span><strong>세레머니</strong><br>득점의 순간, 컨트롤러를 머리 위로 들어 올립니다. <br> 축하 이펙트가 재생되며 승리의 기쁨을 더합니다.</p>
+                                    <p class="vb-carousel__caption" data-vb-type="small"><span class="vb-carousel__num">4.</span><strong data-vb-type="h3">세레머니</strong><br>득점의 순간, 컨트롤러를 머리 위로 들어 올립니다. <br> 축하 이펙트가 재생되며 승리의 기쁨을 더합니다.</p>
                                 </div>
                             </div>
                         </div>
@@ -2570,10 +2536,10 @@
                 <!-- 인터랙션 가이드 하위 섹션 : 튜토리얼 영상 4장 -->
                 <div class="vb-group vb-group--lg">
                     <div class="vb-group__head reveal">
-                        <span class="vb-group__num">B</span>
-                        <span class="vb-group__name">인터랙션 가이드</span>
+                        <span class="vb-group__num" data-vb-type="small">B</span>
+                        <span class="vb-group__name" data-vb-type="h3">인터랙션 가이드</span>
                     </div>
-                    <p class="vb-body reveal" style="margin-bottom: var(--vb-lead-gap);">XR 디바이스와 서비스에 익숙하지 않은 유저들을 위해 3D 애니메이션 기반 인터랙션 가이드를 제작,<br> 필요한 타이밍에 맞춰 튜토리얼 형식으로 제공하였습니다.</p>
+                    <p class="vb-body reveal" style="margin-bottom: var(--vb-lead-gap);" data-vb-type="body">XR 디바이스와 서비스에 익숙하지 않은 사용자를 위해 3D 애니메이션 가이드를 제작했습니다.<br>필요한 순간에 튜토리얼을 제공해 인터랙션을 쉽게 익힐 수 있도록 했습니다.</p>
                     <!-- 한 줄에 4개, 하나씩 순서대로 재생(재생 중=컬러, 나머지=흑백 정지). loop 없음 = 'ended'로 다음으로 넘어감 -->
                     <div class="ig-grid" id="interaction-guide">
                         <div class="ig-card reveal">
@@ -2582,7 +2548,7 @@
                                     <source src="media/interaction/1.click.mp4" type="video/mp4">
                                 </video>
                             </div>
-                            <p class="ig-card__cap"><span class="ig-card__num">1.</span>클릭</p>
+                            <p class="ig-card__cap" data-vb-type="small"><span class="ig-card__num">1.</span>클릭</p>
                         </div>
                         <div class="ig-card reveal">
                             <div class="ig-card__media">
@@ -2590,7 +2556,7 @@
                                     <source src="media/interaction/2.grab%26move.mp4" type="video/mp4">
                                 </video>
                             </div>
-                            <p class="ig-card__cap"><span class="ig-card__num">2.</span>잡기 &amp; 이동</p>
+                            <p class="ig-card__cap" data-vb-type="small"><span class="ig-card__num">2.</span>잡기 &amp; 이동</p>
                         </div>
                         <div class="ig-card reveal">
                             <div class="ig-card__media">
@@ -2598,7 +2564,7 @@
                                     <source src="media/interaction/3.capture.mp4" type="video/mp4">
                                 </video>
                             </div>
-                            <p class="ig-card__cap"><span class="ig-card__num">3.</span>캡처</p>
+                            <p class="ig-card__cap" data-vb-type="small"><span class="ig-card__num">3.</span>캡처</p>
                         </div>
                         <div class="ig-card reveal">
                             <div class="ig-card__media">
@@ -2606,7 +2572,7 @@
                                     <source src="media/interaction/4.emoji.mp4" type="video/mp4">
                                 </video>
                             </div>
-                            <p class="ig-card__cap"><span class="ig-card__num">4.</span>이모지</p>
+                            <p class="ig-card__cap" data-vb-type="small"><span class="ig-card__num">4.</span>이모지</p>
                         </div>
                     </div>
                 </div>
@@ -2618,8 +2584,8 @@
              ==================================================== -->
         <section class="vb-section vb-video-section sec-dark sec-centered">
             <div class="vb-wrap">
-                <span class="vb-eyebrow reveal">06 — Demo</span>
-                <h2 class="vb-title reveal">Play Film<br><span style="color:var(--vb-muted);font-weight:500;">실제 플레이 영상</span></h2>
+                <span class="vb-eyebrow reveal" data-vb-type="small">06 — Demo</span>
+                <h2 class="vb-title reveal" data-vb-type="h1">Play Film<br><span style="color:var(--vb-muted);font-weight:500;">실제 플레이 영상</span></h2>
 
                 <div class="vb-video reveal">
                     <div class="vb-video__frame">
@@ -2644,9 +2610,9 @@
              ==================================================== -->
         <section class="vb-section sec-centered">
             <div class="vb-wrap">
-                <span class="vb-eyebrow reveal">Behind</span>
-                <h2 class="vb-title reveal">현장감을 담아낸 360° 레코딩</h2>
-                <p class="vb-body reveal" style="margin-bottom: var(--vb-lead-gap);">더 생생한 현장감, 더 높은 몰입감을 위해 K리그 현장을 직접 담았습니다.<br>한국프로축구연맹 및 강원FC와 협력하여 Insta360 Titan 카메라로 실제 경기장 환경을 촬영했습니다.</p>
+                <span class="vb-eyebrow reveal" data-vb-type="small">Behind</span>
+                <h2 class="vb-title reveal" data-vb-type="h1">현장감을 담아낸 360° 레코딩</h2>
+                <p class="vb-body reveal" style="margin-bottom: var(--vb-lead-gap);" data-vb-type="body">생생한 현장감을 전하기 위해 한국프로축구연맹 및 강원FC와 협력했습니다.<br>Insta360 Titan 카메라로 K리그 경기장 현장을 직접 촬영했습니다.</p>
                 <div class="vb-archive-media reveal">
                     <img src="media/vr_titan.jpg" alt="경기장 VR 촬영" loading="lazy">
                 </div>
@@ -2658,8 +2624,8 @@
              ==================================================== -->
         <section class="vb-section sec-centered">
             <div class="vb-wrap">
-                <span class="vb-eyebrow reveal">Archive</span>
-                <h2 class="vb-title reveal">Project Archive</h2>
+                <span class="vb-eyebrow reveal" data-vb-type="small">Archive</span>
+                <h2 class="vb-title reveal" data-vb-type="h1">Project Archive</h2>
                 <div class="vb-archive-media reveal">
                     <div class="vb-slideshow" id="archive-slideshow">
                         <img src="media/archieve_1.jpg" alt="프로젝트 아카이브 1" class="is-active">
@@ -2680,7 +2646,7 @@
                 <img src="media/archive/closing.jpg" alt="VIBRA" loading="lazy">
             </div>
             <div class="vb-closing__inner">
-                <h2 class="vb-closing__title">
+                <h2 class="vb-closing__title" data-vb-type="h2">
                 <a href="../../../works.html" class="vb-closing__cta hover-trigger">Back to Works</a>
             </div>
         </section>
@@ -3208,14 +3174,7 @@
                읽는 데 도움이 안 된다. 단을 좁혀 큰 것은 낮추고 작은 것은 올린다. */
             :root {
                 /* 카드 밖에서 강조하는 글자는 하나로 */
-                --fs-display: 30px;
-                --fs-h1:      30px;
                 /* 카드 안에서 강조하는 글자도 하나로 ('대부분 능동적으로~' 크기) */
-                --fs-h2:      18px;
-                --fs-h3:      18px;
-                --fs-body:    16px;
-                --fs-small:   15px;
-                --fs-caption: 13px;
             }
 
             /* 강조 글자를 두 단으로 묶는다.

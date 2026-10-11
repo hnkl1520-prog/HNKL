@@ -148,12 +148,5 @@
     --gray-ink:     var(--gray-5);
 }
 
-/* ----------------------------------------------------------------------
-   3층 · --s 실제 적용 (vibra 원본과 동일한 @media + @supports 래핑)
-   1024px 미만은 --s = 1 유지(위 :root 기본값).
-   ---------------------------------------------------------------------- */
-@media (min-width: 1024px) {
-    @supports (width: calc(1px * clamp(0.8, calc(0.5 + 100vw / 5120px), 1))) {
-        :root { --s: clamp(0.8, calc(0.5 + 100vw / 5120px), 1); }
-    }
-}
+/* Viewport-based downscaling is disabled.
+   Keep the base --s: 1 above; responsive layouts retain their own breakpoints. */

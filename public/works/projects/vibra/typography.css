@@ -1,0 +1,26 @@
+/* Project typography: shared size tokens and explicit content roles. */
+.page-vibra { --fs-cap: var(--fs-small); }
+.page-vibra main [data-vb-type="display"] { letter-spacing:normal !important; }
+.page-vibra main [data-vb-type="display"] {font-size:var(--fs-display) !important;font-weight:var(--fw-semibold) !important;line-height:1.05 !important;letter-spacing:-0.02em !important;}
+.page-vibra main [data-vb-type="display"]:lang(ko) {line-height:1.2 !important;}
+.page-vibra main [data-vb-type="h1"] { letter-spacing:normal !important; }
+.page-vibra main [data-vb-type="h1"] {font-size:var(--fs-h1) !important;font-weight:var(--fw-semibold) !important;line-height:1.1 !important;letter-spacing:-0.015em !important;}
+.page-vibra main [data-vb-type="h1"]:lang(ko) {line-height:1.25 !important;}
+.page-vibra main [data-vb-type="h2"] { letter-spacing:normal !important; }
+.page-vibra main [data-vb-type="h2"] {font-size:var(--fs-h2) !important;font-weight:var(--fw-semibold) !important;line-height:1.3 !important;letter-spacing:-0.01em !important;}
+.page-vibra main [data-vb-type="h3"] { letter-spacing:normal !important; }
+.page-vibra main [data-vb-type="h3"] {font-size:var(--fs-h3) !important;font-weight:var(--fw-semibold) !important;line-height:1.4 !important;}
+.page-vibra main [data-vb-type="body"] { letter-spacing:normal !important; }
+.page-vibra main [data-vb-type="body"] {font-size:var(--fs-body) !important;font-weight:var(--fw-regular) !important;line-height:1.7 !important;}
+.page-vibra main [data-vb-type="caption"] { letter-spacing:normal !important; }
+.page-vibra main [data-vb-type="caption"] {font-size:var(--fs-caption) !important;font-weight:var(--fw-regular) !important;line-height:1.5 !important;}
+.page-vibra main [data-vb-type="small"] {font-size:var(--fs-small)!important;font-weight:var(--fw-regular)!important;line-height:1.5!important;letter-spacing:normal!important;}
+.page-vibra main [data-vb-type="intro"] {font-size:var(--fs-h2)!important;font-weight:var(--fw-regular)!important;line-height:1.7!important;letter-spacing:normal!important;}
+.page-vibra main strong:not([data-vb-type]), .page-vibra main b:not([data-vb-type]) {font-weight:var(--fw-bold)!important;}
+.page-vibra main .vb-title > span {font-weight:inherit!important;}
+.page-vibra main p, .page-vibra main [data-vb-type="h2"], .page-vibra main [data-vb-type="h3"] {word-break:keep-all!important;overflow-wrap:break-word;text-wrap:pretty;}
+.page-vibra main .vb-research-copy, .page-vibra main .info-card p, .page-vibra main .ql-intro, .page-vibra main .ql-method-card__desc, .page-vibra main .sky-feature__caption, .page-vibra main .ai-sec__desc {text-wrap:balance;}
+.page-vibra main .ai-sec__desc strong, .page-vibra main .vb-keep-phrase {white-space:nowrap;}
+.page-vibra main .vb-field-intro {width:100%;max-width:760px!important;}
+.page-vibra main .ai-sec__below-desc {max-width:860px;text-wrap:balance;}
+.page-vibra main .vb-carousel__num {font-size:var(--fs-h3);font-weight:var(--fw-semibold);line-height:1.4;}

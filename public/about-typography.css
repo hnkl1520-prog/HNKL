@@ -1,0 +1,81 @@
+/* About introduction only: keep the profile and Key Info cards independent. */
+.page-about .hero-text-block {
+    /* The opening statement has its own display size. */
+    --about-intro-size: calc(48px * var(--s));
+    font-size: var(--about-intro-size);
+    font-weight: var(--fw-regular);
+    line-height: 1.5;
+    letter-spacing: -.025em;
+    text-wrap: pretty;
+}
+
+.page-about .philo-intro-title,
+.page-about .key-detail-title {
+    font-size: var(--fs-display);
+    font-weight: var(--fw-semibold);
+    line-height: 1.2;
+    letter-spacing: -.025em;
+}
+
+.page-about .philo-intro-title {
+    margin-bottom: var(--space-5);
+}
+
+.page-about .philo-label {
+    font-size: var(--fs-display);
+    font-weight: var(--fw-semibold);
+    line-height: 1.3;
+    letter-spacing: -.01em;
+}
+
+.page-about .philo-desc {
+    /* These are prominent statements, rather than supporting body copy. */
+    font-size: var(--fs-h2);
+    font-weight: var(--fw-regular);
+    line-height: 1.6;
+    letter-spacing: -.01em;
+    margin-top: var(--space-5);
+    word-break: keep-all;
+    overflow-wrap: break-word;
+}
+
+.page-about .philo-desc strong {
+    font-weight: var(--fw-semibold);
+}
+
+.page-about .key-detail-title {
+    margin-bottom: var(--space-7);
+}
+
+@media (min-width: 768px) and (max-width: 1024px) {
+    .page-about .hero-text-block {
+        --about-intro-size: var(--fs-h1);
+    }
+}
+
+@media (max-width: 767px) {
+    .page-about .hero-text-block {
+        --about-intro-size: clamp(22px, 5.8vw, 28px);
+        line-height: 1.6;
+    }
+
+    .page-about .philo-intro-title,
+    .page-about .key-detail-title {
+        font-size: var(--fs-h1);
+        line-height: 1.25;
+    }
+
+    .page-about .philo-label {
+        font-size: var(--fs-h2);
+        line-height: 1.4;
+    }
+
+    .page-about .philo-desc {
+        font-size: var(--fs-h3);
+        margin-top: var(--space-3);
+    }
+
+    .page-about .key-detail-title {
+        margin-bottom: var(--space-6);
+    }
+}
