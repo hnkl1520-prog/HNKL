@@ -26,3 +26,18 @@ test('calls selected model, keeps credentials in headers, hides upstream error b
  });
  await assert.rejects(()=>respond({prompt:'hello'},'test-key',async()=>({ok:false,status:429})),{message:'Model request failed',upstreamStatus:429});
 });
+test('recognizes standalone state pages without treating SOON as KORAIL',()=>{
+ const prompt=prepare({prompt:'여기는?',page:{path:'/experiments/page-states/soon-stone/'}}).systemInstruction.parts[0].text;
+ assert.match(prompt,/"page":"Under Construction"/);
+ assert.match(prepare({prompt:'여기는?',page:{path:'/missing',kind:'not-found'}}).systemInstruction.parts[0].text,/"page":"404"/);
+ assert.match(prepare({prompt:'여기는?',page:{path:'/works.html',category:'labs'}}).systemInstruction.parts[0].text,/"page":"Labs"/);
+});
+test('preserves readable paragraphs without splitting registration dates',()=>{
+ const result=normalize({candidates:[{content:{parts:[{text:JSON.stringify({reply:'등록일은 2026년 1월 29일이에요. 좌석별 공조를 다뤘어요.',destinations:[]})}]}}]});
+ assert.equal(result.reply,'등록일은 2026년 1월 29일이에요.\n\n좌석별 공조를 다뤘어요.');
+});
+test('knowledge includes approved career and activities without a patent registration identifier',()=>{
+ const data=JSON.stringify(require('../functions/guide-knowledge.json'));
+ for(const fact of ['제일기획 프리랜서','AE','2026년 1월 29일','학생회','중앙도서관','취리히'])assert.ok(data.includes(fact));
+ assert.doesNotMatch(data,/10-\d{7}|제\s*\d[\d-]{5,}호/);
+});

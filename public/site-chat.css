@@ -83,7 +83,9 @@
     margin-bottom: 12px;
     padding: 10px 14px;
     border-radius: 14px;
-    line-height: 1.4;
+    line-height: 1.65;
+    overflow-wrap: anywhere;
+    word-break: keep-all;
     white-space: pre-wrap;
 }
 .site-chat-message-bot {
@@ -198,3 +200,8 @@ body.site-chat-pointer :is(#cursor-bg-layer, #cursor-text-layer) { visibility: h
 @media (prefers-reduced-motion: reduce) {
     .site-chat-widget *, .site-chat-widget *::before, .site-chat-widget *::after { animation: none !important; transition: none !important; }
 }
+
+/* State pages use the native cursor for the chat controls. */
+body[data-page-state] .site-chat-widget, body[data-page-state] .site-chat-launcher { cursor: auto; }
+body[data-page-state] .site-chat-launcher { cursor: pointer; }
+body.site-chat-pointer #cursor-follower { visibility: hidden; }

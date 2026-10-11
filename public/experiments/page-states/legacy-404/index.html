@@ -4,7 +4,7 @@
     <base href="/">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>404 - Project HNKL</title>
+    <title>404</title>
     <script>
         const isEmbeddedPreview = new URLSearchParams(window.location.search).get('embed') === '1';
         if (isEmbeddedPreview) document.documentElement.classList.add('is-embedded-preview');
@@ -256,8 +256,13 @@
 
     </style>
     <link rel="stylesheet" href="/responsive.css">
+  <link rel="stylesheet" href="/site-chat.css?v=20261012-guide-v2">
+  <link rel="stylesheet" href="/ai-actions.css?v=20261012-guide-v2">
+  <script src="/ai-client.js?v=20261012-guide-v2" defer></script>
+  <script src="/site-chat.js?v=20261012-guide-v2" defer></script>
+  <script src="/page-state.js?v=20261012-guide-v2" defer></script>
 </head>
-<body class="page-error">
+<body class="page-error" data-page-state="not-found">
 
     <div id="page-entry-curtain"></div>
 
@@ -270,7 +275,7 @@
 
     <div class="ui-container">
         <h2 class="status-text">Page Not Found</h2>
-        <a href="index.html" class="back-btn" onclick="/* history.back(); return false; */" data-hover-text="Go Back">
+        <a href="/works.html" class="back-btn"  data-hover-text="Go Back">
             <span>Go Back</span>
         </a>
     </div>

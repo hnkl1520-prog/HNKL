@@ -1,7 +1,7 @@
 /* Shared chat for About, Works and project detail pages. */
 (() => {
     'use strict';
-    if (document.getElementById('site-chat-widget')) return;
+    if (window.self !== window.top || document.getElementById('site-chat-widget')) return;
 
     const widget = document.createElement('div');
     widget.id = 'site-chat-widget';

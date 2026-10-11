@@ -6,7 +6,7 @@
   function context() {
     const sections=[...document.querySelectorAll('main section[id]')];
     const visible=sections.map(e=>({e,r:e.getBoundingClientRect()})).filter(({r})=>r.bottom>80&&r.top<innerHeight).sort((a,b)=>Math.abs(a.r.top-100)-Math.abs(b.r.top-100));
-    return {path:location.pathname,section:visible[0]?.e.id||'',category:document.querySelector('#btn-labs')?.classList.contains('active')?'labs':'projects',mobile:matchMedia('(max-width:768px)').matches,language:document.body.dataset.lang==='en'?'en':'ko'};
+    return {kind:document.body.dataset.pageState||'',path:location.pathname,section:visible[0]?.e.id||'',category:document.querySelector('#btn-labs')?.classList.contains('active')?'labs':'projects',mobile:matchMedia('(max-width:768px)').matches,language:document.body.dataset.lang==='en'?'en':'ko'};
   }
   const allowed=new Set(['/index.html','/about.html','/works.html','/works/projects/hnkl/hnkl.html','/works/projects/vibra/vibra.html','/experiments/page-states/soon-stone/']);
   function appendActions(container,actions) {
